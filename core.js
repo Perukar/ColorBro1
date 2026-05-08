@@ -469,7 +469,17 @@ class MathAgent {
                 status: "BLOCKED",
                 warnings: localWarnings,
                 diagnostics: localDiagnostics,
-                stages: [{ title: "БЛОКУВАННЯ", text: "ФАТАЛЬНО: Довжина 'сильно пошкоджена'. Будь-яке освітлення заборонено." }]
+                stages: [{ title: "БЛОКУВАННЯ", text: "ФАТАЛЬНО: Довжина 'сильно пошкоджена'. Будь-яке освітлення або декапірування пудрою категорично заборонено." }]
+            });
+        }
+        
+        if (inputSnapshot.rStep > 0 && inputSnapshot.condition === HairCondition.DAMAGED) {
+             return Object.freeze({
+                ...initState,
+                status: "BLOCKED",
+                warnings: localWarnings,
+                diagnostics: localDiagnostics,
+                stages: [{ title: "БЛОКУВАННЯ", text: "ФАТАЛЬНО: Корінь 'сильно пошкоджений'. Будь-яке освітлення пудрою заборонено." }]
             });
         }
 
@@ -514,13 +524,32 @@ class MathAgent {
         
         const FO_MAP = {
             1: 'Чорний', 2: 'Брунатно-чорний', 3: 'Темно-коричневий', 4: 'Червоно-коричневий',
-            5: 'Червоний', 6: 'Червоно-оранжевий', 7: 'Оранжевий',
-            8: 'Жовто-оранжевий', 9: 'Жовтий', 10: 'Світло-жовтий'
+            5: 'Червоний', 6: 'Помаранчевий', 7: 'Жовто-помаранчевий',
+            8: 'Жовтий', 9: 'Світло-жовтий', 10: 'Дуже світло-жовтий'
+        };
+
+        const NEUTRALIZER_MAP = {
+            5: { color: 'Зелений', id: '9' }, // або 7 (залежить від бренду, але зазвичай зелений)
+            6: { color: 'Синій', id: '1' },
+            7: { color: 'Синьо-фіолетовий', id: '16' },
+            8: { color: 'Фіолетовий', id: '2 або 7' },
+            9: { color: 'Світло-фіолетовий/Перламутр', id: '2 або 8' },
+            10: { color: 'Пастельний фіолет', id: '2' }
         };
 
         if (isDecapRoot || isDecapLength) {
             let targetFOLevel = Math.min(inputSnapshot.targetLevel, 10);
             let projectedFO = FO_MAP[targetFOLevel] || 'Світло-жовтий';
+            
+            // Розрахунок нейтралізатора (За Правилом 11)
+            let nInfo = NEUTRALIZER_MAP[targetFOLevel] || NEUTRALIZER_MAP[10];
+            let rule11 = 11 - targetFOLevel;
+            let toningMass = modifiedLength ? massDist.length : (massDist.length + massDist.root);
+            let neutralizerMass = 0;
+            
+            if (rule11 > 0) {
+                 neutralizerMass = Math.round(((rule11 / 2.0) * (toningMass / 30.0)) * 10) / 10;
+            }
             
             plan.push(`⚠️ ПРОТОКОЛ ЗМИВКИ (ДЕКАПІРУВАННЯ) КОСМЕТИЧНОЇ БАЗИ`);
             if (isDecapLength) plan.push(`КРОК 1: Нанести порошок на довжину. Пропорція: ${finalLength.ratio} (${finalLength.ox}). Маса пудри: ${massDist.length} гр.`);
@@ -529,7 +558,12 @@ class MathAgent {
             plan.push("КРОК 3: Візуальний контроль до досягнення необхідного фону освітлення.");
             plan.push("КРОК 4 (МИЙКА): Змиття ШГО + Маска для зупинки реакції.");
             plan.push(`🎯 Прогнозований Фон Освітлення (ФО): Рівень ${targetFOLevel} (${projectedFO})`);
-            plan.push(`КРОК 5: Тонування з урахуванням нейтралізації ФО. Рецепт: Барвник ${inputSnapshot.targetLevel}.${inputSnapshot.targetDirection} + Оксид 1.9% (1:2).`);
+            
+            let toningRecipe = `Барвник ${inputSnapshot.targetLevel}.${inputSnapshot.targetDirection} + Оксид 1.9% (1:2)`;
+            if (neutralizerMass > 0) {
+                 toningRecipe += ` + Мікстон ${nInfo.id} (${nInfo.color}): ${neutralizerMass} гр`;
+            }
+            plan.push(`КРОК 5: Тонування з урахуванням нейтралізації ФО. Рецепт: ${toningRecipe}.`);
             
             timing = 90 + tMod;
             if (modifiedLength) {
@@ -537,6 +571,7 @@ class MathAgent {
                 modifiedLength.dye = `Барвник ${inputSnapshot.targetLevel}.${inputSnapshot.targetDirection}`;
                 modifiedLength.ox = "1.9%";
                 modifiedLength.ratio = "1:2";
+                modifiedLength.mixtone = neutralizerMass > 0 ? `${neutralizerMass} гр | ${nInfo.color} (нейтралізація ФО)` : "Не потрібен";
             }
         }
         else if (isLPowder && inputSnapshot.lStep >= 4) {
