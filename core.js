@@ -108,8 +108,9 @@ class ChemistAgent {
             };
         }
 
+        // Косметична база + підйом рівня → не блокуємо, а передаємо DecapAgent
         if ([BaseType.COSMETIC_FRESH, BaseType.COSMETIC_BUILDUP].includes(baseType) && (rStep > 0 || lStep > 0)) {
-            return { status: "BLOCKED", stages: [{ title: "🚨 ХІМІЧНИЙ КОНФЛІКТ: КОСМЕТИЧНА БАЗА", text: "Фарба не освітлює фарбу! Освітлення косметичного пігменту можливе ТІЛЬКИ через протокол змивки (порошок). Процес заблоковано." }] };
+            return { status: "APPROVED", requiresDecap: true };
         }
 
         if (targetLevel >= 11) {
@@ -130,6 +131,96 @@ class ChemistAgent {
         }
 
         return { status: "APPROVED" };
+    }
+}
+
+// --- LIGHTENING BACKGROUND TABLE (Фон Освітлення) ---
+// Рівень після змивки → залишковий пігмент → необхідний нейтралізатор
+const FO_TABLE = [
+    { fo: 3, pigment: 'Чорний (залишки)', neutralizer: null },
+    { fo: 4, pigment: 'Коричневий', neutralizer: null },
+    { fo: 5, pigment: 'Темно-помаранчевий', neutralizer: '1' },   // нейтр. синім
+    { fo: 6, pigment: 'Помаранчевий', neutralizer: '11' },         // нейтр. інтенс. синім
+    { fo: 7, pigment: 'Жовто-помаранчевий', neutralizer: '1' },   // нейтр. синьо-фіолетовим
+    { fo: 8, pigment: 'Жовтий', neutralizer: '16' },               // нейтр. фіолетово-голубим
+    { fo: 9, pigment: 'Блідо-жовтий', neutralizer: '81' },         // нейтр. сріблястим
+    { fo: 10, pigment: 'Майже білий', neutralizer: '89' }          // нейтр. жемчужним
+];
+
+// --- DECAP AGENT --- Протокол Декапірування / Освітлення косметичної бази
+class DecapAgent {
+    // Оксид залежить від типу бази та кількості тонів підйому
+    _selectOxidant(baseType, toneStep) {
+        if (baseType === BaseType.COSMETIC_BUILDUP) {
+            // Накопичена база — знижений оксид для поступового вимивання
+            if (toneStep <= 2) return { ox: '3%', ratio: '1:2', note: 'Мʼякий підйом' };
+            if (toneStep <= 4) return { ox: '6%', ratio: '1:2', note: 'Середній підйом' };
+            return { ox: '9%', ratio: '1:3', note: 'Агресивний підйом — поетапно' };
+        } else {
+            // Свіжа косметична база
+            if (toneStep <= 2) return { ox: '6%', ratio: '1:2', note: 'Стандартний підйом' };
+            if (toneStep <= 4) return { ox: '9%', ratio: '1:2', note: 'Інтенсивний підйом' };
+            return { ox: '9%', ratio: '1:3', note: 'Максимальний підйом — можливий повтор' };
+        }
+    }
+
+    // Прогноз ФО після змивки
+    _predictFO(lengthLevel, toneStep) {
+        // ФО = приблизно (lengthLevel + toneStep * 0.7), але не вище 10
+        const predicted = Math.min(10, Math.round(lengthLevel + toneStep * 0.7));
+        return FO_TABLE.find(t => t.fo === predicted) || FO_TABLE[FO_TABLE.length - 1];
+    }
+
+    calculate(snapshot, massDist) {
+        const { baseType, lengthLevel, targetLevel, targetDirection, lStep, elasticity } = snapshot;
+        const lMass = massDist.length;
+
+        // Безпека: якщо еластичність 4 — знижений оксид
+        const elasticityPenalty = (elasticity === Elasticity.STRETCHING);
+
+        const toneStep = lStep; // кількість тонів підйому
+        let oxData = this._selectOxidant(baseType, toneStep);
+        if (elasticityPenalty && oxData.ox === '9%') oxData = { ox: '6%', ratio: '1:2', note: oxData.note + ' [знижено через еластичність 4]' };
+
+        // Маса порошку з коефіцієнтом набухання 1.6
+        const powderMass = Math.max(40, Math.round(lMass * 1.6));
+
+        const foData = this._predictFO(lengthLevel, toneStep);
+
+        // Рецепт тонування ПІСЛЯ змивки (нейтралізація ФО)
+        const toningDirection = foData.neutralizer || targetDirection;
+        const toningDye = `Барвник ${targetLevel}.${toningDirection}`;
+
+        // Immutable — повертаємо новий об'єкт
+        return Object.freeze({
+            // Фаза 1: Змивка / Декапірування
+            decapRec: Object.freeze({
+                process: ProcessType.DECAPITATION,
+                dye: 'Освітлюючий порошок (без аміаку)',
+                ox: oxData.ox,
+                ratio: oxData.ratio,
+                mass: powderMass,
+                note: oxData.note,
+                repeats: toneStep > 4 ? '2-3 раунди до досягнення ФО' : '1-2 раунди'
+            }),
+            // Прогнозований ФО
+            fo: Object.freeze({
+                level: foData.fo,
+                pigment: foData.pigment,
+                neutralizer: foData.neutralizer
+            }),
+            // Фаза 2: Тонування після змивки
+            toningRec: Object.freeze({
+                process: ProcessType.TONING,
+                dye: toningDye,
+                ox: targetLevel >= 9 ? '1.9%' : '3%',
+                ratio: '1:2',
+                mass: lMass,
+                note: foData.neutralizer
+                    ? `Нейтралізатор ФО ${foData.fo}: напрямок .${foData.neutralizer} нейтралізує ${foData.pigment}`
+                    : 'Нейтралізатор не потрібен — ФО відповідає цілі'
+            })
+        });
     }
 }
 
@@ -568,14 +659,51 @@ class MasterNode {
 
     process(rawInput) {
         try {
-            // Маппінг сирих даних у заморожений Snapshot
+            // Маппінг сирих даних у заморожений Snapshot (атомарний — без залипань)
             const snapshot = InputMapper.buildSnapshot(rawInput);
             
-            // 1. Спочатку перевірка Агентом-Хіміком
+            // 1. Перевірка Агентом-Хіміком
             const chemCheck = this.agents.chemist.validate(snapshot);
             if (chemCheck.status === "BLOCKED") return this.terminateWithRedStatus(chemCheck);
 
-            // 2. Якщо хімія ок, передаємо Математику (віддає заморожений стан)
+            // 2а. ДЕКАПІРУВАННЯ — якщо косметична база + підйом рівня
+            if (chemCheck.requiresDecap) {
+                const massDist = this.agents.math.calculateMass(snapshot);
+                const decapResult = new DecapAgent().calculate(snapshot, massDist);
+                return Object.freeze({
+                    status: "DECAP_PROTOCOL",
+                    requiresDecap: true,
+                    decapRec:  decapResult.decapRec,
+                    fo:        decapResult.fo,
+                    toningRec: decapResult.toningRec,
+                    // Стандартні поля для сумісності з render()
+                    rootRec:   null,
+                    lenRec:    null,
+                    midRec:    null,
+                    plan: [
+                        "КРОК 1: Нанести освітлюючий порошок на довжину згідно рецепту. Уникати шкіри голови!",
+                        `КРОК 2: Витримати ${decapResult.decapRec.repeats}. Контроль щоразу.`,
+                        "КРОК 3 (МИЙКА): Змити з ШГО. Кислотна стабілізація (3% оксид, 5 хв).",
+                        `КРОК 4: Нанести тонування на вологе полотно. ${decapResult.toningRec.note}`
+                    ],
+                    warnings: snapshot.elasticity === Elasticity.STRETCHING
+                        ? ["⚠️ Еластичність 4: оксид знижено. Контроль кожні 5 хв!"]
+                        : [],
+                    diagnostics: [
+                        `Прогнозований ФО після змивки: Рівень ${decapResult.fo.level} — ${decapResult.fo.pigment}`
+                    ],
+                    timing: decapResult.decapRec.repeats.includes('2-3') ? 90 : 60,
+                    totalMass: massDist.total,
+                    underTheHood: [
+                        `DecapAgent: baseType=${snapshot.baseType}, lStep=${snapshot.lStep}`,
+                        `Оксид підібраний: ${decapResult.decapRec.ox} (${decapResult.decapRec.note})`,
+                        `ФО=${decapResult.fo.level}, нейтралізатор: ${decapResult.fo.neutralizer || 'не потрібен'}`
+                    ],
+                    stages: []
+                });
+            }
+
+            // 2б. Стандартний шлях через MathAgent
             let state = this.agents.math.process(snapshot);
             if (state.status === "FATAL_ERROR" || state.status === "BLOCKED") {
                 return this.terminateWithRedStatus(state);

@@ -577,6 +577,112 @@ function run(d){
 function render(s, input) {
     let h = '';
 
+    // --- ПРОТОКОЛ ДЕКАПІРУВАННЯ (косметична база + підйом) ---
+    if (s.status === 'DECAP_PROTOCOL') {
+        h += `<div class="lasthope-banner" style="border-color:#f59e0b;background:rgba(245,158,11,.13)">
+            <strong style="color:#fbbf24;font-size:1.1em;display:block;margin-bottom:8px">
+                🧪 ПРОТОКОЛ ДЕКАПІРУВАННЯ / ОСВІТЛЕННЯ КОСМЕТИЧНОЇ БАЗИ
+            </strong>
+            <div style="color:#fde68a;font-size:.9em">Пряме фарбування неможливе. Система сформувала двофазний протокол.</div>
+        </div>`;
+
+        // Warnings / Diagnostics
+        (s.warnings || []).forEach(w => { h += `<div class="warn-box">⚠️ ${w}</div>`; });
+        (s.diagnostics || []).forEach(d => { h += `<div class="diag-box">🔬 ${d}</div>`; });
+
+        // ФАЗА 1: Декапірування
+        if (s.decapRec) {
+            h += `<div class="step-card midband">
+                <div class="step-num">🟡 ФАЗА 1</div>
+                <div class="step-title">ЗМИВКА / ДЕКАПІРУВАННЯ</div>
+                <div class="step-note">🧭 ${s.decapRec.note} — ${s.decapRec.repeats}</div>
+                <div class="step-formula">
+                    <div class="step-formula-item">
+                        <div class="sfi-label">Засіб</div>
+                        <div class="sfi-val" style="font-size:.9em">${s.decapRec.dye}</div>
+                    </div>
+                    <div class="step-formula-item">
+                        <div class="sfi-label">Оксид</div>
+                        <div class="sfi-val ox-val">${s.decapRec.ox}</div>
+                    </div>
+                    <div class="step-formula-item">
+                        <div class="sfi-label">Маса суміші</div>
+                        <div class="sfi-val mass-val big-val">${s.decapRec.mass} г</div>
+                    </div>
+                    <div class="step-formula-item">
+                        <div class="sfi-label">Пропорція</div>
+                        <div class="sfi-val">${s.decapRec.ratio}</div>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        // ФО — Прогнозований Фон Освітлення
+        if (s.fo) {
+            const neutralNote = s.fo.neutralizer
+                ? `Нейтралізатор: <b style="color:#a5b4fc">.${s.fo.neutralizer}</b>`
+                : 'Нейтралізатор не потрібен';
+            h += `<div class="step-card" style="border-left:5px solid #6366f1;background:#12122a">
+                <div class="step-num" style="color:#818cf8">🎨 ПРОГНОЗ</div>
+                <div class="step-title">ФОН ОСВІТЛЕННЯ (ФО) ПІСЛЯ ЗМИВКИ</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                    <div class="step-formula-item">
+                        <div class="sfi-label">Рівень ФО</div>
+                        <div class="sfi-val" style="color:#818cf8;font-size:1.6em">${s.fo.level}</div>
+                    </div>
+                    <div class="step-formula-item">
+                        <div class="sfi-label">Залишковий пігмент</div>
+                        <div class="sfi-val" style="font-size:.95em">${s.fo.pigment}</div>
+                    </div>
+                </div>
+                <div class="step-note" style="margin-top:8px">${neutralNote}</div>
+            </div>`;
+        }
+
+        // ФАЗА 2: Тонування
+        if (s.toningRec) {
+            h += `<div class="step-card length">
+                <div class="step-num">🟢 ФАЗА 2</div>
+                <div class="step-title">ТОНУВАННЯ ПІСЛЯ ЗМИВКИ (нейтралізація ФО)</div>
+                <div class="step-note">🧭 ${s.toningRec.note}</div>
+                <div class="step-formula">
+                    <div class="step-formula-item">
+                        <div class="sfi-label">Барвник</div>
+                        <div class="sfi-val" style="font-size:.9em">${s.toningRec.dye}</div>
+                    </div>
+                    <div class="step-formula-item">
+                        <div class="sfi-label">Оксид</div>
+                        <div class="sfi-val ox-val">${s.toningRec.ox}</div>
+                    </div>
+                    <div class="step-formula-item">
+                        <div class="sfi-label">Маса</div>
+                        <div class="sfi-val mass-val big-val">${s.toningRec.mass} г</div>
+                    </div>
+                    <div class="step-formula-item">
+                        <div class="sfi-label">Пропорція</div>
+                        <div class="sfi-val">${s.toningRec.ratio}</div>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        // Час + Регламент
+        if (s.timing) h += `<div class="timing-box">⏱ Орієнтовний час<br><span class="big">${s.timing} хв</span></div>`;
+        if (s.plan && s.plan.length) {
+            h += `<div class="protocol-box">
+                <div style="color:#fbbf24;font-weight:700;margin-bottom:10px">📋 ПОРЯДОК ДІЙ</div>
+                ${s.plan.map((p,i) => `<div class="protocol-step"><span class="ps-num">${i+1}.</span><span>${p}</span></div>`).join('')}
+            </div>`;
+        }
+        if (s.underTheHood && s.underTheHood.length) {
+            h += `<details style="margin-top:12px"><summary>[i] Логіка DecapAgent</summary>
+                ${s.underTheHood.map(u => `<div style="margin:4px 0;color:#aaa">• ${u}</div>`).join('')}
+            </details>`;
+        }
+        out.innerHTML = h;
+        return;
+    }
+
     // --- БЛОКУВАННЯ: Перекриває весь екран ---
     if (s.status === 'BLOCKED' || s.status === 'FATAL_ERROR') {
         (s.stages || []).forEach(st => {
