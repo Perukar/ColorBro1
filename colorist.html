@@ -302,6 +302,22 @@ window.showReason = function(text) {
 function render(s, input) {
     let h = '';
 
+    console.log('RENDER STATE:', s);
+
+    // Захист від відсутності фаз або помилок
+    if (s.status === 'ERROR' || !s.phases || !Array.isArray(s.phases)) {
+        out.innerHTML = `<div class="blocked-full">
+            <div class="blocked-title" style="color:#ff8fab;font-size:1.15em;font-weight:700;margin-bottom:10px">
+                🚨 СИСТЕМНА ПОМИЛКА
+            </div>
+            <div style="color:#ffb4c0;font-size:.95em;line-height:1.55">
+                Фази не згенеровані або пошкоджені.<br>
+                ${s.errors && Array.isArray(s.errors) ? s.errors.join('<br>') : (s.message || 'Невідома помилка під час розрахунку.')}
+            </div>
+        </div>`;
+        return;
+    }
+
     // Блокування
     if (s.status === 'BLOCKED' || s.status === 'FATAL_ERROR') {
         (s.stages || []).forEach(st => {
