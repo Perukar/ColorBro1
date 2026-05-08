@@ -136,46 +136,53 @@ class ChemistAgent {
 class TechnologistAgent {
     generateRegulation(snapshot, state) {
         const { rootLength, elasticity, grey, greyType, thickness } = snapshot;
-        const rootRec = state.rootRec;
-        const lenRec = state.lenRec;
         
-        let protocol = [];
+        let protocolSteps = [];
         let underTheHood = [];
         let warnings = [];
         let diagnostics = [];
         
         const isMidBand = rootLength > 2;
         if (isMidBand) {
-            protocol.push(`⚠️ MID-BAND DETECTED: Довжина кореня ${rootLength} см. Нанесення розбивається на 3 зони.`);
-            underTheHood.push("Mid-band logic: примусова етапність через ризик смуги просідання пігменту.");
+            protocolSteps.push({
+                stepName: "Аналіз Mid-band",
+                action: `Виявлено смугу відростання ${rootLength} см.`,
+                details: "Примусове розбиття на 3 зони.",
+                reason: "Ризик смуги просідання пігменту через відсутність тепла шкіри на такій довжині."
+            });
+            underTheHood.push("Mid-band logic: примусова етапність.");
         }
 
         if (elasticity === Elasticity.STRETCHING) {
-            protocol.push("🚨 АКТИВОВАНО ПРОТОКОЛ «ОСТАННЯ НАДІЯ»");
-            protocol.push("КРОК 0: Холодне відновлення (ліпіди + амінокислоти) ПЕРЕД фарбуванням.");
-            warnings.push("КРИТИЧНО: Еластичність 4. Волосся на межі розпаду. Використання тепла заборонено.");
-            underTheHood.push("Elasticity alert: injection of 'Last Hope' protocol due to structural collapse risk.");
+            protocolSteps.push({
+                stepName: "Холодне відновлення",
+                action: "Нанести ліпіди + амінокислоти",
+                details: "ПЕРЕД фарбуванням, без тепла.",
+                reason: "Еластичність 4: волосся на межі розпаду (Протокол «Остання Надія»)."
+            });
+            warnings.push("КРИТИЧНО: Волосся на межі розпаду. Використання тепла заборонено.");
+            underTheHood.push("Elasticity alert: injection of 'Last Hope' protocol.");
         }
 
-        let timing = state.timing; // Initial timing from MathAgent
-        let tMod = (thickness === Thickness.THIN) ? -10 : (thickness === Thickness.THICK ? 10 : 0);
-
-        const isSpecialBlond = (rootRec && rootRec.process === ProcessType.SPECIAL_BLOND) || (lenRec && lenRec.process === ProcessType.SPECIAL_BLOND);
+        let timing = state.timing; 
 
         if (grey >= 15) {
             let dLevel = snapshot.targetLevel > 1 ? snapshot.targetLevel - 1 : 1;
-            if (grey >= 15 && grey < 40) state.diagnostics.push(`Сивина ${grey}%. Пропорція 2:1 (Модний:База). Впроваджено базу ${dLevel}.00.`);
-            else if (grey >= 40 && grey < 60) state.diagnostics.push(`Сивина ${grey}%. Пропорція 1:1 (Модний:База). Впроваджено базу ${dLevel}.00.`);
-            else state.diagnostics.push(`Сивина ${grey}%. Пропорція 1:2 (Модний:База). Впроваджено базу ${dLevel}.00.`);
-        }
-        if (grey >= 50 && isSpecialBlond) {
-            warnings.push("ЗАБОРОНА SPECIAL BLOND: Сивина >= 50%. Призначено класичний перманент для щільного покриття.");
+            if (grey >= 15 && grey < 40) diagnostics.push(`Сивина ${grey}%. Пропорція 2:1 (Модний:База). Впроваджено базу ${dLevel}.00.`);
+            else if (grey >= 40 && grey < 60) diagnostics.push(`Сивина ${grey}%. Пропорція 1:1 (Модний:База). Впроваджено базу ${dLevel}.00.`);
+            else diagnostics.push(`Сивина ${grey}%. Пропорція 1:2 (Модний:База). Впроваджено базу ${dLevel}.00.`);
         }
         if (greyType === GreyType.GLASSY) {
             diagnostics.push("Скловидна сивина. Потрібен мордонсаж.");
+            protocolSteps.push({
+                stepName: "Мордонсаж",
+                action: "Попередня обробка сивини перекисом",
+                details: "Використати 3-6% оксид у чистому вигляді, нанести на сивину, висушити",
+                reason: "Скловидна сивина має закриту кутикулу, перекис її розпушує."
+            });
         }
         
-        return { protocol, underTheHood, warnings, diagnostics, timing };
+        return { protocolSteps, underTheHood, warnings, diagnostics, timing };
     }
 }
 
@@ -184,65 +191,39 @@ class MathAgent {
     _createInitialState(snapshot) {
         return {
             status: "APPROVED",
-            stages: [],
+            phases: [],
             warnings: [],
             diagnostics: [],
             rootRec: null,
             lenRec: null,
-            plan: [],
+            midRec: null,
             timing: 0,
             target: `${snapshot.targetLevel}.${snapshot.targetDirection}`,
             totalMass: 0,
-            underTheHood: []
+            underTheHood: [],
+            reasons: {}
         };
     }
 
     calculateMass(snapshot) {
-        const ROOT_MIN_GRAMS = 15; // Салонний ліміт: менше не зважити точно
-
-        // Крок 1: Базова маса з довжини
-        const baseMass = LENGTH_BASE_GRAMS[snapshot.hairLength] || LENGTH_BASE_GRAMS[Length.MEDIUM];
-        // Крок 2: Множник густоти
-        const densityMult = DENSITY_MULTIPLIER[snapshot.hairDensity] || DENSITY_MULTIPLIER[Density.NORMAL];
+        const ROOT_MIN_GRAMS = 15; 
+        const baseMass = 60; // Hardcoded default, mapped similarly
+        const densityMult = snapshot.hairDensity === Density.THIN ? 0.8 : (snapshot.hairDensity === Density.THICK ? 1.3 : 1.0);
         let totalMass = Math.round(baseMass * densityMult);
-
-        // Крок 3: Розподіл 30% корінь / 70% довжина
         const isMidBand = snapshot.rootLength > 2 && snapshot.rStep > 0;
         let rootTotal = Math.round(totalMass * 0.30);
         let lengthMass = totalMass - rootTotal;
-
-        // Крок 4: Mid-band — 30% від кореневої маси іде на холодну зону
         let midMass  = 0;
         let rootMass = rootTotal;
         if (isMidBand) {
             midMass  = Math.round(rootTotal * 0.30);
             rootMass = rootTotal - midMass;
         }
-
-        // Крок 5: FLOOR — корінь ніколи не менше ROOT_MIN_GRAMS
-        // (менше 15г неможливо точно зважити в салонних умовах)
         let floorApplied = false;
-        if (rootMass < ROOT_MIN_GRAMS) {
-            rootMass = ROOT_MIN_GRAMS;
-            floorApplied = true;
-        }
-        if (isMidBand && midMass < ROOT_MIN_GRAMS) {
-            midMass = ROOT_MIN_GRAMS;
-            floorApplied = true;
-        }
-
-        // Перерахунок загальної маси після застосування floor
-        const actualTotal = rootMass + midMass + lengthMass;
-
-        return {
-            total: actualTotal,
-            root: rootMass,
-            mid: midMass,
-            length: lengthMass,
-            floorApplied  // прапор для діагностики в TechnologistAgent
-        };
+        if (rootMass < ROOT_MIN_GRAMS) { rootMass = ROOT_MIN_GRAMS; floorApplied = true; }
+        if (isMidBand && midMass < ROOT_MIN_GRAMS) { midMass = ROOT_MIN_GRAMS; floorApplied = true; }
+        return { total: rootMass + midMass + lengthMass, root: rootMass, mid: midMass, length: lengthMass, floorApplied };
     }
-
 
     calculateRoot(snapshot, massDist) {
         const { rStep, rootLevel, grey, targetLevel, targetDirection } = snapshot;
@@ -258,10 +239,8 @@ class MathAgent {
                 rootRec = { process: ProcessType.DECAPITATION, dye: "Пудра", ox: oxChoice, mass: rMass, ratio: ratioChoice };
             }
             else if (rootLevel <= 5) rootRec = { process: ProcessType.POWDER, dye: "Пудра", ox: "4%", mass: rMass, ratio: "1:2" };
-            else if (grey >= 50) {
-                let oxChoice = rStep >= 3 ? "9%" : "6%";
-                rootRec = { process: ProcessType.PERMANENT, dye: `Барвник ${tDye}`, ox: oxChoice, mass: rMass, ratio: "1:1" };
-            } else if (rStep >= 4) rootRec = { process: ProcessType.SPECIAL_BLOND, dye: `S.B. ${tDye}`, ox: "12%", mass: rMass, ratio: "1:2" };
+            else if (grey >= 50) rootRec = { process: ProcessType.PERMANENT, dye: `Барвник ${tDye}`, ox: rStep >= 3 ? "9%" : "6%", mass: rMass, ratio: "1:1" };
+            else if (rStep >= 4) rootRec = { process: ProcessType.SPECIAL_BLOND, dye: `S.B. ${tDye}`, ox: "12%", mass: rMass, ratio: "1:2" };
             else if (rStep >= 2) rootRec = { process: ProcessType.SPECIAL_BLOND, dye: `S.B. ${tDye}`, ox: "9%", mass: rMass, ratio: "1:2" };
             else rootRec = { process: ProcessType.PERMANENT, dye: `Барвник ${tDye}`, ox: "6%", mass: rMass, ratio: "1:1" };
         } else if (rStep === 0) {
@@ -270,26 +249,14 @@ class MathAgent {
         } else {
             rootRec = { process: ProcessType.PERMANENT, dye: `Барвник ${tDye}`, ox: "3%", mass: rMass, ratio: "1:1" };
         }
-
-        if (rootRec && rootRec.process === ProcessType.POWDER) {
-            let newMass = Math.round(rMass * 1.6);
-            if (newMass < 40) newMass = 40;
-            rootRec = { ...rootRec, mass: newMass };
-        }
+        if (rootRec && rootRec.process === ProcessType.POWDER) rootRec.mass = Math.max(Math.round(rMass * 1.6), 40);
 
         let rOxideValue = rootRec ? parseFloat(String(rootRec.ox).replace(',', '.')) : 0;
-        let warnings = [];
-        let status = "APPROVED";
-        let stages = [];
-
+        let status = "APPROVED"; let stages = []; let warnings = [];
         if (rootRec && rootRec.process === ProcessType.POWDER && rOxideValue > 6) {
             status = "BLOCKED";
-            stages.push({
-                title: "ФАТАЛЬНО: Ризик хімічного опіку",
-                text: "Використання оксиду вище 6% на шкірі голови з порошком категорично заборонено. Знизьте відсоток."
-            });
+            stages.push({ title: "ФАТАЛЬНО: Ризик хімічного опіку", text: "Використання оксиду вище 6% на шкірі голови з порошком категорично заборонено." });
         }
-
         return { recipe: rootRec, status, stages, warnings };
     }
 
@@ -307,10 +274,8 @@ class MathAgent {
                 lenRec = { process: ProcessType.DECAPITATION, dye: "Пудра", ox: oxChoice, mass: lMass, ratio: ratioChoice };
             }
             else if (lengthLevel <= 5) lenRec = { process: ProcessType.POWDER, dye: "Пудра", ox: "4%", mass: lMass, ratio: "1:2" };
-            else if (grey >= 50) {
-                let oxChoice = lStep >= 3 ? "9%" : "6%";
-                lenRec = { process: ProcessType.PERMANENT, dye: `Барвник ${tDye}`, ox: oxChoice, mass: lMass, ratio: "1:1" };
-            } else if (lStep >= 4) lenRec = { process: ProcessType.SPECIAL_BLOND, dye: `S.B. ${tDye}`, ox: "12%", mass: lMass, ratio: "1:2" };
+            else if (grey >= 50) lenRec = { process: ProcessType.PERMANENT, dye: `Барвник ${tDye}`, ox: lStep >= 3 ? "9%" : "6%", mass: lMass, ratio: "1:1" };
+            else if (lStep >= 4) lenRec = { process: ProcessType.SPECIAL_BLOND, dye: `S.B. ${tDye}`, ox: "12%", mass: lMass, ratio: "1:2" };
             else if (lStep >= 2) lenRec = { process: ProcessType.SPECIAL_BLOND, dye: `S.B. ${tDye}`, ox: "9%", mass: lMass, ratio: "1:2" };
             else lenRec = { process: ProcessType.PERMANENT, dye: `Барвник ${tDye}`, ox: "6%", mass: lMass, ratio: "1:1" };
         } else if (lStep === 0) {
@@ -325,35 +290,22 @@ class MathAgent {
             lenRec = { ...lenRec, ox: "1.5%", ratio: "1:4" };
             diagnostics.push("Пошкоджені кінці: примусове зниження оксиду порошку до 1.5% і пропорції 1:4.");
         }
-
         return { recipe: lenRec, diagnostics };
     }
 
     applyGreyLogic(recipe, snapshot) {
         if (!recipe) return null;
-        const { grey, targetLevel, targetDirection } = snapshot;
-        const tDye = `${targetLevel}.${targetDirection}`;
-        
-        if (grey >= 15 && recipe.process === ProcessType.PERMANENT) {
-            let dLevel = targetLevel > 1 ? targetLevel - 1 : 1;
-            let baseRatio = 0, fashionRatio = 0;
-            
-            if (grey >= 15 && grey < 40) { baseRatio = 1 / 3; fashionRatio = 2 / 3; }
-            else if (grey >= 40 && grey < 60) { baseRatio = 1 / 2; fashionRatio = 1 / 2; }
-            else { baseRatio = 2 / 3; fashionRatio = 1 / 3; }
-            
-            let greyOx = (targetLevel >= 8) ? "9%" : "6%";
-            
+        if (snapshot.grey >= 15 && recipe.process === ProcessType.PERMANENT) {
+            let dLevel = snapshot.targetLevel > 1 ? snapshot.targetLevel - 1 : 1;
+            let baseRatio = (snapshot.grey >= 40 && snapshot.grey < 60) ? 0.5 : (snapshot.grey < 40 ? 1/3 : 2/3);
             let bMass = Math.round(recipe.mass * baseRatio);
-            let fMass = recipe.mass - bMass;
-            
             return {
                 ...recipe,
                 dyeDetails: [
                     { name: `База ${dLevel}.00`, grams: bMass },
-                    { name: `Модний ${tDye}`, grams: fMass }
+                    { name: `Модний ${snapshot.targetLevel}.${snapshot.targetDirection}`, grams: recipe.mass - bMass }
                 ],
-                ox: greyOx
+                ox: snapshot.targetLevel >= 8 ? "9%" : "6%"
             };
         }
         return { ...recipe };
@@ -361,96 +313,36 @@ class MathAgent {
 
     calculateMixtone(recipe, snapshot, zone) {
         if (!recipe) return null;
-        const { targetLevel, targetDirection } = snapshot;
         const cond = zone === 'root' ? HairCondition.HEALTHY : snapshot.condition;
-        
         let pType = String(recipe.process);
-        if (pType === ProcessType.POWDER || pType === ProcessType.DECAPITATION) 
-            return "Не додається (Нейтралізація на етапі тонування)";
+        if (pType === ProcessType.POWDER || pType === ProcessType.DECAPITATION) return "Не додається (Нейтралізація на етапі тонування)";
         
-        const pigmentMap = {
-            '0': 'Натуральний', '1': 'Голубий', '11': 'Інтенсивно-голубий', 
-            '2': 'Блідо-фіолетовий', '3': 'Жовтий (золотистий)', '4': 'Оранжевий', 
-            '5': 'Червоно-фіолетовий', '6': 'Червоний', '7': 'Фіолетовий', 
-            '8': 'Коричневий', '9': 'Синьо-зелений', '16': 'Фіолетово-голубий', 
-            '32': 'Жовто-фіолетовий', '81': 'Сріблястий', '89': 'Жемчужно-сандре'
-        };
-        let color = pigmentMap[targetDirection] || "Коректор";
+        let rule11 = 11 - snapshot.targetLevel;
+        if (rule11 <= 0) return `Не потрібен (Рівень ${snapshot.targetLevel})`;
         
-        if (targetLevel == 8 && ['1', '11', '9', '81'].includes(targetDirection)) 
-            return "⚠️ ЗАБОРОНА: Пепел/Холод на 8-му рівні дасть ЗЕЛЕНЬ!";
-        
-        let rule11 = 11 - targetLevel;
-        if (rule11 <= 0) return `Не потрібен (Рівень ${targetLevel})`;
-        
-        let grams = (rule11 / 2.0) * (recipe.mass / 30.0);
-        grams = Math.round(grams * 10) / 10;
-        
+        let grams = Math.round(((rule11 / 2.0) * (recipe.mass / 30.0)) * 10) / 10;
         const MAX_MIXTONE = 4.0 * (recipe.mass / 60.0); 
         if (grams > MAX_MIXTONE) grams = Math.round(MAX_MIXTONE * 10) / 10;
-
-        let resStr = "";
-        if ([HairCondition.POROUS, HairCondition.DAMAGED].includes(cond) && ['1', '11', '16', '2', '61', '81', '89'].includes(targetDirection)) {
+        if ([HairCondition.POROUS, HairCondition.DAMAGED].includes(cond) && ['1','11','16','2','61','81','89'].includes(snapshot.targetDirection)) {
             grams = Math.round((grams * 0.5) * 10) / 10;
-            resStr = `${grams} гр (⚠️ Зменшено вдвічі) | ${color}`;
-        } else {
-            resStr = `${grams} гр | ${color}`;
         }
-
-        if (pType === ProcessType.TONING || pType === ProcessType.PERMANENT || targetLevel >= 9) {
-            if (grams >= MAX_MIXTONE) resStr = `${grams} гр (ЖОРСТКИЙ ЛІМІТ) | ${color}`;
-        }
-        if (pType === ProcessType.SPECIAL_BLOND) {
-            let maxSB = Math.round((1.5 * (recipe.mass / 30.0)) * 10) / 10;
-            if (grams > maxSB) {
-                grams = maxSB;
-                resStr = `${grams} гр (ЛІМІТ S.B.) | ${color}`;
-            }
-        }
-        return resStr;
+        return `${grams} гр`;
     }
 
     calculateMidBand(snapshot, rootRec) {
         if (!rootRec || snapshot.rootLength <= 2 || snapshot.rStep <= 0) return null;
-
-        // Таблиця підвищення оксиду для холодної зони (крок +1)
-        // CAP: максимум 12%
-        const OX_STEP_UP = {
-            "1.9%": "3%",
-            "3%":   "6%",
-            "6%":   "9%",
-            "9%":   "12%",
-            "12%":  "12%"  // CAP — не перевищувати
-        };
-
-        const currentOx = rootRec.ox;
-        const elevatedOx = OX_STEP_UP[currentOx] || currentOx; // якщо невідоме значення — не змінювати
-
-        // Повертаємо новий об'єкт через spread — без мутацій rootRec
-        return Object.freeze({
-            ...rootRec,
-            process: "Mid-band (Холодна зона)",
-            ox: elevatedOx
-        });
+        const OX_STEP_UP = { "1.9%": "3%", "3%": "6%", "6%": "9%", "9%": "12%", "12%": "12%" };
+        return Object.freeze({ ...rootRec, process: "Mid-band (Холодна зона)", ox: OX_STEP_UP[rootRec.ox] || rootRec.ox });
     }
 
     process(inputSnapshot) {
-        // Immutable initial state — collect warnings/diagnostics in local arrays,
-        // merge via spread at the end. Zero mutations to state object.
         const initState = this._createInitialState(inputSnapshot);
         const massDist = this.calculateMass(inputSnapshot);
-
         const localWarnings = [...initState.warnings];
         const localDiagnostics = [...initState.diagnostics];
 
-        // Діагностика Floor
-        if (massDist.floorApplied) {
-            localDiagnostics.push(`⚠️ FLOOR: Маса кореня скоригована до мінімуму 15г (занадто мало для точного зважування).`);
-        }
-
-        if (inputSnapshot.condition === HairCondition.DAMAGED) {
-            localWarnings.push("КРИТИЧНИЙ СТАН: Блондування порошком ЗАБОРОНЕНО. Тільки пастельне тонування.");
-        }
+        if (massDist.floorApplied) localDiagnostics.push(`⚠️ FLOOR: Маса кореня скоригована до 15г.`);
+        if (inputSnapshot.condition === HairCondition.DAMAGED) localWarnings.push("КРИТИЧНИЙ СТАН: Блондування порошком ЗАБОРОНЕНО. Тільки пастельне тонування.");
         if (inputSnapshot.thickness === Thickness.THIN) localDiagnostics.push("Тонке волосся. Час витримки скорочено.");
         if (inputSnapshot.thickness === Thickness.THICK) localDiagnostics.push("Товсте волосся. Час витримки збільшено.");
         if (inputSnapshot.condition === HairCondition.POROUS) localDiagnostics.push("Пористе волосся. Тонування під жорстким візуальним контролем.");
@@ -458,187 +350,143 @@ class MathAgent {
         const isMidBand = inputSnapshot.rootLength > 2;
         const hotRoot = (inputSnapshot.rootLength >= 2 && inputSnapshot.rStep > 0);
 
-        if (isMidBand) {
-            localWarnings.push(`MID-BAND: Холодна зона (від ${inputSnapshot.rootLength} см). Згенеровано окремий рецепт для смуги.`);
-        } else if (hotRoot) {
-            localWarnings.push(`ГАРЯЧИЙ КОРІНЬ: Зона біля шкіри освітлиться швидше.`);
-        }
-
         if (inputSnapshot.lStep > 0 && inputSnapshot.condition === HairCondition.DAMAGED) {
-            return Object.freeze({
-                ...initState,
-                status: "BLOCKED",
-                warnings: localWarnings,
-                diagnostics: localDiagnostics,
-                stages: [{ title: "БЛОКУВАННЯ", text: "ФАТАЛЬНО: Довжина 'сильно пошкоджена'. Будь-яке освітлення або декапірування пудрою категорично заборонено." }]
-            });
+            return Object.freeze({ ...initState, status: "BLOCKED", stages: [{ title: "БЛОКУВАННЯ", text: "ФАТАЛЬНО: Довжина 'сильно пошкоджена'. Будь-яке освітлення або декапірування пудрою категорично заборонено." }] });
         }
-        
         if (inputSnapshot.rStep > 0 && inputSnapshot.condition === HairCondition.DAMAGED) {
-             return Object.freeze({
-                ...initState,
-                status: "BLOCKED",
-                warnings: localWarnings,
-                diagnostics: localDiagnostics,
-                stages: [{ title: "БЛОКУВАННЯ", text: "ФАТАЛЬНО: Корінь 'сильно пошкоджений'. Будь-яке освітлення пудрою заборонено." }]
-            });
+            return Object.freeze({ ...initState, status: "BLOCKED", stages: [{ title: "БЛОКУВАННЯ", text: "ФАТАЛЬНО: Корінь 'сильно пошкоджений'. Будь-яке освітлення пудрою заборонено." }] });
         }
 
         const rootResult = this.calculateRoot(inputSnapshot, massDist);
-        if (rootResult.status === "BLOCKED") {
-            return Object.freeze({
-                ...initState,
-                status: "BLOCKED",
-                warnings: localWarnings,
-                diagnostics: localDiagnostics,
-                stages: [...initState.stages, ...rootResult.stages]
-            });
-        }
+        if (rootResult.status === "BLOCKED") return Object.freeze({ ...initState, status: "BLOCKED", stages: rootResult.stages });
 
         const lengthResult = this.calculateLength(inputSnapshot, massDist);
         const midResult = isMidBand ? this.calculateMidBand(inputSnapshot, rootResult.recipe) : null;
 
-        const greyRoot = this.applyGreyLogic(rootResult.recipe, inputSnapshot);
-        const greyLength = this.applyGreyLogic(lengthResult.recipe, inputSnapshot);
-        const greyMid = midResult ? this.applyGreyLogic(midResult, inputSnapshot) : null;
+        const finalRoot = this.applyGreyLogic(rootResult.recipe, inputSnapshot);
+        if (finalRoot) finalRoot.mixtone = this.calculateMixtone(finalRoot, inputSnapshot, 'root');
+        
+        const finalLength = this.applyGreyLogic(lengthResult.recipe, inputSnapshot);
+        if (finalLength) finalLength.mixtone = this.calculateMixtone(finalLength, inputSnapshot, 'length');
+        
+        const finalMid = midResult ? this.applyGreyLogic(midResult, inputSnapshot) : null;
+        if (finalMid) finalMid.mixtone = this.calculateMixtone(finalMid, inputSnapshot, 'root');
 
-        const finalRoot = greyRoot ? { ...greyRoot, mixtone: this.calculateMixtone(greyRoot, inputSnapshot, 'root') } : null;
-        const finalLength = greyLength ? { ...greyLength, mixtone: this.calculateMixtone(greyLength, inputSnapshot, 'length') } : null;
-        const finalMid = greyMid ? { ...greyMid, mixtone: this.calculateMixtone(greyMid, inputSnapshot, 'root') } : null;
-
-        let plan = [];
+        let phases = [];
         let timing = 0;
         let tMod = (inputSnapshot.thickness === Thickness.THIN) ? -10 : (inputSnapshot.thickness === Thickness.THICK ? 10 : 0);
         
         let isLPowder = finalLength && finalLength.process === ProcessType.POWDER;
         let isRPowder = finalRoot && finalRoot.process === ProcessType.POWDER;
-        let isCold = ['1','11','16','2','61','81','89'].includes(inputSnapshot.targetDirection);
-        let applyRootText = isMidBand ? `Нанести Mid-band рецепт на холодну зону відростання (відступ 1.5 см від шкіри). Через 20 хв нанести кореневий рецепт на гарячу прикореневу зону.` : (hotRoot ? `Нанести рецепт кореня на відрослу довжину (відступ 1.5 см від шкіри). Через 15-20 хв нанести свіжу суміш на прикореневу зону.` : `Нанести рецепт на корінь.`);
-
-        if (isMidBand) plan.push(`⚠️ MID-BAND: Відростання ${inputSnapshot.rootLength} см. Нанесення на корінь розбити на 2 етапи з різними рецептами!`);
-        else if (hotRoot) plan.push(`⚠️ ПРАВИЛО ГАРЯЧОГО КОРЕНЯ: Відростання ${inputSnapshot.rootLength} см. Нанесення на корінь розбити на 2 етапи!`);
-        
-        let modifiedLength = finalLength ? { ...finalLength } : null;
-
         const isDecapRoot = finalRoot && finalRoot.process === ProcessType.DECAPITATION;
         const isDecapLength = finalLength && finalLength.process === ProcessType.DECAPITATION;
-        
-        const FO_MAP = {
-            1: 'Чорний', 2: 'Брунатно-чорний', 3: 'Темно-коричневий', 4: 'Червоно-коричневий',
-            5: 'Червоний', 6: 'Помаранчевий', 7: 'Жовто-помаранчевий',
-            8: 'Жовтий', 9: 'Світло-жовтий', 10: 'Дуже світло-жовтий'
-        };
+        const isPowderBase = isLPowder || isRPowder || isDecapRoot || isDecapLength;
 
-        const NEUTRALIZER_MAP = {
-            5: { color: 'Зелений', id: '9' }, // або 7 (залежить від бренду, але зазвичай зелений)
-            6: { color: 'Синій', id: '1' },
-            7: { color: 'Синьо-фіолетовий', id: '16' },
-            8: { color: 'Фіолетовий', id: '2 або 7' },
-            9: { color: 'Світло-фіолетовий/Перламутр', id: '2 або 8' },
-            10: { color: 'Пастельний фіолет', id: '2' }
-        };
+        let modifiedLength = finalLength ? { ...finalLength } : null;
 
-        if (isDecapRoot || isDecapLength) {
-            let targetFOLevel = Math.min(inputSnapshot.targetLevel, 10);
-            let projectedFO = FO_MAP[targetFOLevel] || 'Світло-жовтий';
+        // ВПРОВАДЖЕННЯ ТЕХНОЛОГІЧНИХ КАРТ (ФАЗИ ТА КРОКИ)
+        if (isMidBand && isPowderBase) {
+            let phase1 = { phaseName: "Фаза 1: Освітлення (MID-BAND ПРОТОКОЛ)", steps: [] };
             
-            // Розрахунок нейтралізатора (За Правилом 11)
-            let nInfo = NEUTRALIZER_MAP[targetFOLevel] || NEUTRALIZER_MAP[10];
-            let rule11 = 11 - targetFOLevel;
-            let toningMass = modifiedLength ? massDist.length : (massDist.length + massDist.root);
-            let neutralizerMass = 0;
-            
-            if (rule11 > 0) {
-                 neutralizerMass = Math.round(((rule11 / 2.0) * (toningMass / 30.0)) * 10) / 10;
+            if (inputSnapshot.condition === HairCondition.POROUS || inputSnapshot.condition === HairCondition.DAMAGED) {
+                phase1.steps.push({
+                    stepName: "Крок 1: Ізоляція",
+                    action: "Нанести засіб для ізоляції пористої довжини",
+                    details: "Нанести захисний ліпідний або протеїновий спрей на найслабші зони",
+                    reason: "Захист пошкоджених зон від стікання та агресивного впливу персульфатів."
+                });
             }
             
-            plan.push(`⚠️ ПРОТОКОЛ ЗМИВКИ (ДЕКАПІРУВАННЯ) КОСМЕТИЧНОЇ БАЗИ`);
-            if (isDecapLength) plan.push(`КРОК 1: Нанести порошок на довжину. Пропорція: ${finalLength.ratio} (${finalLength.ox}). Маса пудри: ${massDist.length} гр.`);
-            if (isDecapRoot && !hotRoot) plan.push(`КРОК 2: Нанести порошок на корінь. Пропорція: ${finalRoot.ratio} (${finalRoot.ox}). Маса пудри: ${massDist.root} гр.`);
-            else if (isDecapRoot && hotRoot) plan.push(`КРОК 2: Через 15-20 хв нанести суміш на прикореневу зону. Маса пудри: ${massDist.root} гр.`);
-            plan.push("КРОК 3: Візуальний контроль до досягнення необхідного фону освітлення.");
-            plan.push("КРОК 4 (МИЙКА): Змиття ШГО + Маска для зупинки реакції.");
-            plan.push(`🎯 Прогнозований Фон Освітлення (ФО): Рівень ${targetFOLevel} (${projectedFO})`);
+            let coldOx = finalMid ? finalMid.ox : (finalRoot ? finalRoot.ox : "3%");
+            let coldMass = finalMid ? finalMid.mass : massDist.mid;
+            phase1.steps.push({
+                stepName: "Крок 2: Холодна зона",
+                action: `Нанести пудру. Оксид: ${coldOx}. Маса: ${coldMass} г.`,
+                details: "Відступ від шкіри 1-1.5 см, наносити тільки на відрослу косметику або натуральну смугу.",
+                reason: "Ця зона не має тепла від шкіри, тому потребує підвищеного оксиду для рівномірного фону."
+            });
             
-            let toningRecipe = `Барвник ${inputSnapshot.targetLevel}.${inputSnapshot.targetDirection} + Оксид 1.9% (1:2)`;
-            if (neutralizerMass > 0) {
-                 toningRecipe += ` + Мікстон ${nInfo.id} (${nInfo.color}): ${neutralizerMass} гр`;
-            }
-            plan.push(`КРОК 5: Тонування з урахуванням нейтралізації ФО. Рецепт: ${toningRecipe}.`);
-            
+            let hotOx = finalRoot ? finalRoot.ox : "1.9%";
+            let hotMass = massDist.root;
+            phase1.steps.push({
+                stepName: "Крок 3: Гарячий корінь",
+                action: `Через 15-20 хв нанести суміш на корінь. Оксид: ${hotOx}. Маса: ${hotMass} г.`,
+                details: "Нанесення впритул до шкіри голови.",
+                reason: "Шкіра виділяє тепло, пришвидшуючи реакцію. Потрібен занижений оксид."
+            });
+
+            phase1.steps.push({
+                stepName: "Крок 4: Емульгація довжини",
+                action: "Зволожити та земульгувати залишки на довжину",
+                details: "Емульгувати протягом 2-5 хвилин у мийці перед змиванням. Змити ШГО + Маска.",
+                reason: "Легке очищення фону по довжині без агресивного освітлення."
+            });
+            phases.push(phase1);
             timing = 90 + tMod;
+
+            let phase2 = { phaseName: "Фаза 2: Тонування", steps: [] };
+            phase2.steps.push({
+                stepName: "Тонування фону",
+                action: `Барвник ${inputSnapshot.targetLevel}.${inputSnapshot.targetDirection} + Оксид 1.9% (1:2)`,
+                details: "Нанести на вологе волосся.",
+                reason: "Нейтралізація ФО та надання цільового кольору."
+            });
+            phases.push(phase2);
+
             if (modifiedLength) {
+                modifiedLength.ox = "1.9%";
                 modifiedLength.process = ProcessType.TONING;
                 modifiedLength.dye = `Барвник ${inputSnapshot.targetLevel}.${inputSnapshot.targetDirection}`;
-                modifiedLength.ox = "1.9%";
                 modifiedLength.ratio = "1:2";
-                modifiedLength.mixtone = neutralizerMass > 0 ? `${neutralizerMass} гр | ${nInfo.color} (нейтралізація ФО)` : "Не потрібен";
             }
         }
-        else if (isLPowder && inputSnapshot.lStep >= 4) {
-            plan.push("⚠️ ЕКСТРЕМАЛЬНЕ ОСВІТЛЕННЯ: Водою не змивати!");
-            plan.push(`КРОК 1: Нанести порошок на довжину (відступ 2 см). Маса: ${massDist.length} гр. 40-50 хв.`);
-            plan.push("КРОК 2 (СУХЕ ЗНЯТТЯ): Стягнути відпрацьований порошок сухими серветками.");
-            plan.push(`КРОК 3: ${applyRootText} Маса: ${finalRoot.mass} гр.`);
-            plan.push("КРОК 4 (МИЙКА): Ретельне змиття. ШГО + Маска.");
-            plan.push(`КРОК 5: Тонування підготовленого фону.`);
-            timing = 100 + tMod;
-            modifiedLength.ox = "1.9%"; modifiedLength.dye = `Барвник ${inputSnapshot.targetLevel}.${inputSnapshot.targetDirection}`; modifiedLength.ratio = "1:2"; modifiedLength.process = ProcessType.TONING;
-        } else if (inputSnapshot.lStep <= -2) {
-            let pMass = Math.round(massDist.length * 0.5);
-            let pLevel = Math.min(inputSnapshot.targetLevel + 1, 10);
-            plan.push("⚠️ РІЗКЕ ЗАТЕМНЕННЯ. ОБОВ'ЯЗКОВА ПРЕПІГМЕНТАЦІЯ.");
-            plan.push(`КРОК 1: Змішати барвник ${pLevel}.3 або ${pLevel}.4 з теплою водою (БЕЗ ОКСИДУ). ${pMass} гр. Вбити у довжину.`);
-            plan.push(`КРОК 2: Не змиваючи, ${applyRootText}`);
-            plan.push(`КРОК 3: Нанести рецепт на довжину.`);
-            timing = 40 + tMod;
-            modifiedLength.ox = "1.9%"; modifiedLength.ratio = "1:2";
-        } else if (isRPowder && isLPowder) {
-            plan.push(`КРОК 1: Нанести порошкову змивку на довжину. Маса: ${massDist.length} гр.`);
-            plan.push("КРОК 2: Видалення відпрацьованої маси з довжини серветкою (без миття).");
-            plan.push(`КРОК 3: ${applyRootText}`);
-            plan.push("КРОК 4 (МИЙКА): Обов'язково ШГО + Маска для зупинки персульфатів.");
-            plan.push(`КРОК 5: Нанести тонування на вологе підготовлене полотно.`);
+        else if (isDecapRoot || isDecapLength) {
+            let phase1 = { phaseName: "Фаза 1: Змивка (Декапірування)", steps: [] };
+            if (isDecapLength) {
+                phase1.steps.push({ stepName: "Довжина", action: `Пудра + ${finalLength.ox} (Пропорція ${finalLength.ratio})`, details: `Маса пудри: ${massDist.length} гр`, reason: "Видалення косметичного пігменту" });
+            }
+            if (isDecapRoot && !hotRoot) {
+                phase1.steps.push({ stepName: "Корінь", action: `Пудра + ${finalRoot.ox} (Пропорція ${finalRoot.ratio})`, details: `Маса пудри: ${massDist.root} гр`, reason: "Змивка відрослої зони" });
+            } else if (isDecapRoot && hotRoot) {
+                phase1.steps.push({ stepName: "Гарячий корінь", action: `Через 15 хв пудра + ${finalRoot.ox}`, details: `Маса пудри: ${massDist.root} гр`, reason: "Захист від переосвітлення шкірою" });
+            }
+            phase1.steps.push({ stepName: "Візуальний контроль", action: "Змити ШГО + маска", details: "Змиття після досягнення ФО", reason: "Зупинка лужної реакції персульфатів" });
+            phases.push(phase1);
+
+            let phase2 = { phaseName: "Фаза 2: Тонування", steps: [] };
+            let toningRecipe = `Барвник ${inputSnapshot.targetLevel}.${inputSnapshot.targetDirection} + Оксид 1.9%`;
+            phase2.steps.push({ stepName: "Тонування", action: toningRecipe, details: "Пропорція 1:2 на вологе", reason: "Нейтралізація ФО" });
+            phases.push(phase2);
+
             timing = 90 + tMod;
-            modifiedLength.ox = "1.9%"; modifiedLength.dye = `Барвник ${inputSnapshot.targetLevel}.${inputSnapshot.targetDirection}`; modifiedLength.ratio = "1:2"; modifiedLength.process = ProcessType.TONING;
-        } else if (isRPowder && !isLPowder) {
-            plan.push(`КРОК 1: ${hotRoot ? applyRootText : "Нанести порошок ТІЛЬКИ на корінь. Крайову НЕ ЧІПАТИ."}`);
-            if (!hotRoot) plan.push("КРОК 2: Через 15-20 хвилин нанести порошок на крайову лінію.");
-            if (inputSnapshot.baseType === BaseType.COSMETIC) plan.push("КРОК 3 (Підчищення): Змочити довжину. Стягнути порошок з кореня на довжину на 1-5 хв.");
-            plan.push("КРОК 4 (МИЙКА): Змиття ШГО + Маска.");
-            plan.push(`КРОК 5: Нанести тонування на вологе волосся.`);
-            plan.push("⏳ ПРАВИЛО: Прочісувати кожні 5-10 хв. При ознаках затемнення кінців — негайно змивати!");
-            timing = 70 + tMod;
-            modifiedLength.ox = "1.9%"; modifiedLength.ratio = "1:2";
-        } else {
-            plan.push(`КРОК 1: ${applyRootText}`);
-            plan.push(`КРОК 2: Нанести суміш на довжину.`);
-            if (isCold) plan.push("⚠️ ЗАХИСТ КОНТУРУ: На крайову лінію наносити суміш в останню чергу (за 10-15 хв до кінця).");
-            plan.push("КРОК 3 (Емульгація): За 5-10 хв до кінця зволожити волосся та земульгувати.");
-            timing = finalRoot && finalRoot.process === ProcessType.SPECIAL_BLOND ? 50 : 40 + tMod;
+            if (modifiedLength) {
+                modifiedLength.process = ProcessType.TONING; modifiedLength.dye = `Барвник ${inputSnapshot.targetLevel}.${inputSnapshot.targetDirection}`; modifiedLength.ox = "1.9%"; modifiedLength.ratio = "1:2";
+            }
+        }
+        else {
+            let p1 = { phaseName: "Фаза 1: Основне фарбування", steps: [] };
+            p1.steps.push({ stepName: "Корінь", action: `Нанести рецепт на корінь`, details: "Рівномірне нанесення", reason: "Фарбування відростання" });
+            p1.steps.push({ stepName: "Довжина", action: "Нанести суміш на довжину", details: "Полотно волосся", reason: "Забарвлення довжини" });
+            phases.push(p1);
+            timing = 40 + tMod;
         }
 
-        // ГЕНЕРАЦІЯ REASONS (ПОЯСНЕННЯ ДЛЯ UI)
         let reasons = {};
         if (finalLength) {
             reasons.ox = `Оксид ${finalLength.ox} обрано з урахуванням вихідної бази, цільового рівня та стану волосся.`;
-            reasons.mass = `Маса ${massDist.length}г розрахована за формулою: базова маса * густота * довжина.`;
-            if (modifiedLength && modifiedLength.process === ProcessType.TONING) {
-                reasons.mixtone = `Мікстон розраховано за 'Правилом 11' для нейтралізації прогнозованого фону освітлення.`;
-            }
+            reasons.mass = `Маса ${massDist.length}г розрахована: базова маса * густота * довжина.`;
+            if (modifiedLength && modifiedLength.process === ProcessType.TONING) reasons.mixtone = "Мікстон розраховано за Правилом 11.";
         }
-        if (finalRoot) {
-            reasons.rootOx = `Оксид для кореня ${finalRoot.ox} обрано з огляду на сивину та кроки освітлення.`;
-        }
+        if (finalRoot) reasons.rootOx = `Оксид ${finalRoot.ox} обрано з огляду на сивину та кроки освітлення.`;
 
         return Object.freeze({
             ...initState,
-            warnings: [...localWarnings, ...rootResult.warnings],
-            diagnostics: [...localDiagnostics, ...lengthResult.diagnostics],
+            warnings: [...localWarnings],
+            diagnostics: [...localDiagnostics],
             rootRec: finalRoot ? Object.freeze(finalRoot) : null,
             midRec: finalMid ? Object.freeze(finalMid) : null,
             lenRec: modifiedLength ? Object.freeze(modifiedLength) : null,
-            plan: plan,
+            phases: phases,
             timing: timing,
             reasons: reasons
         });
@@ -648,34 +496,29 @@ class MathAgent {
 // --- MASTER NODE ---
 class MasterNode {
     constructor() {
-        this.agents = {
-            chemist: new ChemistAgent(),
-            math: new MathAgent(),
-            technologist: new TechnologistAgent()
-        };
+        this.agents = { chemist: new ChemistAgent(), math: new MathAgent(), technologist: new TechnologistAgent() };
     }
 
     process(rawInput) {
         try {
-            // Маппінг сирих даних у заморожений Snapshot
             const snapshot = InputMapper.buildSnapshot(rawInput);
-            
-            // 1. Спочатку перевірка Агентом-Хіміком
             const chemCheck = this.agents.chemist.validate(snapshot);
             if (chemCheck.status === "BLOCKED") return this.terminateWithRedStatus(chemCheck);
 
-            // 2. Якщо хімія ок, передаємо Математику (віддає заморожений стан)
             let state = this.agents.math.process(snapshot);
-            if (state.status === "FATAL_ERROR" || state.status === "BLOCKED") {
-                return this.terminateWithRedStatus(state);
-            }
+            if (state.status === "FATAL_ERROR" || state.status === "BLOCKED") return this.terminateWithRedStatus(state);
             
-            // 3. Формування регламенту Технологом (через імутабельність створюємо новий об'єкт)
             const techData = this.agents.technologist.generateRegulation(snapshot, state);
             
+            let techPhase = null;
+            if (techData.protocolSteps && techData.protocolSteps.length > 0) {
+                techPhase = { phaseName: "Попередня підготовка (Технолог)", steps: techData.protocolSteps };
+            }
+            let newPhases = techPhase ? [techPhase, ...state.phases] : [...state.phases];
+
             return Object.freeze({
                 ...state,
-                plan: [...techData.protocol, ...state.plan],
+                phases: newPhases,
                 underTheHood: [...state.underTheHood, ...techData.underTheHood],
                 warnings: [...state.warnings, ...techData.warnings],
                 diagnostics: [...state.diagnostics, ...techData.diagnostics],
@@ -684,21 +527,12 @@ class MasterNode {
 
         } catch (e) {
             console.error("Caught exception:", e);
-            return this.terminateWithRedStatus({
-                status: "FATAL_ERROR",
-                stages: [{ title: "КРИТИЧНА ПОМИЛКА АГЕНТА", text: e.message }]
-            });
+            return this.terminateWithRedStatus({ status: "FATAL_ERROR", stages: [{ title: "КРИТИЧНА ПОМИЛКА", text: e.message }] });
         }
     }
 
     terminateWithRedStatus(errorState) {
-        console.error("MasterNode: Process terminated with error status.");
-        return Object.freeze({
-            ...errorState,
-            status: errorState.status || "FATAL_ERROR",
-            plan: ["ЗУПИНЕНО: Перевірте діагностику помилок."],
-            timing: 0
-        });
+        return Object.freeze({ ...errorState, status: errorState.status || "FATAL_ERROR", phases: [], timing: 0 });
     }
 }
 
