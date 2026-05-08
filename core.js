@@ -207,7 +207,7 @@ class MathAgent {
 
     calculateMass(snapshot) {
         const ROOT_MIN_GRAMS = 15; 
-        const baseMass = 60; // Hardcoded default, mapped similarly
+        const baseMass = 60; 
         const densityMult = snapshot.hairDensity === Density.THIN ? 0.8 : (snapshot.hairDensity === Density.THICK ? 1.3 : 1.0);
         let totalMass = Math.round(baseMass * densityMult);
         const isMidBand = snapshot.rootLength > 2 && snapshot.rStep > 0;
@@ -286,15 +286,29 @@ class MathAgent {
         }
 
         let diagnostics = [];
-        if (lenRec && lenRec.process === ProcessType.POWDER && [HairCondition.POROUS, HairCondition.DAMAGED].includes(condition)) {
-            lenRec = { ...lenRec, ox: "1.5%", ratio: "1:4" };
-            diagnostics.push("Пошкоджені кінці: примусове зниження оксиду порошку до 1.5% і пропорції 1:4.");
+        if (lenRec && [HairCondition.POROUS, HairCondition.DAMAGED].includes(condition)) {
+            let isPowd = lenRec.process === ProcessType.POWDER || lenRec.process === ProcessType.DECAPITATION;
+            if (lengthLevel >= 9 && (isPowd || (snapshot.rStep > 0 && snapshot.rootLevel <= 5))) {
+                lenRec = { ...lenRec, process: "Емульгація", dye: "Відпрацьована суміш", ox: "-", ratio: "-", mass: 0 };
+                diagnostics.push("ПРАВИЛО 2: Пориста довжина 9-10 УГТ — свіжа пудра або агресивна фарба заборонена. Призначено емульгацію.");
+            } else if (isPowd) {
+                lenRec = { ...lenRec, ox: "1.5%", ratio: "1:4" };
+                diagnostics.push("Пошкоджені кінці: примусове зниження оксиду порошку до 1.5% і пропорції 1:4.");
+            }
         }
         return { recipe: lenRec, diagnostics };
     }
 
     applyGreyLogic(recipe, snapshot) {
         if (!recipe) return null;
+        let isPowder = recipe.process === ProcessType.POWDER || recipe.process === ProcessType.DECAPITATION;
+        
+        // ПРАВИЛО 4: Игнорирование седины при пудре
+        if (isPowder && snapshot.grey > 0) {
+            recipe._greyIgnored = true;
+            return { ...recipe };
+        }
+
         if (snapshot.grey >= 15 && recipe.process === ProcessType.PERMANENT) {
             let dLevel = snapshot.targetLevel > 1 ? snapshot.targetLevel - 1 : 1;
             let baseRatio = (snapshot.grey >= 40 && snapshot.grey < 60) ? 0.5 : (snapshot.grey < 40 ? 1/3 : 2/3);
@@ -315,7 +329,7 @@ class MathAgent {
         if (!recipe) return null;
         const cond = zone === 'root' ? HairCondition.HEALTHY : snapshot.condition;
         let pType = String(recipe.process);
-        if (pType === ProcessType.POWDER || pType === ProcessType.DECAPITATION) return "Не додається (Нейтралізація на етапі тонування)";
+        if (pType === ProcessType.POWDER || pType === ProcessType.DECAPITATION || pType === "Емульгація") return "Не додається (Нейтралізація на етапі тонування)";
         
         let rule11 = 11 - snapshot.targetLevel;
         if (rule11 <= 0) return `Не потрібен (Рівень ${snapshot.targetLevel})`;
@@ -372,12 +386,16 @@ class MathAgent {
         const finalMid = midResult ? this.applyGreyLogic(midResult, inputSnapshot) : null;
         if (finalMid) finalMid.mixtone = this.calculateMixtone(finalMid, inputSnapshot, 'root');
 
+        if (finalRoot && finalRoot._greyIgnored) {
+            localDiagnostics.push("ПРАВИЛО 4: Сивина ігнорується при роботі з пудрою (меланін знищується повністю).");
+        }
+
         let phases = [];
         let timing = 0;
         let tMod = (inputSnapshot.thickness === Thickness.THIN) ? -10 : (inputSnapshot.thickness === Thickness.THICK ? 10 : 0);
         
-        let isLPowder = finalLength && finalLength.process === ProcessType.POWDER;
-        let isRPowder = finalRoot && finalRoot.process === ProcessType.POWDER;
+        let isLPowder = finalLength && (finalLength.process === ProcessType.POWDER || finalLength.process === ProcessType.DECAPITATION || finalLength.process === "Емульгація");
+        let isRPowder = finalRoot && (finalRoot.process === ProcessType.POWDER || finalRoot.process === ProcessType.DECAPITATION);
         const isDecapRoot = finalRoot && finalRoot.process === ProcessType.DECAPITATION;
         const isDecapLength = finalLength && finalLength.process === ProcessType.DECAPITATION;
         const isPowderBase = isLPowder || isRPowder || isDecapRoot || isDecapLength;
@@ -397,40 +415,66 @@ class MathAgent {
                 });
             }
             
-            let coldOx = finalMid ? finalMid.ox : (finalRoot ? finalRoot.ox : "3%");
+            // ПРАВИЛО 1: Оксиды для MID-BAND
+            let coldOx = "3%";
+            if (finalMid && (finalMid.ox === "1.5%" || finalMid.ox === "1.9%")) coldOx = finalMid.ox;
+            else coldOx = "1.9%"; // override if 6% or 9% was passed
+            
             let coldMass = finalMid ? finalMid.mass : massDist.mid;
             phase1.steps.push({
-                stepName: "Крок 2: Холодна зона",
-                action: `Нанести пудру. Оксид: ${coldOx}. Маса: ${coldMass} г.`,
-                details: "Відступ від шкіри 1-1.5 см, наносити тільки на відрослу косметику або натуральну смугу.",
-                reason: "Ця зона не має тепла від шкіри, тому потребує підвищеного оксиду для рівномірного фону."
+                stepName: "Крок 2: Холодна зона (фольга/термопапір)",
+                action: `Нанести пудру. Оксид: ${coldOx}. Маса: ${coldMass} г. Пропорція 1:3`,
+                details: "Відступ від шкіри 1-1.5 см, наносити тільки на відрослу косметику або натуральну смугу (напівзакритий режим).",
+                reason: "Низький відсоток + ізоляція зберігають структуру товстого/густого волосся, даючи чистий фон без пересвіту."
             });
             
-            let hotOx = finalRoot ? finalRoot.ox : "1.9%";
+            let hotOx = "1.5%";
             let hotMass = massDist.root;
             phase1.steps.push({
                 stepName: "Крок 3: Гарячий корінь",
-                action: `Через 15-20 хв нанести суміш на корінь. Оксид: ${hotOx}. Маса: ${hotMass} г.`,
+                action: `Через 15-20 хв нанести суміш на корінь. Оксид: ${hotOx}. Маса: ${hotMass} г. Пропорція 1:2`,
                 details: "Нанесення впритул до шкіри голови.",
-                reason: "Шкіра виділяє тепло, пришвидшуючи реакцію. Потрібен занижений оксид."
+                reason: "Шкіра виділяє тепло, пришвидшуючи реакцію. Застосовано мінімальний оксид для безпеки."
             });
 
-            phase1.steps.push({
-                stepName: "Крок 4: Емульгація довжини",
-                action: "Зволожити та земульгувати залишки на довжину",
-                details: "Емульгувати протягом 2-5 хвилин у мийці перед змиванням. Змити ШГО + Маска.",
-                reason: "Легке очищення фону по довжині без агресивного освітлення."
-            });
+            if (finalLength && finalLength.process === "Емульгація") {
+                phase1.steps.push({
+                    stepName: "Крок 4: Емульгація довжини",
+                    action: "Зволоження довжини водою та емульгація відпрацьованої суміші з коренів",
+                    details: "Емульгувати протягом 3-10 хвилин у мийці перед змиванням. Змити ШГО + Маска.",
+                    reason: "ПРАВИЛО 2: Для пористої довжини на 9-10 УГТ свіжа пудра заборонена. М'яке очищення фону."
+                });
+            } else {
+                phase1.steps.push({
+                    stepName: "Крок 4: Освітлення / Емульгація довжини",
+                    action: "Нанести суміш на довжину або земульгувати",
+                    details: "Змити ШГО + Маска після досягнення ФО.",
+                    reason: "Залежить від стану довжини."
+                });
+            }
             phases.push(phase1);
             timing = 90 + tMod;
 
             let phase2 = { phaseName: "Фаза 2: Тонування", steps: [] };
-            phase2.steps.push({
-                stepName: "Тонування фону",
-                action: `Барвник ${inputSnapshot.targetLevel}.${inputSnapshot.targetDirection} + Оксид 1.9% (1:2)`,
-                details: "Нанести на вологе волосся.",
-                reason: "Нейтралізація ФО та надання цільового кольору."
-            });
+            
+            // ПРАВИЛО 3: Колірна лазня
+            let isCoolBlonde = inputSnapshot.targetLevel >= 10 && ['1', '11'].includes(inputSnapshot.targetDirection);
+            if (isCoolBlonde && inputSnapshot.condition === HairCondition.POROUS) {
+                phase2.steps.push({
+                    stepName: "Колірна лазня (Color Bath)",
+                    action: `Барвник ${inputSnapshot.targetLevel}.${inputSnapshot.targetDirection} + Оксид 1.5% або 1.9% + Шампунь (1:1:1)`,
+                    details: "Нанести на вологе волосся. Візуальний контроль.",
+                    reason: "ПРАВИЛО 3: Запобігання провалу пігменту на пористих ділянках завдяки розбавленню щільності шампунем."
+                });
+                localDiagnostics.push("ПРАВИЛО 3: Активовано протокол 'Колірна лазня' для пористого холодного блонда.");
+            } else {
+                phase2.steps.push({
+                    stepName: "Тонування фону",
+                    action: `Барвник ${inputSnapshot.targetLevel}.${inputSnapshot.targetDirection} + Оксид 1.9% (1:2)`,
+                    details: "Нанести на вологе волосся.",
+                    reason: "Нейтралізація ФО та надання цільового кольору."
+                });
+            }
             phases.push(phase2);
 
             if (modifiedLength) {
@@ -440,22 +484,35 @@ class MathAgent {
                 modifiedLength.ratio = "1:2";
             }
         }
-        else if (isDecapRoot || isDecapLength) {
-            let phase1 = { phaseName: "Фаза 1: Змивка (Декапірування)", steps: [] };
-            if (isDecapLength) {
-                phase1.steps.push({ stepName: "Довжина", action: `Пудра + ${finalLength.ox} (Пропорція ${finalLength.ratio})`, details: `Маса пудри: ${massDist.length} гр`, reason: "Видалення косметичного пігменту" });
+        else if (isDecapRoot || isDecapLength || isLPowder || isRPowder) {
+            let phase1 = { phaseName: "Фаза 1: Змивка (Декапірування / Освітлення)", steps: [] };
+            if (finalLength && finalLength.process === "Емульгація") {
+                phase1.steps.push({ stepName: "Довжина", action: "Емульгація", details: "Зволоження довжини водою та емульгація відпрацьованої суміші з коренів (3-10 хв)", reason: "ПРАВИЛО 2: Пориста довжина 9-10 УГТ" });
+            } else if (isLPowder || isDecapLength) {
+                phase1.steps.push({ stepName: "Довжина", action: `Пудра + ${finalLength.ox} (Пропорція ${finalLength.ratio})`, details: `Маса пудри: ${massDist.length} гр`, reason: "Освітлення / Видалення косметичного пігменту" });
             }
-            if (isDecapRoot && !hotRoot) {
+            
+            if ((isRPowder || isDecapRoot) && !hotRoot) {
                 phase1.steps.push({ stepName: "Корінь", action: `Пудра + ${finalRoot.ox} (Пропорція ${finalRoot.ratio})`, details: `Маса пудри: ${massDist.root} гр`, reason: "Змивка відрослої зони" });
-            } else if (isDecapRoot && hotRoot) {
+            } else if ((isRPowder || isDecapRoot) && hotRoot) {
                 phase1.steps.push({ stepName: "Гарячий корінь", action: `Через 15 хв пудра + ${finalRoot.ox}`, details: `Маса пудри: ${massDist.root} гр`, reason: "Захист від переосвітлення шкірою" });
             }
             phase1.steps.push({ stepName: "Візуальний контроль", action: "Змити ШГО + маска", details: "Змиття після досягнення ФО", reason: "Зупинка лужної реакції персульфатів" });
             phases.push(phase1);
 
             let phase2 = { phaseName: "Фаза 2: Тонування", steps: [] };
-            let toningRecipe = `Барвник ${inputSnapshot.targetLevel}.${inputSnapshot.targetDirection} + Оксид 1.9%`;
-            phase2.steps.push({ stepName: "Тонування", action: toningRecipe, details: "Пропорція 1:2 на вологе", reason: "Нейтралізація ФО" });
+            let isCoolBlonde = inputSnapshot.targetLevel >= 10 && ['1', '11'].includes(inputSnapshot.targetDirection);
+            if (isCoolBlonde && inputSnapshot.condition === HairCondition.POROUS) {
+                phase2.steps.push({
+                    stepName: "Колірна лазня",
+                    action: `Барвник ${inputSnapshot.targetLevel}.${inputSnapshot.targetDirection} + Оксид 1.5/1.9% + Шампунь (1:1:1)`,
+                    details: "На вологе волосся",
+                    reason: "Запобігання провалу пігменту на пористих ділянках завдяки розбавленню щільності шампунем"
+                });
+            } else {
+                let toningRecipe = `Барвник ${inputSnapshot.targetLevel}.${inputSnapshot.targetDirection} + Оксид 1.9%`;
+                phase2.steps.push({ stepName: "Тонування", action: toningRecipe, details: "Пропорція 1:2 на вологе", reason: "Нейтралізація ФО" });
+            }
             phases.push(phase2);
 
             timing = 90 + tMod;
