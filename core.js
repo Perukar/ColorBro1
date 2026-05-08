@@ -17,12 +17,8 @@ class InputMapper {
     static mapCondition(raw) {
         if (raw === 'здоровые') return HairCondition.HEALTHY;
         if (raw === 'пористые' || raw === 'пористі') return HairCondition.POROUS;
-        if (raw === 'поврежденные') return HairCondition.DAMAGED; // Maps to DAMAGED for now, or maybe POROUS? The user didn't specify intermediate, but I'll map to DAMAGED. Actually, let's treat it as DAMAGED, and "сильно поврежденные" as DAMAGED too, but I'll add a new enum or just treat both as DAMAGED. Let's just use DAMAGED for "сильно поврежденные".
+        if (raw === 'поврежденные') return HairCondition.DAMAGED; // Maps to DAMAGED
         if (raw === 'сильно поврежденные') return HairCondition.DAMAGED;
-        
-        // Wait, the user asked for: здоровые, пористые, поврежденные, сильно поврежденные.
-        // Let's refine.
-        if (raw === 'поврежденные') return HairCondition.POROUS; // Often treated similarly to porous. Or I can add a new condition.
         throw new Error(`Unknown condition: ${raw}`);
     }
     static mapBaseType(raw) {
