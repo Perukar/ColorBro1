@@ -2,7 +2,7 @@
   "name": "My Barber UA",
   "short_name": "Barber UA",
   "description": "Професійний колористичний калькулятор для майстрів",
-  "start_url": "/ColorBro1/colorist.html",
+  "start_url": "/ColorBro1/index.html",
   "scope": "/ColorBro1/",
   "display": "standalone",
   "background_color": "#0d0d0d",
