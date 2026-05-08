@@ -1,0 +1,24 @@
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #1e1e1e; color: #e0e0e0; margin: 0; padding: 15px; }
+        h2 { text-align: center; color: #b0bec5; font-size: 20px; text-transform: uppercase; letter-spacing: 1px; }
+        .block { background: #2b2b2b; padding: 15px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); border-left: 4px solid #4db6ac; }
+        .block-title { font-weight: bold; margin-bottom: 10px; color: #80cbc4; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+        label { display: block; font-size: 13px; font-weight: bold; margin-top: 10px; color: #b0bec5; }
+        select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #424242; border-radius: 5px; font-size: 16px; background: #333; color: #e0e0e0; -webkit-appearance: none; appearance: none; }
+        .hidden-select { display: none; }
+        button { width: 100%; padding: 15px; background-color: #d32f2f; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; text-transform: uppercase; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        button:active { background-color: #b71c1c; transform: translateY(2px); }
+        #output { margin-top: 20px; }
+        .alert { background-color: #3a1a1a; padding: 15px; border: 2px solid #d32f2f; border-radius: 5px; color: #ffcdd2; }
+        .success { background-color: #1a3a1a; padding: 15px; border: 2px solid #4caf50; border-radius: 5px; color: #c8e6c9; }
+        .warning { color: #ffcc02; font-weight: bold; }
+        ul { padding-left: 20px; margin: 5px 0; }
+        li { margin-bottom: 5px; }
+
+        /* Custom Level Grid */
+        .level-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 8px; }
+        .level-tile { background: #333; border: 2px solid #424242; border-radius: 8px; padding: 8px; text-align: center; cursor: pointer; transition: all 0.2s ease; }
+        .level-tile:hover { border-color: #616161; }
+        .level-tile.active { border-color: #4db6ac; box-shadow: 0 0 0 2px #4db6ac inset; background: #222; }
+        .tile-preview { height: 24px; border-radius: 4px; margin-bottom: 6px; background: linear-gradient(135deg, #424242, #616161); }
+        .tile-level { font-size: 18px; font-weight: bold; color: #e0e0e0; }
+        .tile-note { font-size: 10px; color: #8c8c8c; margin-top: 4px; }

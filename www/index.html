@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Master Colorist PRO</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <h2>Colorist Auto-Pilot</h2>
+
+    <div class="block">
+        <div class="block-title">Блок 1: Структура</div>
+        <label>Історія волосся:</label>
+        <select id="history"><option value="натуральні">Натуральні</option><option value="косметический пигмент">Косметичний пігмент</option><option value="осветление">Висвітлення</option><option value="хна / металл">Хна / Метали</option></select>
+        <label>Стан довжини:</label>
+        <select id="condition"><option value="здоровые">Здорові</option><option value="пористі">Пористі</option><option value="сильно поврежденные">Сильно пошкоджені</option></select>
+        <label>Товщина:</label>
+        <select id="thickness"><option value="средние">Середні</option><option value="тонкие">Тонкі</option><option value="толстые">Товсті</option></select>
+        <label>Густота:</label>
+        <select id="density"><option value="средние">Середні</option><option value="редкие">Рідкі</option><option value="густые">Густі</option></select>
+        <label>Довжина:</label>
+        <select id="length"><option value="средние">Середні</option><option value="короткие">Короткі</option><option value="длинные">Довгі</option></select>
+        <label>Сивина (%):</label>
+        <select id="grey_percent"><option value="0">0%</option><option value="10">10%</option><option value="30">30%</option><option value="50">50%</option><option value="70">70%</option><option value="100">100%</option></select>
+        <label>Тип сивини:</label>
+        <select id="grey_type"><option value="мягкая">М'яка</option><option value="стекловидная">Скловидна</option></select>
+    </div>
+
+    <div class="block">
+        <div class="block-title">Блок 2: Поточна база</div>
+        <label>Рівень кореня (1-10):</label>
+        <select id="root_level">
+            <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5" selected>5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+        </select>
+        <label class="warning">Довжина відростання (см):</label>
+        <select id="root_length">
+            <option value="1">До 1.5 см (Норма)</option>
+            <option value="2">1.5 - 2.0 см (Норма)</option>
+            <option value="3">3 см (Гарячий корінь)</option>
+            <option value="4">4 см (Гарячий корінь)</option>
+            <option value="5">5+ см (Критично)</option>
+        </select>
+        <label>Рівень довжини (1-10):</label>
+        <select id="length_level">
+            <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9" selected>9</option><option value="10">10</option>
+        </select>
+        <label>Тип бази довжини:</label>
+        <select id="base_type"><option value="Косметична">Косметична</option><option value="Натуральна">Натуральна</option></select>
+    </div>
+
+    <div class="block">
+        <div class="block-title">Блок 3: Ціль</div>
+        <label>Бажаний рівень (1-12):</label>
+        <select id="target_level">
+            <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9" selected>9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option>
+        </select>
+        <label>Бажаний відтінок:</label>
+        <select id="target_direction">
+            <option value="0">0 - Натуральний</option>
+            <option value="1">1 - Голубий (Пепел)</option>
+            <option value="11">11 - Інтенсивно-голубий</option>
+            <option value="16">16 - Слонова кістка (Фіолетово-голубий)</option>
+            <option value="2">2 - Перлинний (Блідо-фіолетовий)</option>
+            <option value="3">3 - Золотистий (Жовтий)</option>
+            <option value="32">32 - Світлий мед (Жовто-фіолетовий)</option>
+            <option value="4">4 - Мідний (Оранжевий)</option>
+            <option value="5">5 - Махагон (Червоно-фіолетовий)</option>
+            <option value="6">6 - Червоний</option>
+            <option value="7">7 - Фіолетовий</option>
+            <option value="81">81 - Сріблястий</option>
+            <option value="89">89 - Жемчужно-сандре</option>
+        </select>
+    </div>
+
+    <button onclick="calculateProtocol()">ЗГЕНЕРУВАТИ ПРОТОКОЛ</button>
+
+    <div id="output"></div>
+
+    <script src="core.js"></script>
+</body>
+</html>

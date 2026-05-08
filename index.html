@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Colorist PRO</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <h2>Colorist Auto-Pilot</h2>
+
+    <div class="block">
+        <div class="block-title">Блок 1: Структура</div>
+        <label>Історія волосся:</label>
+        <select id="history"><option value="натуральні">Натуральні</option><option value="косметический пигмент">Косметичний пігмент</option><option value="осветление">Висвітлення</option><option value="хна / металл">Хна / Метали</option></select>
+        <label>Стан довжини:</label>
+        <select id="condition"><option value="здоровые">Здорові</option><option value="пористі">Пористі</option><option value="сильно поврежденные">Сильно пошкоджені</option></select>
+        <label>Товщина:</label>
+        <select id="thickness"><option value="средние">Середні</option><option value="тонкие">Тонкі</option><option value="толстые">Товсті</option></select>
+        <label>Густота:</label>
+        <select id="density"><option value="средние">Середні</option><option value="редкие">Рідкі</option><option value="густые">Густі</option></select>
+        <label>Довжина:</label>
+        <select id="length"><option value="средние">Середні</option><option value="короткие">Короткі</option><option value="длинные">Довгі</option></select>
+        <label>Сивина (%):</label>
+        <select id="grey_percent"><option value="0">0%</option><option value="10">10%</option><option value="30">30%</option><option value="50">50%</option><option value="70">70%</option><option value="100">100%</option></select>
+        <label>Тип сивини:</label>
+        <select id="grey_type"><option value="мягкая">М'яка</option><option value="стекловидная">Скловидна</option></select>
+    </div>
+
+    <div class="block">
+        <div class="block-title">Блок 2: Поточна база</div>
+        <label>Рівень кореня (1-10):</label>
+        <select id="root_level" class="hidden-select">
+            <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5" selected>5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+        </select>
+        <div class="level-grid" data-target="root_level">
+            <div class="level-tile" data-value="1"><div class="tile-preview"></div><div class="tile-level">1</div><div class="tile-note">Чорний</div></div>
+            <div class="level-tile" data-value="2"><div class="tile-preview"></div><div class="tile-level">2</div><div class="tile-note">Чорний</div></div>
+            <div class="level-tile" data-value="3"><div class="tile-preview"></div><div class="tile-level">3</div><div class="tile-note">Коричневий</div></div>
+            <div class="level-tile" data-value="4"><div class="tile-preview"></div><div class="tile-level">4</div><div class="tile-note">Красно-коричневий</div></div>
+            <div class="level-tile" data-value="5"><div class="tile-preview"></div><div class="tile-level">5</div><div class="tile-note">Красно-оранжевий</div></div>
+            <div class="level-tile" data-value="6"><div class="tile-preview"></div><div class="tile-level">6</div><div class="tile-note">Оранжевий</div></div>
+            <div class="level-tile" data-value="7"><div class="tile-preview"></div><div class="tile-level">7</div><div class="tile-note">Жовтий</div></div>
+            <div class="level-tile" data-value="8"><div class="tile-preview"></div><div class="tile-level">8</div><div class="tile-note">Оранжево-жовтий</div></div>
+            <div class="level-tile" data-value="9"><div class="tile-preview"></div><div class="tile-level">9</div><div class="tile-note">Жовто-оранжевий</div></div>
+            <div class="level-tile" data-value="10"><div class="tile-preview"></div><div class="tile-level">10</div><div class="tile-note">Світло-жовтий</div></div>
+        </div>
+        <label class="warning">Довжина відростання (см):</label>
+        <select id="root_length">
+            <option value="1">До 1.5 см (Норма)</option>
+            <option value="2">1.5 - 2.0 см (Норма)</option>
+            <option value="3">3 см (Гарячий корінь)</option>
+            <option value="4">4 см (Гарячий корінь)</option>
+            <option value="5">5+ см (Критично)</option>
+        </select>
+        <label>Рівень довжини (1-10):</label>
+        <select id="length_level" class="hidden-select">
+            <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9" selected>9</option><option value="10">10</option>
+        </select>
+        <div class="level-grid" data-target="length_level">
+            <div class="level-tile" data-value="1"><div class="tile-preview"></div><div class="tile-level">1</div><div class="tile-note">Чорний</div></div>
+            <div class="level-tile" data-value="2"><div class="tile-preview"></div><div class="tile-level">2</div><div class="tile-note">Чорний</div></div>
+            <div class="level-tile" data-value="3"><div class="tile-preview"></div><div class="tile-level">3</div><div class="tile-note">Коричневий</div></div>
+            <div class="level-tile" data-value="4"><div class="tile-preview"></div><div class="tile-level">4</div><div class="tile-note">Красно-коричневий</div></div>
+            <div class="level-tile" data-value="5"><div class="tile-preview"></div><div class="tile-level">5</div><div class="tile-note">Красно-оранжевий</div></div>
+            <div class="level-tile" data-value="6"><div class="tile-preview"></div><div class="tile-level">6</div><div class="tile-note">Оранжевий</div></div>
+            <div class="level-tile" data-value="7"><div class="tile-preview"></div><div class="tile-level">7</div><div class="tile-note">Жовтий</div></div>
+            <div class="level-tile" data-value="8"><div class="tile-preview"></div><div class="tile-level">8</div><div class="tile-note">Оранжево-жовтий</div></div>
+            <div class="level-tile" data-value="9"><div class="tile-preview"></div><div class="tile-level">9</div><div class="tile-note">Жовто-оранжевий</div></div>
+            <div class="level-tile" data-value="10"><div class="tile-preview"></div><div class="tile-level">10</div><div class="tile-note">Світло-жовтий</div></div>
+        </div>
+        <label>Тип бази довжини:</label>
+        <select id="base_type"><option value="Косметична">Косметична</option><option value="Натуральна">Натуральна</option></select>
+    </div>
+
+    <div class="block">
+        <div class="block-title">Блок 3: Ціль</div>
+        <label>Бажаний рівень (1-12):</label>
+        <select id="target_level" class="hidden-select">
+            <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9" selected>9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option>
+        </select>
+        <div class="level-grid" data-target="target_level">
+            <div class="level-tile" data-value="1"><div class="tile-preview"></div><div class="tile-level">1</div><div class="tile-note">Чорний</div></div>
+            <div class="level-tile" data-value="2"><div class="tile-preview"></div><div class="tile-level">2</div><div class="tile-note">Чорний</div></div>
+            <div class="level-tile" data-value="3"><div class="tile-preview"></div><div class="tile-level">3</div><div class="tile-note">Коричневий</div></div>
+            <div class="level-tile" data-value="4"><div class="tile-preview"></div><div class="tile-level">4</div><div class="tile-note">Красно-коричневий</div></div>
+            <div class="level-tile" data-value="5"><div class="tile-preview"></div><div class="tile-level">5</div><div class="tile-note">Красно-оранжевий</div></div>
+            <div class="level-tile" data-value="6"><div class="tile-preview"></div><div class="tile-level">6</div><div class="tile-note">Оранжевий</div></div>
+            <div class="level-tile" data-value="7"><div class="tile-preview"></div><div class="tile-level">7</div><div class="tile-note">Жовтий</div></div>
+            <div class="level-tile" data-value="8"><div class="tile-preview"></div><div class="tile-level">8</div><div class="tile-note">Оранжево-жовтий</div></div>
+            <div class="level-tile" data-value="9"><div class="tile-preview"></div><div class="tile-level">9</div><div class="tile-note">Жовто-оранжевий</div></div>
+            <div class="level-tile" data-value="10"><div class="tile-preview"></div><div class="tile-level">10</div><div class="tile-note">Світло-жовтий</div></div>
+        </div>
+        <label>Бажаний відтінок:</label>
+        <select id="target_direction">
+            <option value="0">0 - Натуральний</option>
+            <option value="1">1 - Голубий (Пепел)</option>
+            <option value="11">11 - Інтенсивно-голубий</option>
+            <option value="16">16 - Слонова кістка (Фіолетово-голубий)</option>
+            <option value="2">2 - Перлинний (Блідо-фіолетовий)</option>
+            <option value="3">3 - Золотистий (Жовтий)</option>
+            <option value="32">32 - Світлий мед (Жовто-фіолетовий)</option>
+            <option value="4">4 - Мідний (Оранжевий)</option>
+            <option value="5">5 - Махагон (Червоно-фіолетовий)</option>
+            <option value="6">6 - Червоний</option>
+            <option value="7">7 - Фіолетовий</option>
+            <option value="81">81 - Сріблястий</option>
+            <option value="89">89 - Жемчужно-сандре</option>
+        </select>
+    </div>
+
+    <button onclick="calculateProtocol()">ЗГЕНЕРУВАТИ ПРОТОКОЛ</button>
+
+    <div id="output"></div>
+
+    <script src="core.js"></script>
+    <script>
+        /**
+         * РЕНДЕРЕР (Тупий фронтенд).
+         * Приймає JSON-стан від Агента-Математика і малює UI.
+         * Вся верстка — ТІЛЬКИ тут.
+         */
+        function renderState(state) {
+            const out = document.getElementById('output');
+
+            // --- BLOCKED / FATAL_ERROR ---
+            if (state.status === "BLOCKED" || state.status === "FATAL_ERROR") {
+                let html = `<div class='alert'><h2>❌ ${state.stages.map(s => s.title).join(' | ')}</h2><ul>`;
+                state.stages.forEach(s => { html += `<li>${s.text}</li>`; });
+                html += `</ul></div>`;
+                out.innerHTML = html;
+                return;
+            }
+
+            // --- APPROVED ---
+            let html = `<div class='success'><h2 style="color:green; margin-top:0;">✅ ПРОТОКОЛ ЗАТВЕРДЖЕНО</h2>`;
+            html += `<b>🎯 Ціль:</b> <span style="color:blue;">${state.target}</span> | <b>⚖️ Загальна маса фарби:</b> <span style="color:blue;">${state.totalMass} гр</span><hr>`;
+            
+            // Попередження та діагностика
+            if (state.warnings.length || state.diagnostics.length) {
+                html += `<b>🔹 АНАЛІЗ ТА ПОПЕРЕДЖЕННЯ:</b><ul>`;
+                state.warnings.forEach(w => html += `<li><span class="warning">⚠️ ${w}</span></li>`);
+                state.diagnostics.forEach(d => html += `<li>🔬 ${d}</li>`);
+                html += `</ul><hr>`;
+            }
+
+            // Рецепт кореня
+            if (state.rootRec) {
+                let dyeText = state.rootRec.dye;
+                if (state.rootRec.dyeDetails) {
+                    dyeText = '<br>' + state.rootRec.dyeDetails.map(d => `&nbsp;&nbsp;&nbsp;▪️ <b>${d.name}</b> (${d.grams} гр)`).join('<br>');
+                }
+                html += `<b>🧪 КОРІНЬ:</b><ul>`;
+                html += `<li><b>Інструмент:</b> ${dyeText} + ${state.rootRec.ox}</li>`;
+                html += `<li><b>Загальна маса суміші:</b> ${state.rootRec.mass} гр (${state.rootRec.ratio})</li>`;
+                html += `<li><b>Мікстони:</b> ${state.rootRec.mixtone}</li></ul>`;
+            }
+
+            // Рецепт довжини
+            if (state.lenRec) {
+                let dyeText = state.lenRec.dye;
+                if (state.lenRec.dyeDetails) {
+                    dyeText = '<br>' + state.lenRec.dyeDetails.map(d => `&nbsp;&nbsp;&nbsp;▪️ <b>${d.name}</b> (${d.grams} гр)`).join('<br>');
+                }
+                html += `<b>🧪 ДОВЖИНА:</b><ul>`;
+                html += `<li><b>Інструмент:</b> ${dyeText} + ${state.lenRec.ox}</li>`;
+                html += `<li><b>Загальна маса суміші:</b> ${state.lenRec.mass} гр (${state.lenRec.ratio})</li>`;
+                html += `<li><b>Мікстони:</b> ${state.lenRec.mixtone}</li></ul><hr>`;
+            }
+            
+            // Регламент дій
+            html += `<b>📋 РЕГЛАМЕНТ ДІЙ:</b><ul>`;
+            state.plan.forEach(p => html += `<li>▫️ ${p}</li>`);
+            html += `</ul><b>⏳ Розрахунковий час:</b> ${state.timing} хв.</div>`;
+
+            out.innerHTML = html;
+        }
+
+        // Initialize active tiles based on default select values
+        document.addEventListener('DOMContentLoaded', () => {
+            ['root_level', 'length_level', 'target_level'].forEach(id => {
+                const select = document.getElementById(id);
+                const grid = document.querySelector(`.level-grid[data-target="${id}"]`);
+                if (select && grid) {
+                    const value = select.value;
+                    const tile = grid.querySelector(`.level-tile[data-value="${value}"]`);
+                    if (tile) tile.classList.add('active');
+                }
+            });
+
+            // Attach click handlers to tiles
+            document.querySelectorAll('.level-grid').forEach(grid => {
+                grid.addEventListener('click', (e) => {
+                    const tile = e.target.closest('.level-tile');
+                    if (!tile) return;
+                    const targetId = grid.getAttribute('data-target');
+                    const select = document.getElementById(targetId);
+                    if (!select) return;
+
+                    // Update active state
+                    grid.querySelectorAll('.level-tile').forEach(t => t.classList.remove('active'));
+                    tile.classList.add('active');
+
+                    // Update select value
+                    select.value = tile.getAttribute('data-value');
+
+                    // Optional: trigger change event for any listeners
+                    select.dispatchEvent(new Event('change'));
+                });
+            });
+        });
+    </script>
+</body>
+</html>

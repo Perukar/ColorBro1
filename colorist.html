@@ -1,0 +1,773 @@
+﻿<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>My Barber UA — Colorist Calculator</title>
+<meta name="theme-color" content="#bb86fc">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="My Barber UA">
+<link rel="manifest" href="./manifest.json">
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('[SW] Registered, scope:', reg.scope))
+        .catch(err => console.warn('[SW] Registration failed:', err));
+    });
+  }
+</script>
+<style>
+*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+body{background:#0d0d0d;color:#e0e0e0;margin:0;padding:12px 12px 90px}
+h1{color:#bb86fc;text-align:center;font-size:1.4em;border-bottom:1px solid #333;padding-bottom:8px;margin:5px 0 15px}
+.card{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:14px;margin-bottom:12px}
+.pt{font-weight:700;font-size:1.05em;margin-bottom:10px;color:#fff}
+.rg{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px}
+.rg5{grid-template-columns:repeat(5,1fr)}
+.rg4{grid-template-columns:repeat(4,1fr)}
+.rg3{grid-template-columns:repeat(3,1fr)}
+label.rb{display:flex;align-items:center;justify-content:center;background:#252525;border:2px solid transparent;border-radius:8px;padding:13px 6px;text-align:center;font-size:.92em;cursor:pointer;color:#ccc;transition:all .15s;user-select:none}
+input[type=radio]{display:none}
+label.rb:has(input:checked){background:#bb86fc;color:#0d0d0d;font-weight:700;border-color:#bb86fc}
+label.rb:active{transform:scale(.96)}
+#blocker{background:#cf6679;color:#fff;padding:14px;text-align:center;font-weight:700;font-size:1.05em;border-radius:8px;position:sticky;top:8px;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,.5);margin-bottom:16px}
+#results{display:none}
+.stage{border-left:4px solid #bb86fc;background:#1e1e1e;padding:12px;border-radius:0 8px 8px 0;margin-bottom:12px}
+.stage-t{font-weight:700;color:#bb86fc;font-size:1.05em;border-bottom:1px solid #333;padding-bottom:5px;margin-bottom:8px}
+.sr{margin-bottom:5px;font-size:.93em}
+.sr .l{color:#999;font-size:.88em}
+.fatal{background:rgba(207,102,121,.15);border:1px solid #cf6679;border-left:4px solid #cf6679;padding:14px;border-radius:6px;color:#ffb4c0;margin-bottom:12px}
+.warn-box{background:rgba(255,152,0,.1);border:1px solid #ff9800;border-left:4px solid #ff9800;padding:10px;border-radius:6px;color:#ffcc80;margin-bottom:10px;font-size:.93em}
+.diag-box{background:rgba(100,181,246,.08);border-left:3px solid #64b5f6;padding:8px 10px;margin-bottom:6px;font-size:.9em;color:#90caf9;border-radius:0 6px 6px 0}
+details{background:#141414;padding:10px;border-radius:6px;margin-top:8px;font-size:.88em;border:1px solid #2a2a2a}
+summary{cursor:pointer;color:#888;font-weight:500;outline:none}
+.mix-box{background:#252525;padding:10px;border-radius:6px;font-family:monospace;margin-top:6px;font-size:.95em}
+.btn-main{background:#bb86fc;color:#0d0d0d;border:none;padding:15px;width:100%;font-size:1.05em;font-weight:700;border-radius:10px;margin-top:12px;cursor:pointer}
+.btn-main:active{transform:scale(.98)}
+.btn-sec{background:#252525;color:#e0e0e0;border:1px solid #444;padding:13px;width:100%;font-size:.95em;border-radius:10px;margin-top:8px;cursor:pointer}
+.btn-sec:active{background:#333}
+textarea{width:100%;height:100px;background:#141414;color:#e0e0e0;border:1px solid #333;border-radius:8px;padding:10px;margin-top:8px;resize:none;font-size:.95em}
+textarea:focus{outline:1px solid #bb86fc}
+#post-fin{display:none}
+.recipe-card{background:#1e1e1e;border:1px solid #333;border-radius:8px;padding:12px;margin-bottom:10px}
+.recipe-card h4{color:#bb86fc;margin:0 0 8px;font-size:1em}
+.recipe-row{display:flex;justify-content:space-between;padding:3px 0;font-size:.92em;border-bottom:1px solid #1a1a1a}
+.recipe-row:last-child{border-bottom:none}
+.timing-box{background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid #0f3460;border-radius:10px;padding:14px;text-align:center;margin:12px 0}
+.timing-box .big{font-size:2em;font-weight:700;color:#e94560}
+.step-card{background:#1a1a1a;border-radius:14px;padding:16px;margin-bottom:14px;position:relative;overflow:hidden}
+.step-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px}
+.step-card.midband::before{background:#f59e0b}
+.step-card.root::before{background:#bb86fc}
+.step-card.length::before{background:#34d399}
+.step-card.blocked-card{background:rgba(207,102,121,.18);border:2px solid #cf6679}
+.step-card.lasthope-card{background:rgba(255,152,0,.12);border:2px solid #ff9800}
+.step-num{font-size:.75em;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;opacity:.7}
+.step-card.midband .step-num{color:#f59e0b}
+.step-card.root .step-num{color:#bb86fc}
+.step-card.length .step-num{color:#34d399}
+.step-title{font-size:1.1em;font-weight:700;margin-bottom:12px;color:#fff}
+.step-formula{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.step-formula-item{background:#111;border-radius:8px;padding:10px 12px;text-align:center}
+.step-formula-item .sfi-label{font-size:.75em;color:#888;margin-bottom:3px}
+.step-formula-item .sfi-val{font-size:1.3em;font-weight:700;color:#fff}
+.step-formula-item .sfi-val.big-val{font-size:1.7em;color:#bb86fc}
+.step-formula-item .sfi-val.ox-val{color:#34d399}
+.step-formula-item .sfi-val.mass-val{color:#f59e0b}
+.step-note{font-size:.88em;color:#aaa;background:#111;border-radius:6px;padding:8px 10px;margin-bottom:8px;border-left:3px solid #444}
+.step-mixtone{background:linear-gradient(135deg,#1e1e3a,#1a1a2e);border:1px solid #3730a3;border-radius:8px;padding:10px 12px;font-size:.92em;color:#a5b4fc}
+.step-dye-details{margin:6px 0 10px;padding-left:4px}
+.step-dye-details .dd-row{display:flex;justify-content:space-between;padding:4px 8px;border-bottom:1px solid #222;font-size:.9em}
+.step-dye-details .dd-row:last-child{border-bottom:none}
+.step-dye-details .dd-name{color:#bb86fc}
+.step-dye-details .dd-g{color:#fff;font-weight:600}
+.blocked-full{background:rgba(207,102,121,.15);border:2px solid #cf6679;border-radius:12px;padding:18px;margin-bottom:14px;animation:pulse-red 2s infinite}
+@keyframes pulse-red{0%,100%{box-shadow:0 0 0 0 rgba(207,102,121,.4)}50%{box-shadow:0 0 0 8px rgba(207,102,121,0)}}
+.blocked-full-title{color:#ff8fab;font-size:1.1em;font-weight:700;margin-bottom:8px}
+.blocked-full-text{color:#ffb4c0;font-size:.95em;line-height:1.5}
+.lasthope-banner{background:rgba(255,152,0,.15);border:2px solid #ff9800;border-radius:12px;padding:16px;margin-bottom:14px}
+.lasthope-banner strong{color:#ffb74d;font-size:1.05em;display:block;margin-bottom:6px}
+.protocol-box{background:#111;border-radius:10px;padding:14px;margin-top:10px}
+.protocol-step{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #1e1e1e;font-size:.93em;color:#ddd}
+.protocol-step:last-child{border-bottom:none}
+.protocol-step .ps-num{color:#bb86fc;font-weight:700;min-width:20px;flex-shrink:0}
+</style>
+</head>
+<body>
+
+<h1>⚗️ COREONLINE</h1>
+<div id="blocker">🔒 БЛОКАДОР: Введи всі 10 параметрів</div>
+
+<form id="F">
+<!-- 1. Бренд -->
+<div class="card"><div class="pt">1. Бренд</div><div class="rg rg3">
+<label class="rb"><input type="radio" name="brand" value="LOréal">L'Oréal</label>
+<label class="rb"><input type="radio" name="brand" value="Wella">Wella</label>
+<label class="rb"><input type="radio" name="brand" value="Matrix">Matrix</label>
+</div></div>
+
+<!-- 2. Тип бази -->
+<div class="card"><div class="pt">2. Тип бази (Корінь)</div><div class="rg">
+<label class="rb"><input type="radio" name="baseType" value="Натуральна">Натуральна (Корінь)</label>
+<label class="rb"><input type="radio" name="baseType" value="Свіжа косметика">Свіжа косметика (Корінь)</label>
+<label class="rb"><input type="radio" name="baseType" value="Накопичена косметика">Накопичена косметика (Корінь)</label>
+<label class="rb"><input type="radio" name="baseType" value="Прямий пігмент/Хна">Прямий пігмент / Хна (Корінь)</label>
+</div></div>
+
+<!-- 2.1 Тип бази Довжина -->
+<div class="card"><div class="pt">2.1 Тип бази (Довжина)</div><div class="rg">
+<label class="rb"><input type="radio" name="lengthBaseType" value="Натуральна">Натуральна (Довжина)</label>
+<label class="rb"><input type="radio" name="lengthBaseType" value="Свіжа косметика">Свіжа косметика (Довжина)</label>
+<label class="rb"><input type="radio" name="lengthBaseType" value="Накопичена косметика">Накопичена косметика (Довжина)</label>
+<label class="rb"><input type="radio" name="lengthBaseType" value="Прямий пігмент/Хна">Прямий пігмент / Хна (Довжина)</label>
+</div></div>
+
+<!-- 3. УГТ Корінь -->
+<div class="card"><div class="pt">3. УГТ Корінь</div><div class="rg rg5">
+<label class="rb"><input type="radio" name="rLevel" value="1">1</label>
+<label class="rb"><input type="radio" name="rLevel" value="2">2</label>
+<label class="rb"><input type="radio" name="rLevel" value="3">3</label>
+<label class="rb"><input type="radio" name="rLevel" value="4">4</label>
+<label class="rb"><input type="radio" name="rLevel" value="5">5</label>
+<label class="rb"><input type="radio" name="rLevel" value="6">6</label>
+<label class="rb"><input type="radio" name="rLevel" value="7">7</label>
+<label class="rb"><input type="radio" name="rLevel" value="8">8</label>
+<label class="rb"><input type="radio" name="rLevel" value="9">9</label>
+<label class="rb"><input type="radio" name="rLevel" value="10">10</label>
+</div></div>
+
+<!-- 4. УГТ Довжина -->
+<div class="card"><div class="pt">4. УГТ Довжина</div><div class="rg rg5">
+<label class="rb"><input type="radio" name="lLevel" value="1">1</label>
+<label class="rb"><input type="radio" name="lLevel" value="2">2</label>
+<label class="rb"><input type="radio" name="lLevel" value="3">3</label>
+<label class="rb"><input type="radio" name="lLevel" value="4">4</label>
+<label class="rb"><input type="radio" name="lLevel" value="5">5</label>
+<label class="rb"><input type="radio" name="lLevel" value="6">6</label>
+<label class="rb"><input type="radio" name="lLevel" value="7">7</label>
+<label class="rb"><input type="radio" name="lLevel" value="8">8</label>
+<label class="rb"><input type="radio" name="lLevel" value="9">9</label>
+<label class="rb"><input type="radio" name="lLevel" value="10">10</label>
+</div></div>
+
+<!-- 5. Довжина кореня -->
+<div class="card"><div class="pt">5. Довжина кореня</div><div class="rg rg3">
+<label class="rb"><input type="radio" name="rootLen" value="1">&lt; 1.5 см</label>
+<label class="rb"><input type="radio" name="rootLen" value="2">1.5–2 см</label>
+<label class="rb"><input type="radio" name="rootLen" value="3">&gt; 2 см</label>
+</div></div>
+
+<!-- 6. Еластичність -->
+<div class="card"><div class="pt">6. Еластичність</div><div class="rg rg3">
+<label class="rb"><input type="radio" name="elasticity" value="1">1-3 (Норма)</label>
+<label class="rb"><input type="radio" name="elasticity" value="4">4 (Тягнеться)</label>
+<label class="rb"><input type="radio" name="elasticity" value="5">5 (Рветься)</label>
+</div></div>
+
+<!-- 7. Пористість -->
+<div class="card"><div class="pt">7. Пористість</div><div class="rg rg3">
+<label class="rb"><input type="radio" name="porosity" value="Склоподібна">Склоподібна</label>
+<label class="rb"><input type="radio" name="porosity" value="Норма">Норма</label>
+<label class="rb"><input type="radio" name="porosity" value="Пориста">Пориста</label>
+</div></div>
+
+<!-- 8. Ціль УГТ -->
+<div class="card"><div class="pt">8. Ціль УГТ</div><div class="rg rg4">
+<label class="rb"><input type="radio" name="tLevel" value="1">1</label>
+<label class="rb"><input type="radio" name="tLevel" value="2">2</label>
+<label class="rb"><input type="radio" name="tLevel" value="3">3</label>
+<label class="rb"><input type="radio" name="tLevel" value="4">4</label>
+<label class="rb"><input type="radio" name="tLevel" value="5">5</label>
+<label class="rb"><input type="radio" name="tLevel" value="6">6</label>
+<label class="rb"><input type="radio" name="tLevel" value="7">7</label>
+<label class="rb"><input type="radio" name="tLevel" value="8">8</label>
+<label class="rb"><input type="radio" name="tLevel" value="9">9</label>
+<label class="rb"><input type="radio" name="tLevel" value="10">10</label>
+<label class="rb"><input type="radio" name="tLevel" value="11">11 (S.B.)</label>
+</div></div>
+
+<!-- 9. Напрямок Цілі -->
+<div class="card"><div class="pt">9. Напрямок Цілі</div><div class="rg rg3">
+<label class="rb"><input type="radio" name="tDir" value="0">.0 Натур</label>
+<label class="rb"><input type="radio" name="tDir" value="1">.1 Попіл</label>
+<label class="rb"><input type="radio" name="tDir" value="3">.3 Золото</label>
+<label class="rb"><input type="radio" name="tDir" value="4">.4 Мідь</label>
+<label class="rb"><input type="radio" name="tDir" value="5">.5 Червон</label>
+<label class="rb"><input type="radio" name="tDir" value="6">.6 Фіолет</label>
+<label class="rb"><input type="radio" name="tDir" value="7">.7 Браун</label>
+<label class="rb"><input type="radio" name="tDir" value="8">.8 Перлина</label>
+</div></div>
+
+<!-- 10. Сивина -->
+<div class="card"><div class="pt">10. Сивина %</div><div class="rg rg4">
+<label class="rb"><input type="radio" name="grey" value="0">0%</label>
+<label class="rb"><input type="radio" name="grey" value="20">10-30%</label>
+<label class="rb"><input type="radio" name="grey" value="50">40-60%</label>
+<label class="rb"><input type="radio" name="grey" value="80">70-100%</label>
+</div></div>
+<!-- 11. Довжина волосся -->
+<div class="card"><div class="pt">11. Довжина волосся</div><div class="rg rg4">
+<label class="rb"><input type="radio" name="hairLength" value="SHORT">🔸 Коротке<br><small style="color:#888">≤15 см / 30г</small></label>
+<label class="rb"><input type="radio" name="hairLength" value="MEDIUM">🔹 Середнє<br><small style="color:#888">~30 см / 60г</small></label>
+<label class="rb"><input type="radio" name="hairLength" value="LONG">🔷 Довге<br><small style="color:#888">~50 см / 90г</small></label>
+<label class="rb"><input type="radio" name="hairLength" value="EXTRA">💎 Дуже довге<br><small style="color:#888">60+ см / 120г</small></label>
+</div></div>
+
+<!-- 12. Густота волосся -->
+<div class="card"><div class="pt">12. Густота волосся</div><div class="rg rg3">
+<label class="rb"><input type="radio" name="hairDensity" value="THIN">Рідке<br><small style="color:#888">×0.8</small></label>
+<label class="rb"><input type="radio" name="hairDensity" value="NORMAL">Нормальне<br><small style="color:#888">×1.0</small></label>
+<label class="rb"><input type="radio" name="hairDensity" value="THICK">Густе<br><small style="color:#888">×1.3</small></label>
+</div></div>
+
+</form>
+
+<div id="results" class="card">
+<h3 id="sum-hdr" style="color:#bb86fc;margin-top:0"></h3>
+<div id="out"></div>
+<button type="button" id="fin-btn" class="btn-main">🔒 Затвердити та Розрахувати</button>
+</div>
+
+<div id="post-fin" class="card">
+<h3 style="color:#bb86fc;margin:0 0 8px">📝 Нотатки</h3>
+<textarea placeholder="Техніка, нюанси клієнта, візуальні спостереження..."></textarea>
+<button type="button" class="btn-sec" onclick="alert('✅ Збережено!')">Зберегти в архів</button>
+<button type="button" class="btn-sec" style="border-color:#bb86fc;color:#bb86fc" onclick="location.reload()">Новий клієнт</button>
+</div>
+
+<script>
+// ===== PIGMENT MAP =====
+const pigmentMap={'0':'Натуральний','1':'Голубий','11':'Інтенсивно-голубий','2':'Блідо-фіолетовий','3':'Жовтий (золотистий)','4':'Оранжевий','5':'Червоно-фіолетовий','6':'Червоний','7':'Фіолетовий','8':'Коричневий','9':'Синьо-зелений','16':'Фіолетово-голубий','32':'Жовто-фіолетовий','81':'Сріблястий','89':'Жемчужно-сандре'};
+
+// ===== MIXTONE CALCULATOR =====
+function calcMixtone(tLevel,tDir,processType,mass,condition){
+    let pType=String(processType).toLowerCase();
+    if(pType.includes('порошок')||pType.includes('powder'))return"Не додається (Нейтралізація на етапі тонування)";
+    let color=pigmentMap[tDir]||"Коректор";
+    if(tLevel==8&&['1','11','9','81'].includes(tDir))return"⚠️ ЗАБОРОНА: Пепел/Холод на 8-му рівні дасть ЗЕЛЕНЬ!";
+    let rule11=11-tLevel;
+    if(rule11<=0)return`Не потрібен (Рівень ${tLevel})`;
+    let grams=(rule11/2.0)*(mass/30.0);
+    grams=Math.round(grams*10)/10;
+    const MAX_MIX=4.0*(mass/60.0);
+    if(grams>MAX_MIX)grams=Math.round(MAX_MIX*10)/10;
+    let resStr="";
+    if(['пористі','сильно поврежденные'].includes(condition)&&['1','11','16','2','61','81','89'].includes(tDir)){
+        grams=Math.round((grams*0.5)*10)/10;
+        resStr=`${grams} гр (⚠️ Зменшено вдвічі) | ${color}`;
+    }else{resStr=`${grams} гр | ${color}`;}
+    if(pType.includes('тонування')||pType.includes('перманент')||tLevel>=9){
+        if(grams>=MAX_MIX)resStr=`${grams} гр (ЖОРСТКИЙ ЛІМІТ) | ${color}`;
+    }
+    if(pType.includes('special blond')){
+        let maxSB=Math.round((1.5*(mass/30.0))*10)/10;
+        if(grams>maxSB){grams=maxSB;resStr=`${grams} гр (ЛІМІТ S.B.) | ${color}`;}
+    }
+    return resStr;
+}
+
+// ===== CHEMIST AGENT =====
+class ChemistAgent{
+    validate(p){
+        const{baseType,lengthBaseType,targetLevel,rootLevel,lengthLevel,targetDirection,rStep,lStep,grey,porosity,elasticity}=p;
+        // Еластичність 5 => повна відмова
+        if(elasticity>=5)return{status:"BLOCKED",stages:[{title:"🚨 ФАТАЛЬНО: ВОЛОССЯ РВЕТЬСЯ",text:"Еластичність 5. Відмова від хімічної процедури. Тільки догляд."}]};
+        // Хна + будь-яке освітлення
+        if((baseType==='Прямий пігмент/Хна' && rStep>0) || (lengthBaseType==='Прямий пігмент/Хна' && lStep>0))return{status:"BLOCKED",stages:[{title:"🚨 ХІМІЧНИЙ КОНФЛІКТ: ХНА/ПРЯМИЙ ПІГМЕНТ",text:"Пудра запікає хну. Етап 1: Кислотна змивка + DELETE. Етап 2: М'яке стягування (пудра + 2% 1:3)."}],specialProtocol:"henna"};
+        // Косметична база + освітлення фарбою
+        if(((baseType==='Свіжа косметика'||baseType==='Накопичена косметика') && rStep>0) || ((lengthBaseType==='Свіжа косметика'||lengthBaseType==='Накопичена косметика') && lStep>0)){
+            // Не блокуємо, але маркуємо що потрібна змивка
+        }
+        // Спецблонд обмеження
+        if(targetLevel>=11){
+            if(rootLevel<=5||lengthLevel<=5)return{status:"BLOCKED",stages:[{title:"🚨 SPECIAL BLOND ЗАБОРОНЕНО",text:"S.B. заборонено на базі нижче 6-го УГТ. Ризик брудного оранжевого фону."}]};
+            if(porosity==='Пориста')return{status:"BLOCKED",stages:[{title:"🚨 S.B. + ПОРИСТІСТЬ",text:"Special Blond (12% оксид) заборонено на пористому волоссі. Ризик руйнування структури."}]};
+            if(grey>30)return{status:"BLOCKED",stages:[{title:"🚨 S.B. + СИВИНА",text:`Special Blond заборонено при сивині > 30%. Поточна: ${grey}%. Працює тільки класичний перманент.`}]};
+        }
+        // Червоний + сивина
+        if(targetDirection==='6'&&grey>0)return{status:"BLOCKED",stages:[{title:"🚨 ЧЕРВОНИЙ + СИВИНА",text:"Червоні відтінки не змішуються з натуральною базою для покриття сивини."}]};
+        return{status:"APPROVED"};
+    }
+}
+
+// ===== MATH AGENT =====
+function runMathAgent(input){
+    const{porosity,rootLevel:rLevel,rootLen,lengthLevel:lLevel,baseType:bType,lengthBaseType:lbType,targetLevel:tLevel,targetDirection:tDir,grey,elasticity,rStep,lStep}=input;
+    const condition=porosity==='Пориста'?'пористі':porosity==='Склоподібна'?'стекловидная':'здоровые';
+    const rootLength=parseInt(rootLen)||1;
+    let state={status:"APPROVED",stages:[],warnings:[],diagnostics:[],rootRec:null,lenRec:null,plan:[],timing:0,target:`${tLevel}.${tDir}`,totalMass:0,underTheHood:[]}; // Маса заповнюється з massDist після розрахунку в ядрі
+    // Маса (фіксована 60г для радіо-інтерфейсу — середня довжина/середня густота)
+        // Маса розраховується виключно в core.js > MathAgent.calculateMass(snapshot)
+    // HTML тільки зчитує UI — жодної математики тут
+    let tDye=`${tLevel}.${tDir}`;
+    let rootRec=null,lenRec=null;
+    // Гарячий корінь
+    let hotRoot=(rootLength>=3&&rStep>0);
+    if(hotRoot)state.warnings.push(`ГАРЯЧИЙ КОРІНЬ: Відростання > 2 см. Нанесення на корінь у 2 етапи!`);
+    // Блокування пошкодженої довжини
+    if(lStep>0&&porosity==='Пориста'&&elasticity>=4){
+        state.status="BLOCKED";
+        state.stages.push({title:"БЛОКУВАННЯ",text:"Пориста структура + еластичність 4+. Освітлення заборонено."});
+        return state;
+    }
+    // --- Логіка Довжини ---
+    if(lStep>0){
+        if(lbType==='Свіжа косметика'){lenRec={process:"Порошок (Змивка)",dye:"Пудра",ox:"1.9%",mass:lMass,ratio:"1:3 або 1:4"};}
+        else if(lbType==='Накопичена косметика'&&lLevel<=5&&tLevel>=9){lenRec={process:"Порошок (Глиб. декапір.)",dye:"Пудра",ox:"9%→6%→3%→1.5%",mass:lMass,ratio:"1:3→1:2"};}
+        else if(lLevel<=5){lenRec={process:"Порошок",dye:"Пудра",ox:"4%",mass:lMass,ratio:"1:2"};}
+        else if(grey>=50){
+            let oxC=lStep>=3?"9%":"6%";
+            lenRec={process:"Перманент",dye:`Барвник ${tDye}`,ox:oxC,mass:lMass,ratio:"1:1"};
+        }
+        else if(lStep>=4){lenRec={process:"Special Blond",dye:`S.B. ${tDye}`,ox:"12%",mass:lMass,ratio:"1:2"};}
+        else if(lStep>=2){lenRec={process:"Special Blond",dye:`S.B. ${tDye}`,ox:"9%",mass:lMass,ratio:"1:2"};}
+        else{lenRec={process:"Перманент",dye:`Барвник ${tDye}`,ox:"6%",mass:lMass,ratio:"1:1"};}
+    }else if(lStep===0){
+        if(tLevel>=9){lenRec={process:"Тонування",dye:`Барвник ${tDye}`,ox:"1.9%",mass:lMass,ratio:"1:2"};}
+        else{lenRec={process:"Перманент",dye:`Барвник ${tDye}`,ox:"3%",mass:lMass,ratio:"1:1"};}
+    }else{
+        lenRec={process:"Перманент / Тонування",dye:`Барвник ${tDye}`,ox:"1.9%",mass:lMass,ratio:"1:2"};
+    }
+    // --- Логіка Кореня ---
+    if(rStep>0){
+        if(rLevel<=5){rootRec={process:"Порошок",dye:"Пудра",ox:"4%",mass:rMass,ratio:"1:2"};}
+        else if(grey>=50){
+            let oxC=rStep>=3?"9%":"6%";
+            rootRec={process:"Перманент",dye:`Барвник ${tDye}`,ox:oxC,mass:rMass,ratio:"1:1"};
+        }
+        else if(rStep>=4){rootRec={process:"Special Blond",dye:`S.B. ${tDye}`,ox:"12%",mass:rMass,ratio:"1:2"};}
+        else if(rStep>=2){rootRec={process:"Special Blond",dye:`S.B. ${tDye}`,ox:"9%",mass:rMass,ratio:"1:2"};}
+        else{rootRec={process:"Перманент",dye:`Барвник ${tDye}`,ox:"6%",mass:rMass,ratio:"1:1"};}
+    }else if(rStep===0){
+        if(tLevel>=9){rootRec={process:"Тонування",dye:`Барвник ${tDye}`,ox:"1.9%",mass:rMass,ratio:"1:2"};}
+        else{rootRec={process:"Перманент",dye:`Барвник ${tDye}`,ox:"3%",mass:rMass,ratio:"1:1"};}
+    }else{
+        rootRec={process:"Перманент",dye:`Барвник ${tDye}`,ox:"3%",mass:rMass,ratio:"1:1"};
+    }
+    // Перерахунок маси порошку
+    if(rootRec&&String(rootRec.process).includes("Порошок")){
+        rMass=Math.round(rMass*1.6);if(rMass<40)rMass=40;rootRec.mass=rMass;
+    }
+    // Пониження оксидуclass TechnologistAgent{
+    generateRegulation(p,state){
+        const{rootLen,rStep,lStep,targetLevel,targetDirection,grey,baseType,lengthBaseType,elasticity,porosity}=p;
+        const rootLength=parseInt(rootLen)||1;
+        const rootRec=state.rootRec,lenRec=state.lenRec;
+        let stages=[],underTheHood=[];
+        
+        // Крок 0: Підготовка
+        if(elasticity>=4){
+            stages.push({
+                title: "🚨 ЕТАП 0: ПРОТОКОЛ «ОСТАННЯ НАДІЯ»",
+                text: "КРОК 0: Холодне відновлення (ліпіди + амінокислоти) ПЕРЕД фарбуванням. Тепло ЗАБОРОНЕНО.",
+                recipe: null
+            });
+            underTheHood.push("Еластичність 4+: ін'єкція протоколу «Остання надія» через ризик розпаду структури.");
+        }
+
+        // Крок 1: Змивки / Попередні етапи
+        if(lengthBaseType==='Свіжа косметика'&&lStep>0){
+            stages.push({
+                title: "ЕТАП 1: КИСЛОТНА ЗМИВКА",
+                text: "Фаза 1+2 у 1:1. 20-25 хв з теплом. 2-4 раунди. Після — стабілізація: оксид 3% на 10 хв.",
+                recipe: null
+            });
+            underTheHood.push("Свіжа косметика на довжині: кислотна змивка без пудри для збереження якості.");
+        }
+
+        if(lengthBaseType==='Накопичена косметика'&&parseInt(p.lengthLevel)<=5&&targetLevel>=9){
+            stages.push({
+                title: "ЕТАП 1: ГЛИБОКЕ ДЕКАПІРУВАННЯ",
+                text: "Поетапне нанесення: 9% -> 6% -> 3% -> 1.5%. Кожен раунд до візуального результату.",
+                recipe: null
+            });
+            underTheHood.push("Накопичена косметика на довжині: поетапне зниження оксидів для прочищення пігменту без руйнування.");
+        }
+
+        const isRPowder=rootRec&&String(rootRec.process).includes("Порошок");
+        const isLPowder=lenRec&&String(lenRec.process).includes("Порошок");
+        const isSB=(rootRec&&String(rootRec.process).includes("Special Blond"))||(lenRec&&String(lenRec.process).includes("Special Blond"));
+        const isCold=['1','11','16','2','61','81','89'].includes(targetDirection);
+        const hotRoot=(rootLength>=3&&rStep>0);
+        
+        // Логіка етапів фарбування
+        if(isLPowder && lStep>=4){
+            stages.push({
+                title: "ЕТАП 2: ЕКСТРЕМАЛЬНЕ ОСВІТЛЕННЯ ДОВЖИНИ",
+                text: "Нанести на довжину (відступ 2 см). Витримка до 50 хв. СУХЕ ЗНЯТТЯ серветками.",
+                recipe: "len"
+            });
+            stages.push({
+                title: "ЕТАП 3: ОСВІТЛЕННЯ КОРЕНЯ",
+                text: hotRoot ? "Нанести на відступ 1.5-2 см. Через 15-20 хв — прикоренева зона." : "Нанести на корінь.",
+                recipe: "root"
+            });
+            stages.push({
+                title: "ЕТАП 4: ФІНАЛЬНЕ ТОНУВАННЯ",
+                text: "МИЙКА (ШГО + Маска). Тонування підготовленого фону на вологе волосся.",
+                recipe: "toning" // Спеціальний випадок для тонування після пудри
+            });
+            state.timing=100;
+        } else if(isRPowder && isLPowder){
+            stages.push({
+                title: "ЕТАП 2: КОМБІНОВАНЕ ОСВІТЛЕННЯ (ПУДРА)",
+                text: "1. Змивка на довжину. 2. Стягнути серветкою. 3. Нанести на корінь.",
+                recipe: "both"
+            });
+            state.timing=90;
+        } else {
+            // Класичне нанесення
+            let instr = hotRoot ? "Нанести на відступ 1.5-2 см. Через 15-20 хв — прикоренева зона." : "Нанести рецепт на корінь.";
+            if(isCold) instr += " ⚠️ ЗАХИСТ КОНТУРУ: Крайову лінію — в останню чергу.";
+            
+            stages.push({
+                title: "ЕТАП 2: ОСНОВНЕ ФАРБУВАННЯ",
+                text: instr + " Після кореня — відразу на довжину. Емульгація за 5-10 хв до кінця.",
+                recipe: "all"
+            });
+            state.timing = isSB?50:40;
+        }
+
+        if(porosity==='Пориста') {
+            underTheHood.push("Пористі кінці: нанесення на довжину в останню чергу.");
+        }
+
+        state.stagesData = stages;
+        return {underTheHood};
+    }
+}
+�а вологе");
+            underTheHood.push("Накопичена косметика на довжині: поетапне зниження оксидів для прочищення пігменту без руйнування.");
+        }
+        const isRPowder=rootRec&&String(rootRec.process).includes("Порошок");
+        const isLPowder=lenRec&&String(lenRec.process).includes("Порошок");
+        const isSB=(rootRec&&String(rootRec.process).includes("Special Blond"))||(lenRec&&String(lenRec.process).includes("Special Blond"));
+        const isCold=['1','11','16','2','61','81','89'].includes(targetDirection);
+        const hotRoot=(rootLength>=3&&rStep>0);
+        const rMass=rootRec?rootRec.mass:0;
+        const lMass=lenRec?lenRec.mass:0;
+        const applyRoot=hotRoot?`Нанести на відрослу довжину (відступ 1.5-2 см від шкіри). Через 15-20 хв — прикоренева зона.`:`Нанести рецепт на корінь.`;
+        let timing=40;
+        if(isLPowder&&lStep>=4){
+            protocol.push("⚠️ ЕКСТРЕМАЛЬНЕ ОСВІТЛЕННЯ:");
+            protocol.push(`КРОК 1: Порошок на довжину (відступ 2 см). ${lMass} гр. 40-50 хв.`);
+            protocol.push("КРОК 2: СУХЕ ЗНЯТТЯ серветками.");
+            protocol.push(`КРОК 3: ${applyRoot} ${rMass} гр.`);
+            protocol.push("КРОК 4: МИЙКА (ШГО + Маска).");
+            protocol.push("КРОК 5: Тонування підготовленого фону.");
+            timing=100;
+            underTheHood.push("Екстремальне освітлення: порошок→сухе зняття→корінь→мийка→тонування.");
+        }else if(lStep<=-2){
+            let pMass=Math.round(lMass*0.5),pLev=Math.min(targetLevel+1,10);
+            protocol.push("⚠️ РІЗКЕ ЗАТЕМНЕННЯ. ПРЕПІГМЕНТАЦІЯ.");
+            protocol.push(`КРОК 1: Барвник ${pLev}.3 або ${pLev}.4 + тепла вода (БЕЗ ОКСИДУ). ${pMass} гр. Вбити у довжину.`);
+            protocol.push(`КРОК 2: Не змиваючи, ${applyRoot}`);
+            protocol.push("КРОК 3: Нанести рецепт на довжину.");
+            timing=40;
+            underTheHood.push("Препігментація: заповнення порожньої кутикули теплим пігментом перед цільовим фарбуванням.");
+        }else if(isRPowder&&isLPowder){
+            protocol.push(`КРОК 1: Змивка на довжину. ${lMass} гр.`);
+            protocol.push("КРОК 2: Стягнути серветкою (без миття).");
+            protocol.push(`КРОК 3: ${applyRoot}`);
+            protocol.push("КРОК 4: МИЙКА (ШГО + Маска).");
+            protocol.push("КРОК 5: Тонування на вологе полотно.");
+            timing=90;
+        }else if(isRPowder&&!isLPowder){
+            protocol.push(`КРОК 1: ${hotRoot?applyRoot:"Порошок ТІЛЬКИ на корінь. Крайову НЕ ЧІПАТИ."}`);
+            if(!hotRoot)protocol.push("КРОК 2: Через 15-20 хв — порошок на крайову лінію.");
+            protocol.push("КРОК 3: МИЙКА (ШГО + Маска).");
+            protocol.push("КРОК 4: Тонування на вологе волосся.");
+            protocol.push("⏳ Прочісувати кожні 5-10 хв. Затемнення кінців → негайно змивати!");
+            timing=70;
+        }else{
+            protocol.push(`КРОК 1: ${applyRoot}`);
+            protocol.push("КРОК 2: Нанести суміш на довжину.");
+            if(isCold)protocol.push("⚠️ ЗАХИСТ КОНТУРУ: Крайову лінію — в останню чергу (за 10-15 хв до кінця).");
+            protocol.push("КРОК 3: Емульгація за 5-10 хв до кінця.");
+            timing=isSB?50:40;
+        }
+        if(porosity==='Пориста'){
+            protocol.push("⚠️ ПОРИСТІСТЬ: На кінці наносити В ОСТАННЮ ЧЕРГУ.");
+            underTheHood.push("Знижено оксид тонування через ризик провалу на пористих кінцях.");
+        }
+        state.timing=timing;
+        state.underTheHood=underTheHood;
+        return{protocol,underTheHood};
+    }
+}
+
+// ===== MASTER NODE =====
+class MasterNode{
+    constructor(){
+        this.agents={chemist:new ChemistAgent(),math:runMathAgent,tech:new TechnologistAgent()};
+    }
+    process(input){
+        const rStep=input.targetLevel-input.rootLevel;
+        const lStep=input.targetLevel-input.lengthLevel;
+        const decomp={...input,rStep,lStep};
+        try{
+            const chem=this.agents.chemist.validate(decomp);
+            if(chem.status==="BLOCKED")return this.red(chem);
+            const state=this.agents.math(decomp);
+            if(state.status==="BLOCKED"||state.status==="FATAL_ERROR")return this.red(state);
+            const tech=this.agents.tech.generateRegulation(decomp,state);
+            state.plan=[...tech.protocol,...state.plan];
+            state.underTheHood=[...(state.underTheHood||[]),...tech.underTheHood];
+            return state;
+        }catch(e){return this.red({status:"FATAL_ERROR",stages:[{title:"КРИТИЧНА ПОМИЛКА",text:e.message}]});}
+    }
+    red(s){return{...s,status:s.status||"FATAL_ERROR",warnings:s.warnings||[],diagnostics:s.diagnostics||[],plan:["ЗУПИНЕНО."],timing:0,rootRec:null,lenRec:null,underTheHood:[]};}
+}
+
+// ===== UI CONTROLLER =====
+const form=document.getElementById('F');
+const blocker=document.getElementById('blocker');
+const results=document.getElementById('results');
+const out=document.getElementById('out');
+const sumHdr=document.getElementById('sum-hdr');
+const finBtn=document.getElementById('fin-btn');
+const postFin=document.getElementById('post-fin');
+let locked=false;
+
+form.addEventListener('change',()=>{
+    if(locked)return;
+    const fd=new FormData(form);
+    const d={};
+    for(let[k,v]of fd.entries())d[k]=v;
+    if(Object.keys(d).length<13){blocker.style.display='block';results.style.display='none';return;}
+    blocker.style.display='none';
+    results.style.display='block';
+    run(d);
+});
+
+finBtn.addEventListener('click',()=>{
+    locked=true;finBtn.style.display='none';
+    form.querySelectorAll('input').forEach(i=>i.disabled=true);
+    postFin.style.display='block';
+});
+
+function run(d){
+    const input={
+        brand:d.brand,
+        baseType:d.baseType,
+        lengthBaseType:d.lengthBaseType,
+        rootLevel:parseInt(d.rLevel),
+        lengthLevel:parseInt(d.lLevel),
+        rootLen:d.rootLen,
+        hairLength:d.hairLength||'MEDIUM',
+        hairDensity:d.hairDensity||'NORMAL',
+        elasticity:parseInt(d.elasticity),
+        porosity:d.porosity,
+        targetLevel:parseInt(d.tLevel),
+        targetDirection:d.tDir,
+        grey:parseInt(d.grey)
+    };
+    const master=new MasterNode();
+    const state=master.process(input);
+    sumHdr.textContent=`Зведення: ${d.brand} → ${input.targetLevel}.${input.targetDirection}`;
+    render(state,input);
+}
+
+// ============================================================
+// RENDER ENGINE v3 — Покроковий протокол (Mobile-First)
+// ============================================================
+
+function render(s, input) {
+    let h = '';
+
+    // --- БЛОКУВАННЯ: Перекриває весь екран ---
+    if (s.status === 'BLOCKED' || s.status === 'FATAL_ERROR') {
+        (s.stages || []).forEach(st => {
+            h += `<div class="blocked-full">
+                <div class="blocked-title" style="color:#ff8fab;font-size:1.15em;font-weight:700;margin-bottom:10px">
+                    🚨 ${st.title}
+                </div>
+                <div style="color:#ffb4c0;font-size:.95em;line-height:1.55">${st.text}</div>
+            </div>`;
+        });
+        out.innerHTML = h;
+        return;
+    }
+
+    // --- ПРОТОКОЛ «ОСТАННЯ НАДІЯ» --- (виводиться першим, якщо є)
+    const lastHopePlan = (s.plan || []).filter(p =>
+        p.includes('ОСТАННЯ НАДІЯ') || p.includes('КРОК 0')
+    );
+    if (lastHopePlan.length) {
+        h += `<div class="lasthope-banner">
+            <strong>🚨 ПРОТОКОЛ «ОСТАННЯ НАДІЯ» (Еластичність 4)</strong>
+            ${lastHopePlan.map(p => `<div style="color:#ffe0b2;font-size:.92em;margin-top:5px">▸ ${p}</div>`).join('')}
+        </div>`;
+    }
+
+    // --- ПОПЕРЕДЖЕННЯ ---
+    if (s.warnings && s.warnings.length) {
+        s.warnings.forEach(w => { h += `<div class="warn-box">⚠️ ${w}</div>`; });
+    }
+
+    // --- ДІАГНОСТИКА ---
+    if (s.diagnostics && s.diagnostics.length) {
+        s.diagnostics.forEach(d => { h += `<div class="diag-box">🔬 ${d}</div>`; });
+    }
+
+    // --- ХРОНОЛОГІЯ НАНЕСЕННЯ ---
+    let stepNum = 0;
+
+    // КРОК 1 — Mid-band (якщо є, ЗАВЖДИ першим)
+    if (s.midRec) {
+        stepNum++;
+        h += stepCard({
+            num: stepNum,
+            type: 'midband',
+            icon: '🟡',
+            label: 'КРОК ' + stepNum + ' — MID-BAND (Холодна зона відростання)',
+            note: '🧭 Нанести на відрослу зону, відступаючи 1–1.5 см від шкіри.',
+            rec: s.midRec
+        });
+    }
+
+    // КРОК 2 (або 1 якщо немає mid) — Корінь
+    if (s.rootRec) {
+        stepNum++;
+        h += stepCard({
+            num: stepNum,
+            type: 'root',
+            icon: '🔵',
+            label: 'КРОК ' + stepNum + ' — КОРІНЬ (Гаряча прикоренева зона)',
+            note: '🧭 Нанести на прикореневу зону (0–1.5 см від шкіри).',
+            rec: s.rootRec
+        });
+    }
+
+    // КРОК 3 (або 2) — Довжина
+    if (s.lenRec) {
+        stepNum++;
+        h += stepCard({
+            num: stepNum,
+            type: 'length',
+            icon: '🟢',
+            label: 'КРОК ' + stepNum + ' — ДОВЖИНА',
+            note: '',
+            rec: s.lenRec
+        });
+    }
+
+    // --- ЧАС ВИТРИМКИ ---
+    if (s.timing) {
+        h += `<div class="timing-box">⏱ Загальний час витримки<br>
+              <span class="big">${s.timing} хв</span></div>`;
+    }
+
+    // --- РЕГЛАМЕНТ ДІЙ ---
+    const protocolSteps = (s.plan || []).filter(p =>
+        !p.includes('ОСТАННЯ НАДІЯ') && !p.includes('КРОК 0')
+    );
+    if (protocolSteps.length) {
+        h += `<div class="protocol-box">
+            <div style="color:#bb86fc;font-weight:700;margin-bottom:10px;font-size:1em">📋 РЕГЛАМЕНТ ДІЙ</div>
+            ${protocolSteps.map((p, i) =>
+                `<div class="protocol-step">
+                    <span class="ps-num">${i + 1}.</span>
+                    <span>${p}</span>
+                </div>`
+            ).join('')}
+        </div>`;
+    }
+
+    // --- ЛОГІКА АЛГОРИТМУ ---
+    if (s.underTheHood && s.underTheHood.length) {
+        h += `<details style="margin-top:12px">
+            <summary>[i] Логіка алгоритму</summary>
+            ${s.underTheHood.map(u => `<div style="margin:4px 0;color:#aaa">• ${u}</div>`).join('')}
+        </details>`;
+    }
+
+    out.innerHTML = h;
+}
+
+// Генератор картки кроку
+function stepCard({ num, type, icon, label, note, rec }) {
+    const processStr = rec.process || '—';
+    const dyeStr     = rec.dye    || '—';
+    const oxStr      = rec.ox     || '—';
+    const massStr    = rec.mass   != null ? rec.mass + ' г' : '—';
+    const ratioStr   = rec.ratio  || '—';
+
+    let dyeDetailsHTML = '';
+    if (rec.dyeDetails && rec.dyeDetails.length) {
+        dyeDetailsHTML = `<div class="step-dye-details">
+            ${rec.dyeDetails.map(dd =>
+                `<div class="dd-row">
+                    <span class="dd-name">▸ ${dd.name}</span>
+                    <span class="dd-g">${dd.grams} г</span>
+                </div>`
+            ).join('')}
+        </div>`;
+    }
+
+    const mixtoneHTML = rec.mixtone
+        ? `<div class="step-mixtone">🎨 Мікстон: ${rec.mixtone}</div>`
+        : '';
+
+    const noteHTML = note
+        ? `<div class="step-note">${note}</div>`
+        : '';
+
+    return `
+    <div class="step-card ${type}">
+        <div class="step-num">${icon} Крок ${num}</div>
+        <div class="step-title">${label}</div>
+        ${noteHTML}
+        <div class="step-formula">
+            <div class="step-formula-item">
+                <div class="sfi-label">Процес</div>
+                <div class="sfi-val" style="font-size:1em">${processStr}</div>
+            </div>
+            <div class="step-formula-item">
+                <div class="sfi-label">Оксид</div>
+                <div class="sfi-val ox-val">${oxStr}</div>
+            </div>
+            <div class="step-formula-item">
+                <div class="sfi-label">Маса суміші</div>
+                <div class="sfi-val mass-val big-val">${massStr}</div>
+            </div>
+            <div class="step-formula-item">
+                <div class="sfi-label">Пропорція</div>
+                <div class="sfi-val" style="font-size:1em">${ratioStr}</div>
+            </div>
+        </div>
+        <div style="font-size:.88em;color:#aaa;margin-bottom:8px">
+            <span style="color:#888">Барвник: </span>${dyeStr}
+        </div>
+        ${dyeDetailsHTML}
+        ${mixtoneHTML}
+    </div>`;
+}
+
+function recipeHTML(title,rec){
+    let h=`<div class="recipe-card"><h4>${title}: ${rec.process}</h4>`;
+    h+=`<div class="recipe-row"><span>Барвник:</span><span>${rec.dye}</span></div>`;
+    if(rec.dyeDetails){
+        rec.dyeDetails.forEach(dd=>{h+=`<div class="recipe-row" style="padding-left:12px;color:#bb86fc"><span>▸ ${dd.name}</span><span>${dd.grams} гр</span></div>`;});
+    }
+    h+=`<div class="recipe-row"><span>Оксид:</span><span>${rec.ox}</span></div>`;
+    h+=`<div class="recipe-row"><span>Маса:</span><span>${rec.mass} гр</span></div>`;
+    h+=`<div class="recipe-row"><span>Пропорція:</span><span>${rec.ratio}</span></div>`;
+    if(rec.mixtone){h+=`<div class="mix-box">🎨 Мікстон: ${rec.mixtone}</div>`;}
+    h+='</div>';
+    return h;
+}
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
