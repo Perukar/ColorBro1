@@ -13,7 +13,10 @@
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js', { scope: '/ColorBro1/' })
-        .then(reg => console.log('[SW] Registered, scope:', reg.scope))
+        .then(reg => {
+          console.log('[SW] Registered, scope:', reg.scope);
+          reg.onupdatefound = () => { location.reload(); };
+        })
         .catch(err => console.warn('[SW] Registration failed:', err));
     });
   }
