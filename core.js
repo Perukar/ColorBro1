@@ -16,8 +16,13 @@ const DENSITY_MULTIPLIER = { [Density.THIN]: 0.8, [Density.NORMAL]: 1.0, [Densit
 class InputMapper {
     static mapCondition(raw) {
         if (raw === 'здоровые') return HairCondition.HEALTHY;
-        if (raw === 'пористі') return HairCondition.POROUS;
+        if (raw === 'пористые' || raw === 'пористі') return HairCondition.POROUS;
+        if (raw === 'поврежденные') return HairCondition.DAMAGED; // Maps to DAMAGED for now, or maybe POROUS? The user didn't specify intermediate, but I'll map to DAMAGED. Actually, let's treat it as DAMAGED, and "сильно поврежденные" as DAMAGED too, but I'll add a new enum or just treat both as DAMAGED. Let's just use DAMAGED for "сильно поврежденные".
         if (raw === 'сильно поврежденные') return HairCondition.DAMAGED;
+        
+        // Wait, the user asked for: здоровые, пористые, поврежденные, сильно поврежденные.
+        // Let's refine.
+        if (raw === 'поврежденные') return HairCondition.POROUS; // Often treated similarly to porous. Or I can add a new condition.
         throw new Error(`Unknown condition: ${raw}`);
     }
     static mapBaseType(raw) {
@@ -36,7 +41,7 @@ class InputMapper {
     }
     static mapThickness(raw) {
         if (raw === 'тонкие') return Thickness.THIN;
-        if (raw === 'нормальные') return Thickness.NORMAL;
+        if (raw === 'средние' || raw === 'нормальные') return Thickness.NORMAL;
         if (raw === 'толстые') return Thickness.THICK;
         throw new Error(`Unknown thickness: ${raw}`);
     }
@@ -48,9 +53,9 @@ class InputMapper {
         throw new Error(`Unknown length: ${raw}`);
     }
     static mapDensity(raw) {
-        if (raw === 'THIN')   return Density.THIN;
-        if (raw === 'NORMAL') return Density.NORMAL;
-        if (raw === 'THICK')  return Density.THICK;
+        if (raw === 'редкие' || raw === 'THIN')   return Density.THIN;
+        if (raw === 'средние' || raw === 'NORMAL') return Density.NORMAL;
+        if (raw === 'густые' || raw === 'THICK')  return Density.THICK;
         throw new Error(`Unknown density: ${raw}`);
     }
     static mapGreyType(raw) {
@@ -617,6 +622,19 @@ class MathAgent {
             timing = finalRoot && finalRoot.process === ProcessType.SPECIAL_BLOND ? 50 : 40 + tMod;
         }
 
+        // ГЕНЕРАЦІЯ REASONS (ПОЯСНЕННЯ ДЛЯ UI)
+        let reasons = {};
+        if (finalLength) {
+            reasons.ox = `Оксид ${finalLength.ox} обрано з урахуванням вихідної бази, цільового рівня та стану волосся.`;
+            reasons.mass = `Маса ${massDist.length}г розрахована за формулою: базова маса * густота * довжина.`;
+            if (modifiedLength && modifiedLength.process === ProcessType.TONING) {
+                reasons.mixtone = `Мікстон розраховано за 'Правилом 11' для нейтралізації прогнозованого фону освітлення.`;
+            }
+        }
+        if (finalRoot) {
+            reasons.rootOx = `Оксид для кореня ${finalRoot.ox} обрано з огляду на сивину та кроки освітлення.`;
+        }
+
         return Object.freeze({
             ...initState,
             warnings: [...localWarnings, ...rootResult.warnings],
@@ -625,7 +643,8 @@ class MathAgent {
             midRec: finalMid ? Object.freeze(finalMid) : null,
             lenRec: modifiedLength ? Object.freeze(modifiedLength) : null,
             plan: plan,
-            timing: timing
+            timing: timing,
+            reasons: reasons
         });
     }
 }

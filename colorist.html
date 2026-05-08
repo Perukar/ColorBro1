@@ -733,7 +733,8 @@ function render(s, input) {
             icon: '🟡',
             label: 'КРОК ' + stepNum + ' — MID-BAND (Холодна зона відростання)',
             note: '🧭 Нанести на відрослу зону, відступаючи 1–1.5 см від шкіри.',
-            rec: s.midRec
+            rec: s.midRec,
+            reasons: {}
         });
     }
 
@@ -746,7 +747,8 @@ function render(s, input) {
             icon: '🔵',
             label: 'КРОК ' + stepNum + ' — КОРІНЬ (Гаряча прикоренева зона)',
             note: '🧭 Нанести на прикореневу зону (0–1.5 см від шкіри).',
-            rec: s.rootRec
+            rec: s.rootRec,
+            reasons: { ox: s.reasons?.rootOx }
         });
     }
 
@@ -759,7 +761,8 @@ function render(s, input) {
             icon: '🟢',
             label: 'КРОК ' + stepNum + ' — ДОВЖИНА',
             note: '',
-            rec: s.lenRec
+            rec: s.lenRec,
+            reasons: { ox: s.reasons?.ox, mass: s.reasons?.mass, mixtone: s.reasons?.mixtone }
         });
     }
 
@@ -797,12 +800,14 @@ function render(s, input) {
 }
 
 // Генератор картки кроку
-function stepCard({ num, type, icon, label, note, rec }) {
+function stepCard({ num, type, icon, label, note, rec, reasons = {} }) {
     const processStr = rec.process || '—';
     const dyeStr     = rec.dye    || '—';
     const oxStr      = rec.ox     || '—';
     const massStr    = rec.mass   != null ? rec.mass + ' г' : '—';
     const ratioStr   = rec.ratio  || '—';
+    
+    const getReasonIcon = (text) => text ? ` <span style="cursor:pointer;background:#6366f1;color:#fff;border-radius:50%;padding:0 5px;font-size:0.8em;" onclick="alert('${text}')">[?]</span>` : '';
 
     let dyeDetailsHTML = '';
     if (rec.dyeDetails && rec.dyeDetails.length) {
@@ -817,7 +822,7 @@ function stepCard({ num, type, icon, label, note, rec }) {
     }
 
     const mixtoneHTML = rec.mixtone
-        ? `<div class="step-mixtone">🎨 Мікстон: ${rec.mixtone}</div>`
+        ? `<div class="step-mixtone">🎨 Мікстон: ${rec.mixtone}${getReasonIcon(reasons.mixtone)}</div>`
         : '';
 
     const noteHTML = note
@@ -836,11 +841,11 @@ function stepCard({ num, type, icon, label, note, rec }) {
             </div>
             <div class="step-formula-item">
                 <div class="sfi-label">Оксид</div>
-                <div class="sfi-val ox-val">${oxStr}</div>
+                <div class="sfi-val ox-val">${oxStr}${getReasonIcon(reasons.ox)}</div>
             </div>
             <div class="step-formula-item">
                 <div class="sfi-label">Маса суміші</div>
-                <div class="sfi-val mass-val big-val">${massStr}</div>
+                <div class="sfi-val mass-val big-val">${massStr}${getReasonIcon(reasons.mass)}</div>
             </div>
             <div class="step-formula-item">
                 <div class="sfi-label">Пропорція</div>

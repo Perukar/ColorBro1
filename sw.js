@@ -4,7 +4,7 @@
 // Версія кешу: my-barber-v9.2-ghpages
 // ============================================================
 
-const CACHE_NAME = 'my-barber-v9.3-FINAL-FIX';
+const CACHE_NAME = 'my-barber-v9.4-STABLE';
 const BASE = '/ColorBro1';
 
 // Файли, що кешуються при інсталяції (абсолютні шляхи для GitHub Pages)
