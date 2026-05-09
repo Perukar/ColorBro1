@@ -106,7 +106,7 @@
         
         <div class="card">
             <span class="label">Історія волосся</span>
-            <select name="history">
+            <select name="history" id="history">
                 <option value="чистые">Раніше не фарбоване / Натуральне</option>
                 <option value="Натуральна">Натуральне (корінь)</option>
                 <option value="Косметична">Косметична база (свіжа)</option>
@@ -196,7 +196,7 @@
             </div>
 
             <span class="label">Тип бази довжини</span>
-            <select name="baseType">
+            <select name="baseType" id="baseType">
                 <option value="Натуральна">Натуральна (ФО - це УГТ)</option>
                 <option value="Косметична" selected>Косметична (Фарбована)</option>
                 <option value="Прямий пігмент / Хна">Прямий пігмент / Хна</option>
@@ -222,7 +222,7 @@
             </div>
 
             <span class="label">Бажаний відтінок</span>
-            <select name="targetDirection">
+            <select name="targetDirection" id="targetDirection">
                 <option value="0">.0 Натуральний</option>
                 <option value="1" selected>.1 Попіл (Холодний)</option>
                 <option value="2">.2 Перлина / Фіолет</option>
@@ -233,34 +233,14 @@
             </select>
         </div>
 
-        <button type="button" id="calculateBtn" class="btn-danger">ЗГЕНЕРУВАТИ ПРОТОКОЛ</button>
+        <button type="button" id="calculateBtn" class="btn-danger" onclick="calculateProtocol()">ЗГЕНЕРУВАТИ ПРОТОКОЛ</button>
     </form>
 
     <div id="resultContainer"></div>
 
     <script src="core.js"></script>
     <script>
-        const form = document.getElementById('F');
-        const btn = document.getElementById('calculateBtn');
-        const container = document.getElementById('resultContainer');
-
-        btn.addEventListener('click', () => {
-            const fd = new FormData(form);
-            const d = {};
-            for (let [k, v] of fd.entries()) d[k] = v;
-
-            // Еластичність за замовчуванням 1, якщо не в формі
-            d.elasticity = d.elasticity || "1";
-
-            try {
-                const master = new MasterNode();
-                const state = master.process(d);
-                render(state, d);
-                container.scrollIntoView({ behavior: 'smooth' });
-            } catch (e) {
-                container.innerHTML = `<div class="warning-box">ПОМИЛКА: ${e.message}</div>`;
-            }
-        });
+        // Блок ініціалізації (якщо потрібно)
 
         function render(s, input) {
             let h = '';

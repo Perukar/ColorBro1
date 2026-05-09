@@ -596,48 +596,52 @@ class MasterNode {
 
 // Якщо використовується в браузері для зв'язку з UI
 function calculateProtocol() {
+    console.log("⚡ [core.js] Button clicked! Starting calculation...");
     try {
-        const form = document.getElementById('F');
-        if (!form) throw new Error("Form #F not found");
-        
-        const fd = new FormData(form);
-        const d = {};
-        for(let [k,v] of fd.entries()) d[k] = v;
-
-        let rawInput = {
-            brand: d.brand,
-            baseType: d.baseType,
-            lengthBaseType: d.lengthBaseType,
-            rootLevel: d.rLevel,
-            lengthLevel: d.lLevel,
-            rootLength: d.rootLen || "1",
-            hairLength: d.hairLength || 'MEDIUM',
-            hairDensity: d.hairDensity || 'NORMAL',
-            elasticity: d.elasticity || "1",
-            condition: d.porosity || 'Норма',
-            targetLevel: d.tLevel,
-            targetDirection: d.tDir,
-            grey: d.grey || "0",
-            history: d.baseType === 'хна / металл' ? 'хна / металл' : 'чистые',
-            thickness: 'средние',
-            density: d.hairDensity === 'THICK' ? 'густые' : (d.hairDensity === 'THIN' ? 'редкие' : 'средние'),
-            length: d.hairLength === 'SHORT' ? 'короткие' : (d.hairLength === 'LONG' ? 'длинные' : 'средние'),
-            greyType: 'обычная'
+        const getV = (id) => {
+            const el = document.getElementById(id) || document.querySelector(`[name="${id}"]:checked`);
+            if (!el) {
+                console.warn(`[core.js] Element or Radio not found: ${id}`);
+                return null;
+            }
+            return el.value;
         };
 
+        const rawInput = {
+            history: getV('history'),
+            condition: getV('condition'),
+            thickness: getV('thickness'),
+            density: getV('density'),
+            length: getV('length'),
+            grey: getV('grey'),
+            greyType: getV('greyType'),
+            rootLevel: getV('rootLevel'),
+            rootLength: getV('rootLength'),
+            lengthLevel: getV('lengthLevel'),
+            baseType: getV('baseType'),
+            targetLevel: getV('targetLevel'),
+            targetDirection: getV('targetDirection'),
+            elasticity: "1"
+        };
+
+        console.log("[core.js] Input data:", rawInput);
+
         const master = new MasterNode();
-        let state = master.process(rawInput);
+        const state = master.process(rawInput);
         
+        console.log("[core.js] Calculation complete. Status:", state.status);
+
         if (typeof render === 'function') {
             render(state, rawInput);
-        } else if (typeof renderState === 'function') {
-            renderState(state);
+            document.getElementById('resultContainer').scrollIntoView({ behavior: 'smooth' });
         } else {
-            console.log("Result State:", state);
+            console.error("[core.js] Render function not found!");
+            alert("Помилка: функція відображення не знайдена.");
         }
-    } catch(e) {
-        console.error("Calculation Error:", e);
-        alert("Помилка розрахунку: " + e.message);
+
+    } catch (e) {
+        console.error("[core.js] CRITICAL ERROR:", e);
+        alert("Критична помилка розрахунку: " + e.message);
     }
 }
 
