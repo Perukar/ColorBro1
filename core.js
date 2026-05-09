@@ -87,7 +87,10 @@ class InputMapper {
             targetLevel:     targetLevel,
             targetDirection: String(rawData.targetDirection),
             rStep:           targetLevel - rootLevel,
-            lStep:           targetLevel - lengthLevel
+            lStep:           targetLevel - lengthLevel,
+            isMidActive:     rawData.isMidActive === true,
+            midLevel:        rawData.midLevel ? parseInt(rawData.midLevel) : null,
+            midBaseType:     rawData.midBaseType ? this.mapBaseType(rawData.midBaseType) : null
         });
     }
 }
@@ -211,7 +214,7 @@ class MathAgent {
         const baseMass = 60; 
         const densityMult = snapshot.hairDensity === Density.THIN ? 0.8 : (snapshot.hairDensity === Density.THICK ? 1.3 : 1.0);
         let totalMass = Math.round(baseMass * densityMult);
-        const isMidBand = snapshot.rootLength > 2 && snapshot.rStep > 0;
+        const isMidBand = snapshot.isMidActive;
         let rootTotal = Math.round(totalMass * 0.30);
         let lengthMass = totalMass - rootTotal;
         let midMass  = 0;
@@ -640,42 +643,44 @@ class MasterNode {
 }
 
 // Якщо використовується в браузері для зв'язку з UI
+function gatherFormData() {
+    const midBandBlock = document.getElementById('midBandBlock');
+    const isMidActive = midBandBlock && midBandBlock.style.display === 'block';
+
+    const getV = (id) => {
+        const radio = document.querySelector(`input[name="${id}"]:checked`);
+        if (radio) return radio.value;
+        const el = document.getElementById(id);
+        if (el) return el.value;
+        return null;
+    };
+
+    return {
+        history: getV('history'),
+        condition: getV('condition'),
+        thickness: getV('thickness'),
+        density: getV('density'),
+        length: getV('length'),
+        grey: getV('grey'),
+        greyType: getV('greyType'),
+        rootLevel: getV('rootLevel'),
+        rootLength: getV('rootLength'),
+        lengthLevel: getV('lengthLevel'),
+        baseType: getV('baseType'),
+        targetLevel: getV('targetLevel'),
+        targetDirection: getV('targetDirection'),
+        elasticity: "1",
+        midLevel: isMidActive ? getV('midLevel') : null,
+        midBaseType: isMidActive ? getV('midBaseType') : null,
+        isMidActive: isMidActive
+    };
+}
+
 function calculateProtocol() {
-    console.log("⚡ [core.js] Button clicked! Starting calculation...");
+    console.log("⚡ [core.js] Starting dynamic calculation...");
     try {
-        const midBandBlock = document.getElementById('midBandBlock');
-        const isMidActive = midBandBlock && midBandBlock.style.display === 'block';
-
-        const getV = (id) => {
-            const el = document.getElementById(id) || document.querySelector(`[name="${id}"]:checked`);
-            if (!el) {
-                console.warn(`[core.js] Element or Radio not found: ${id}`);
-                return null;
-            }
-            return el.value;
-        };
-
-        const rawInput = {
-            history: getV('history'),
-            condition: getV('condition'),
-            thickness: getV('thickness'),
-            density: getV('density'),
-            length: getV('length'),
-            grey: getV('grey'),
-            greyType: getV('greyType'),
-            rootLevel: getV('rootLevel'),
-            rootLength: getV('rootLength'),
-            lengthLevel: getV('lengthLevel'),
-            baseType: getV('baseType'),
-            targetLevel: getV('targetLevel'),
-            targetDirection: getV('targetDirection'),
-            elasticity: "1",
-            midLevel: isMidActive ? getV('midLevel') : null,
-            midBaseType: isMidActive ? getV('midBaseType') : null,
-            isMidActive: isMidActive
-        };
-
-        console.log("[core.js] Input data:", rawInput);
+        const rawInput = gatherFormData();
+        console.log("[core.js] Dynamic Input Data:", rawInput);
 
         const master = new MasterNode();
         const state = master.process(rawInput);
@@ -684,10 +689,10 @@ function calculateProtocol() {
 
         if (typeof render === 'function') {
             render(state, rawInput);
-            document.getElementById('resultContainer').scrollIntoView({ behavior: 'smooth' });
+            const container = document.getElementById('resultContainer');
+            if (container) container.scrollIntoView({ behavior: 'smooth' });
         } else {
             console.error("[core.js] Render function not found!");
-            alert("Помилка: функція відображення не знайдена.");
         }
 
     } catch (e) {
