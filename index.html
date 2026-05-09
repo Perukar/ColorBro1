@@ -261,21 +261,32 @@
                         <div class="phase-content">
                     `;
                     
-                    if (phase.steps) {
-                        phase.steps.forEach(step => {
-                            h += `
-                            <div class="step-card">
-                                <div class="step-name">
-                                    <span>${step.stepName}</span>
-                                    ${step.reason ? `<span class="step-reason" onclick="alert('${step.reason.replace(/'/g, "\\'")}')">🧠 Чому?</span>` : ''}
+                        if (phase.steps) {
+                            phase.steps.forEach(step => {
+                                h += `
+                                <div class="step-card">
+                                    <div class="step-name">
+                                        <span>${step.stepName}</span>
+                                        ${step.reason ? `<span class="step-reason" onclick="alert('${step.reason.replace(/'/g, "\\'")}')">🧠 Чому?</span>` : ''}
+                                    </div>
+                                    <div class="step-action">${step.action}</div>
+                                    ${step.details ? `<div style="color:#aaa; font-size:0.85em; margin-top:6px; border-top:1px dashed #333; padding-top:4px;">${step.details}</div>` : ''}
                                 </div>
-                                <div class="step-action">${step.action}</div>
-                                ${step.details ? `<div style="color:#aaa; font-size:0.85em; margin-top:6px; border-top:1px dashed #333; padding-top:4px;">${step.details}</div>` : ''}
+                                `;
+                            });
+                        }
+
+                        // Відображення Технологічних Порад
+                        if (phase.techTips && phase.techTips.length) {
+                            h += `
+                            <div style="background: rgba(187, 134, 252, 0.05); border: 1px dashed var(--accent); padding: 10px; border-radius: 8px; margin-top: 10px;">
+                                <div style="font-weight: 800; color: var(--accent); font-size: 0.85em; margin-bottom: 6px; text-transform: uppercase;">⚡ Технологічна нота:</div>
+                                ${phase.techTips.map(tip => `<div style="font-size: 0.85em; margin-bottom: 4px; color: #ccc;">${tip}</div>`).join('')}
                             </div>
                             `;
-                        });
-                    }
-                    h += `</div></details>`;
+                        }
+
+                        h += `</div></details>`;
                 });
             }
 
