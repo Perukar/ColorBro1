@@ -15,18 +15,18 @@ const DENSITY_MULTIPLIER = { [Density.THIN]: 0.8, [Density.NORMAL]: 1.0, [Densit
 // --- INPUT MAPPER ---
 class InputMapper {
     static mapCondition(raw) {
-        if (raw === 'здоровые') return HairCondition.HEALTHY;
-        if (raw === 'пористые' || raw === 'пористі') return HairCondition.POROUS;
-        if (raw === 'поврежденные') return HairCondition.DAMAGED; // Maps to DAMAGED
-        if (raw === 'сильно поврежденные') return HairCondition.DAMAGED;
-        throw new Error(`Unknown condition: ${raw}`);
+        if (raw === 'здоровые' || raw === 'Нормальні') return HairCondition.HEALTHY;
+        if (raw === 'пористые' || raw === 'пористі' || raw === 'Пористі') return HairCondition.POROUS;
+        if (raw === 'поврежденные' || raw === 'Пошкоджені') return HairCondition.DAMAGED;
+        if (raw === 'сильно поврежденные' || raw === 'Склоподібні') return HairCondition.DAMAGED;
+        return HairCondition.HEALTHY; // Fallback
     }
     static mapBaseType(raw) {
         if (raw === 'Натуральна') return BaseType.NATURAL;
         if (raw === 'Косметична') return BaseType.COSMETIC_FRESH;
-        if (raw === 'Накопичена косметика' || raw === 'COSMETIC_BUILDUP') return BaseType.COSMETIC_BUILDUP;
-        if (raw === 'хна / металл' || raw === 'HENNA') return BaseType.HENNA;
-        throw new Error(`Unknown base type: ${raw}`);
+        if (raw === 'Накопичена косметика' || raw === 'COSMETIC_BUILDUP' || raw === 'Косметична (накопичена)') return BaseType.COSMETIC_BUILDUP;
+        if (raw === 'хна / металл' || raw === 'HENNA' || raw === 'Прямий пігмент / Хна') return BaseType.HENNA;
+        return BaseType.NATURAL; // Fallback
     }
     static mapElasticity(rawNum) {
         let n = parseInt(rawNum) || 1;
@@ -36,26 +36,27 @@ class InputMapper {
         throw new Error(`Unknown elasticity: ${rawNum}`);
     }
     static mapThickness(raw) {
-        if (raw === 'тонкие') return Thickness.THIN;
-        if (raw === 'средние' || raw === 'нормальные') return Thickness.NORMAL;
-        if (raw === 'толстые') return Thickness.THICK;
-        throw new Error(`Unknown thickness: ${raw}`);
+        if (raw === 'тонкие' || raw === 'Тонкі') return Thickness.THIN;
+        if (raw === 'средние' || raw === 'нормальные' || raw === 'Середні') return Thickness.NORMAL;
+        if (raw === 'толстые' || raw === 'Товсті') return Thickness.THICK;
+        return Thickness.NORMAL; // Fallback
     }
     static mapLength(raw) {
-        if (raw === 'SHORT')  return Length.SHORT;
-        if (raw === 'MEDIUM') return Length.MEDIUM;
-        if (raw === 'LONG')   return Length.LONG;
-        if (raw === 'EXTRA')  return Length.EXTRA;
-        throw new Error(`Unknown length: ${raw}`);
+        if (raw === 'SHORT' || raw === 'короткие' || raw === 'Короткі') return Length.SHORT;
+        if (raw === 'MEDIUM' || raw === 'средние' || raw === 'Середні') return Length.MEDIUM;
+        if (raw === 'LONG' || raw === 'длинные' || raw === 'Довгі') return Length.LONG;
+        if (raw === 'EXTRA' || raw === 'Дуже довгі') return Length.EXTRA;
+        return Length.MEDIUM; // Fallback
     }
     static mapDensity(raw) {
-        if (raw === 'редкие' || raw === 'THIN')   return Density.THIN;
-        if (raw === 'средние' || raw === 'NORMAL') return Density.NORMAL;
-        if (raw === 'густые' || raw === 'THICK')  return Density.THICK;
-        throw new Error(`Unknown density: ${raw}`);
+        if (raw === 'редкие' || raw === 'THIN' || raw === 'Рідкі')   return Density.THIN;
+        if (raw === 'средние' || raw === 'NORMAL' || raw === 'Середні') return Density.NORMAL;
+        if (raw === 'густые' || raw === 'THICK' || raw === 'Густі')  return Density.THICK;
+        return Density.NORMAL; // Fallback
     }
     static mapGreyType(raw) {
-        if (raw === 'стекловидная') return GreyType.GLASSY;
+        if (raw === 'стекловидная' || raw === 'Жорстка/Склоподібна' || raw === 'Жорстка') return GreyType.GLASSY;
+        if (raw === "М'яка") return GreyType.NORMAL;
         return GreyType.NORMAL;
     }
     static mapHistory(raw) {
@@ -72,8 +73,8 @@ class InputMapper {
             history:         this.mapHistory(rawData.history),
             condition:       this.mapCondition(rawData.condition),
             thickness:       this.mapThickness(rawData.thickness),
-            hairLength:      this.mapLength(rawData.hairLength || 'MEDIUM'),
-            hairDensity:     this.mapDensity(rawData.hairDensity || 'NORMAL'),
+            hairLength:      this.mapLength(rawData.length || 'MEDIUM'),
+            hairDensity:     this.mapDensity(rawData.density || 'NORMAL'),
             density:         rawData.density,
             length:          rawData.length,
             grey:            parseInt(rawData.grey) || 0,
