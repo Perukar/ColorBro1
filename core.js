@@ -304,24 +304,40 @@ class MathAgent {
         if (!recipe) return null;
         let isPowder = recipe.process === ProcessType.POWDER || recipe.process === ProcessType.DECAPITATION;
         
-        // ПРАВИЛО 4: Игнорирование седины при пудре
         if (isPowder && snapshot.grey > 0) {
             recipe._greyIgnored = true;
             return { ...recipe };
         }
 
         if (snapshot.grey >= 15 && recipe.process === ProcessType.PERMANENT) {
-            let dLevel = snapshot.targetLevel > 1 ? snapshot.targetLevel - 1 : 1;
-            let baseRatio = (snapshot.grey >= 40 && snapshot.grey < 60) ? 0.5 : (snapshot.grey < 40 ? 1/3 : 2/3);
-            let bMass = Math.round(recipe.mass * baseRatio);
-            return {
-                ...recipe,
-                dyeDetails: [
-                    { name: `База ${dLevel}.00`, grams: bMass },
-                    { name: `Модний ${snapshot.targetLevel}.${snapshot.targetDirection}`, grams: recipe.mass - bMass }
-                ],
-                ox: snapshot.targetLevel >= 8 ? "9%" : "6%"
-            };
+            let dLevel = snapshot.targetLevel;
+            let baseRatio = 0;
+            let isGlassy = snapshot.greyType === GreyType.GLASSY;
+
+            if (isGlassy) {
+                baseRatio = 0.67; // 2:1
+            } else if (snapshot.grey >= 50) {
+                baseRatio = 0.50; // 1:1
+            } else if (snapshot.grey >= 30) {
+                baseRatio = 0.33; // 1:2
+            } else {
+                baseRatio = 0;
+            }
+
+            if (baseRatio > 0) {
+                let bMass = Math.round(recipe.mass * baseRatio);
+                let fMass = recipe.mass - bMass;
+                let baseName = isGlassy ? `База ${dLevel}.00` : `База ${dLevel}.0`;
+                
+                return {
+                    ...recipe,
+                    ox: "6%", // DEVELOPER_MATRIX grey standard
+                    dyeDetails: [
+                        { name: baseName, grams: bMass },
+                        { name: `Модний ${snapshot.targetLevel}.${snapshot.targetDirection}`, grams: fMass }
+                    ]
+                };
+            }
         }
         return { ...recipe };
     }
@@ -523,10 +539,38 @@ class MathAgent {
         }
         else {
             let p1 = { phaseName: "Фаза 1: Основне фарбування", steps: [] };
-            p1.steps.push({ stepName: "Корінь", action: `Нанести рецепт на корінь`, details: "Рівномірне нанесення", reason: "Фарбування відростання" });
-            p1.steps.push({ stepName: "Довжина", action: "Нанести суміш на довжину", details: "Полотно волосся", reason: "Забарвлення довжини" });
+            
+            const formatRecipe = (rec) => {
+                if (!rec) return "Рецепт не визначено";
+                if (rec.dyeDetails) {
+                    return rec.dyeDetails.map(d => `${d.name} (${d.grams}г)`).join(' + ') + ` + Оксид ${rec.ox} (${rec.mass}г)`;
+                }
+                let ratio = rec.ratio || "1:1";
+                let oxMass = rec.mass;
+                if (ratio === "1:2") oxMass = rec.mass * 2;
+                return `${rec.dye} (${rec.mass}г) + Оксид ${rec.ox} (${oxMass}г)`;
+            };
+
+            if (finalRoot) {
+                p1.steps.push({ 
+                    stepName: "Корінь", 
+                    action: formatRecipe(finalRoot), 
+                    details: "Рівномірне нанесення на прикореневу зону", 
+                    reason: "Фарбування відростання та робота з сивиною" 
+                });
+            }
+            
+            if (modifiedLength) {
+                p1.steps.push({ 
+                    stepName: "Довжина", 
+                    action: formatRecipe(modifiedLength), 
+                    details: "Нанесення на полотно волосся", 
+                    reason: "Корекція кольору по довжині" 
+                });
+            }
+            
             phases.push(p1);
-            timing = 40 + tMod;
+            timing = 45 + tMod;
         }
 
         let reasons = {};

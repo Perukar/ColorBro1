@@ -106,6 +106,16 @@
             color: #ccc;
             line-height: 1.4;
         }
+
+        /* Troubleshooting Styles */
+        .ts-container { margin-top: 30px; border-top: 1px solid #333; padding-top: 20px; }
+        .ts-title { color: var(--accent); font-weight: 800; font-size: 1.2em; margin-bottom: 15px; text-align: center; }
+        .ts-item { background: #1a1a1a; border: 1px solid #333; border-radius: 10px; margin-bottom: 10px; }
+        .ts-symptom { padding: 12px; font-weight: 700; cursor: pointer; color: #ffbaba; border-bottom: 1px solid #222; }
+        .ts-content { padding: 12px; font-size: 0.9em; display: none; }
+        .ts-item.active .ts-content { display: block; }
+        .ts-cause { color: #888; margin-bottom: 8px; }
+        .ts-fix { color: #4caf50; font-weight: 600; border-top: 1px dashed #444; padding-top: 8px; }
     </style>
 </head>
 <body>
@@ -249,9 +259,29 @@
 
     <div id="resultContainer"></div>
 
+    <div class="ts-container">
+        <div class="ts-title">🆘 ТРАБЛШУТИНГ (ДОПОМОГА)</div>
+        <div id="tsList"></div>
+    </div>
+
+    <script src="expert_logic.js"></script>
     <script src="core.js"></script>
     <script>
-        // Блок ініціалізації (якщо потрібно)
+        // Блок ініціалізації Troubleshooting
+        function initTS() {
+            const list = document.getElementById('tsList');
+            if (!window.TROUBLESHOOTING_MAP) return;
+            list.innerHTML = TROUBLESHOOTING_MAP.map(item => `
+                <div class="ts-item">
+                    <div class="ts-symptom" onclick="this.parentElement.classList.toggle('active')">❓ ${item.symptom}</div>
+                    <div class="ts-content">
+                        <div class="ts-cause"><b>Причина:</b> ${item.cause}</div>
+                        <div class="ts-fix"><b>Рішення:</b> ${item.fix}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        initTS();
 
         function render(s, input) {
             const container = document.getElementById('resultContainer');
