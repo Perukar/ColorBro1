@@ -42,9 +42,9 @@ class InputMapper {
         throw new Error(`Unknown thickness: ${raw}`);
     }
     static mapLength(raw) {
-        if (raw === 'SHORT'  || raw === 'короткие') return Length.SHORT;
-        if (raw === 'MEDIUM' || raw === 'средние')  return Length.MEDIUM;
-        if (raw === 'LONG'   || raw === 'длинные')  return Length.LONG;
+        if (raw === 'SHORT')  return Length.SHORT;
+        if (raw === 'MEDIUM') return Length.MEDIUM;
+        if (raw === 'LONG')   return Length.LONG;
         if (raw === 'EXTRA')  return Length.EXTRA;
         throw new Error(`Unknown length: ${raw}`);
     }
