@@ -596,36 +596,47 @@ class MasterNode {
 // Якщо використовується в браузері для зв'язку з UI
 function calculateProtocol() {
     try {
+        const form = document.getElementById('F');
+        if (!form) throw new Error("Form #F not found");
+        
+        const fd = new FormData(form);
+        const d = {};
+        for(let [k,v] of fd.entries()) d[k] = v;
+
         let rawInput = {
-            history: document.getElementById('history').value,
-            condition: document.getElementById('condition').value,
-            thickness: document.getElementById('thickness').value,
-            density: document.getElementById('density').value,
-            length: document.getElementById('length').value,
-            grey: document.getElementById('grey_percent').value,
-            greyType: document.getElementById('grey_type').value,
-            elasticity: document.getElementById('elasticity')?.value || "1",
-            rootLevel: document.getElementById('root_level').value,
-            rootLength: document.getElementById('root_length').value,
-            lengthLevel: document.getElementById('length_level').value,
-            baseType: document.getElementById('base_type').value,
-            targetLevel: document.getElementById('target_level').value,
-            targetDirection: document.getElementById('target_direction').value
+            brand: d.brand,
+            baseType: d.baseType,
+            lengthBaseType: d.lengthBaseType,
+            rootLevel: d.rLevel,
+            lengthLevel: d.lLevel,
+            rootLength: d.rootLen || "1",
+            hairLength: d.hairLength || 'MEDIUM',
+            hairDensity: d.hairDensity || 'NORMAL',
+            elasticity: d.elasticity || "1",
+            condition: d.porosity || 'Норма',
+            targetLevel: d.tLevel,
+            targetDirection: d.tDir,
+            grey: d.grey || "0",
+            history: d.baseType === 'хна / металл' ? 'хна / металл' : 'чистые',
+            thickness: 'средние',
+            density: d.hairDensity === 'THICK' ? 'густые' : (d.hairDensity === 'THIN' ? 'редкие' : 'средние'),
+            length: d.hairLength === 'SHORT' ? 'короткие' : (d.hairLength === 'LONG' ? 'длинные' : 'средние'),
+            greyType: 'обычная'
         };
 
         const master = new MasterNode();
         let state = master.process(rawInput);
         
-        if (typeof renderState === 'function') {
+        if (typeof render === 'function') {
+            render(state, rawInput);
+        } else if (typeof renderState === 'function') {
             renderState(state);
         } else {
-            console.log(state);
+            console.log("Result State:", state);
         }
     } catch(e) {
-        console.error(e);
-        if (typeof renderState === 'function') {
-            renderState({status: "FATAL_ERROR", stages: [{title: "Помилка Вводу", text: e.message}]});
-        }
+        console.error("Calculation Error:", e);
+        alert("Помилка розрахунку: " + e.message);
     }
 }
 
