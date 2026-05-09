@@ -95,7 +95,7 @@
         .step-reason { cursor: pointer; background: var(--accent); color: #000; border-radius: 12px; padding: 2px 8px; font-size: 0.8em; font-weight: 800; }
         
         .warning-box { background: rgba(255, 75, 43, 0.1); border: 1px solid var(--danger); color: #ffbaba; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 0.9em; }
-        
+
         .tech-note {
             background: rgba(187, 134, 252, 0.08);
             border: 1px dashed var(--accent);
@@ -116,6 +116,8 @@
         .ts-item.active .ts-content { display: block; }
         .ts-cause { color: #888; margin-bottom: 8px; }
         .ts-fix { color: #4caf50; font-weight: 600; border-top: 1px dashed #444; padding-top: 8px; }
+
+        #midBandBlock { display: none; border-color: #ff9800; }
     </style>
 </head>
 <body>
@@ -123,16 +125,92 @@
     <h1>COLORIST PRO</h1>
 
     <form id="F">
-        <div class="block-title">БЛОК 1: СТРУКТУРА</div>
-        
+        <!-- БЛОК 1: КОРІНЬ -->
+        <div class="block-title">БЛОК 1: КОРІНЬ</div>
         <div class="card">
-            <span class="label">Історія волосся</span>
-            <select name="history" id="history">
-                <option value="чистые">Раніше не фарбоване / Натуральне</option>
-                <option value="Натуральна">Натуральне (корінь)</option>
-                <option value="Косметична">Косметична база (свіжа)</option>
-                <option value="Косметична (накопичена)">Накопичена косметика (темна/побутова)</option>
-                <option value="Прямий пігмент / Хна">Прямий пігмент / Хна / Метали</option>
+            <span class="label">Рівень кореня (УГТ)</span>
+            <div class="rg" style="grid-template-columns: repeat(5, 1fr);">
+                <label class="rb"><input type="radio" name="rootLevel" value="1">1</label>
+                <label class="rb"><input type="radio" name="rootLevel" value="2">2</label>
+                <label class="rb"><input type="radio" name="rootLevel" value="3">3</label>
+                <label class="rb"><input type="radio" name="rootLevel" value="4">4</label>
+                <label class="rb"><input type="radio" name="rootLevel" value="5">5</label>
+                <label class="rb"><input type="radio" name="rootLevel" value="6" checked>6</label>
+                <label class="rb"><input type="radio" name="rootLevel" value="7">7</label>
+                <label class="rb"><input type="radio" name="rootLevel" value="8">8</label>
+                <label class="rb"><input type="radio" name="rootLevel" value="9">9</label>
+                <label class="rb"><input type="radio" name="rootLevel" value="10">10</label>
+            </div>
+
+            <span class="label">Сивина (%)</span>
+            <div class="rg">
+                <label class="rb"><input type="radio" name="grey" value="0" checked>0%</label>
+                <label class="rb"><input type="radio" name="grey" value="20">10-30%</label>
+                <label class="rb"><input type="radio" name="grey" value="50">40-60%</label>
+                <label class="rb"><input type="radio" name="grey" value="80">70-100%</label>
+            </div>
+
+            <span class="label">Тип сивини</span>
+            <div class="rg">
+                <label class="rb"><input type="radio" name="greyType" value="М'яка" checked>М'яка</label>
+                <label class="rb"><input type="radio" name="greyType" value="Жорстка">Жорстка</label>
+            </div>
+
+            <span class="label">Довжина відростання (см)</span>
+            <div class="rg">
+                <label class="rb"><input type="radio" name="rootLength" value="1" checked>&lt; 1.5 см</label>
+                <label class="rb"><input type="radio" name="rootLength" value="2">1.5–2 см</label>
+                <label class="rb"><input type="radio" name="rootLength" value="3"> > 2 см</label>
+            </div>
+        </div>
+
+        <!-- БЛОК: ЗОНА ПЕРЕХОДУ (MID-BAND) -->
+        <div id="midBandBlock">
+            <div class="block-title" style="color:#ff9800;">⚡ ЗОНА ПЕРЕХОДУ (MID-BAND)</div>
+            <div class="card" style="border-color:#ff9800;">
+                <span class="label">Рівень Mid-band (УГТ)</span>
+                <div class="rg" style="grid-template-columns: repeat(5, 1fr);">
+                    <label class="rb"><input type="radio" name="midLevel" value="1">1</label>
+                    <label class="rb"><input type="radio" name="midLevel" value="2">2</label>
+                    <label class="rb"><input type="radio" name="midLevel" value="3">3</label>
+                    <label class="rb"><input type="radio" name="midLevel" value="4">4</label>
+                    <label class="rb"><input type="radio" name="midLevel" value="5">5</label>
+                    <label class="rb"><input type="radio" name="midLevel" value="6" checked>6</label>
+                    <label class="rb"><input type="radio" name="midLevel" value="7">7</label>
+                    <label class="rb"><input type="radio" name="midLevel" value="8">8</label>
+                    <label class="rb"><input type="radio" name="midLevel" value="9">9</label>
+                    <label class="rb"><input type="radio" name="midLevel" value="10">10</label>
+                </div>
+                <span class="label">Тип бази Mid-band</span>
+                <select name="midBaseType">
+                    <option value="Натуральна">Натуральна (ФО)</option>
+                    <option value="Косметична" selected>Косметична (Смуга)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- БЛОК 2: ДОВЖИНА -->
+        <div class="block-title">БЛОК 2: ДОВЖИНА</div>
+        <div class="card">
+            <span class="label">Рівень довжини (УГТ)</span>
+            <div class="rg" style="grid-template-columns: repeat(5, 1fr);">
+                <label class="rb"><input type="radio" name="lengthLevel" value="1">1</label>
+                <label class="rb"><input type="radio" name="lengthLevel" value="2">2</label>
+                <label class="rb"><input type="radio" name="lengthLevel" value="3">3</label>
+                <label class="rb"><input type="radio" name="lengthLevel" value="4">4</label>
+                <label class="rb"><input type="radio" name="lengthLevel" value="5">5</label>
+                <label class="rb"><input type="radio" name="lengthLevel" value="6">6</label>
+                <label class="rb"><input type="radio" name="lengthLevel" value="7" checked>7</label>
+                <label class="rb"><input type="radio" name="lengthLevel" value="8">8</label>
+                <label class="rb"><input type="radio" name="lengthLevel" value="9">9</label>
+                <label class="rb"><input type="radio" name="lengthLevel" value="10">10</label>
+            </div>
+
+            <span class="label">Тип бази довжини</span>
+            <select name="baseType" id="baseType">
+                <option value="Натуральна">Натуральна (ФО - це УГТ)</option>
+                <option value="Косметична" selected>Косметична (Фарбована)</option>
+                <option value="Прямий пігмент / Хна">Прямий пігмент / Хна</option>
             </select>
 
             <span class="label">Стан довжини</span>
@@ -141,6 +219,14 @@
                 <label class="rb"><input type="radio" name="condition" value="Пористі">Пористі</label>
                 <label class="rb"><input type="radio" name="condition" value="Склоподібні">Склоподібні</label>
             </div>
+
+            <span class="label">Історія довжини</span>
+            <select name="history" id="history">
+                <option value="чистые">Чиста (раніше не фарбована)</option>
+                <option value="Косметична">Косметична база</option>
+                <option value="Косметична (накопичена)">Накопичена косметика</option>
+                <option value="Прямий пігмент / Хна">Прямий пігмент / Хна</option>
+            </select>
 
             <span class="label">Товщина</span>
             <div class="rg">
@@ -163,67 +249,9 @@
                 <label class="rb"><input type="radio" name="length" value="Довгі">Довгі</label>
                 <label class="rb"><input type="radio" name="length" value="Дуже довгі">Дуже довгі</label>
             </div>
-
-            <span class="label">Сивина (%)</span>
-            <div class="rg">
-                <label class="rb"><input type="radio" name="grey" value="0" checked>0%</label>
-                <label class="rb"><input type="radio" name="grey" value="20">10-30%</label>
-                <label class="rb"><input type="radio" name="grey" value="50">40-60%</label>
-                <label class="rb"><input type="radio" name="grey" value="80">70-100%</label>
-            </div>
-
-            <span class="label">Тип сивини</span>
-            <div class="rg">
-                <label class="rb"><input type="radio" name="greyType" value="М'яка" checked>М'яка</label>
-                <label class="rb"><input type="radio" name="greyType" value="Жорстка">Жорстка</label>
-            </div>
         </div>
 
-        <div class="block-title">БЛОК 2: ПОТОЧНА БАЗА</div>
-        <div class="card">
-            <span class="label">Рівень кореня (УГТ)</span>
-            <div class="rg" style="grid-template-columns: repeat(5, 1fr);">
-                <label class="rb"><input type="radio" name="rootLevel" value="1">1</label>
-                <label class="rb"><input type="radio" name="rootLevel" value="2">2</label>
-                <label class="rb"><input type="radio" name="rootLevel" value="3">3</label>
-                <label class="rb"><input type="radio" name="rootLevel" value="4">4</label>
-                <label class="rb"><input type="radio" name="rootLevel" value="5">5</label>
-                <label class="rb"><input type="radio" name="rootLevel" value="6" checked>6</label>
-                <label class="rb"><input type="radio" name="rootLevel" value="7">7</label>
-                <label class="rb"><input type="radio" name="rootLevel" value="8">8</label>
-                <label class="rb"><input type="radio" name="rootLevel" value="9">9</label>
-                <label class="rb"><input type="radio" name="rootLevel" value="10">10</label>
-            </div>
-
-            <span class="label">Довжина відростання (см)</span>
-            <div class="rg">
-                <label class="rb"><input type="radio" name="rootLength" value="1" checked>&lt; 1.5 см</label>
-                <label class="rb"><input type="radio" name="rootLength" value="2">1.5–2 см</label>
-                <label class="rb"><input type="radio" name="rootLength" value="3">&gt; 2 см</label>
-            </div>
-
-            <span class="label">Рівень довжини (УГТ)</span>
-            <div class="rg" style="grid-template-columns: repeat(5, 1fr);">
-                <label class="rb"><input type="radio" name="lengthLevel" value="1">1</label>
-                <label class="rb"><input type="radio" name="lengthLevel" value="2">2</label>
-                <label class="rb"><input type="radio" name="lengthLevel" value="3">3</label>
-                <label class="rb"><input type="radio" name="lengthLevel" value="4">4</label>
-                <label class="rb"><input type="radio" name="lengthLevel" value="5">5</label>
-                <label class="rb"><input type="radio" name="lengthLevel" value="6">6</label>
-                <label class="rb"><input type="radio" name="lengthLevel" value="7" checked>7</label>
-                <label class="rb"><input type="radio" name="lengthLevel" value="8">8</label>
-                <label class="rb"><input type="radio" name="lengthLevel" value="9">9</label>
-                <label class="rb"><input type="radio" name="lengthLevel" value="10">10</label>
-            </div>
-
-            <span class="label">Тип бази довжини</span>
-            <select name="baseType" id="baseType">
-                <option value="Натуральна">Натуральна (ФО - це УГТ)</option>
-                <option value="Косметична" selected>Косметична (Фарбована)</option>
-                <option value="Прямий пігмент / Хна">Прямий пігмент / Хна</option>
-            </select>
-        </div>
-
+        <!-- БЛОК 3: ЦІЛЬ -->
         <div class="block-title">БЛОК 3: ЦІЛЬ</div>
         <div class="card">
             <span class="label">Бажаний рівень</span>
@@ -283,16 +311,34 @@
         }
         initTS();
 
+        // Динамічна Зона Переходу
+        const rootLengthRadios = document.getElementsByName('rootLength');
+        const midBandBlock = document.getElementById('midBandBlock');
+
+        function toggleMidBand() {
+            let selectedValue = "";
+            for (const rb of rootLengthRadios) {
+                if (rb.checked) { selectedValue = rb.value; break; }
+            }
+            if (selectedValue === "3") {
+                midBandBlock.style.display = 'block';
+            } else {
+                midBandBlock.style.display = 'none';
+            }
+        }
+
+        for (const rb of rootLengthRadios) {
+            rb.addEventListener('change', toggleMidBand);
+        }
+
         function render(s, input) {
             const container = document.getElementById('resultContainer');
             let h = '';
 
-            // Візуальні попередження
             if (s.warnings && s.warnings.length) {
                 h += s.warnings.map(w => `<div class="warning-box">${w}</div>`).join('');
             }
 
-            // Рендер Фаз (Матрьошка)
             if (s.phases && s.phases.length) {
                 s.phases.forEach((phase, index) => {
                     const isOpen = index === 0 ? 'open' : '';
@@ -317,11 +363,19 @@
                             });
                         }
 
+                        if (phase.techTips && phase.techTips.length) {
+                            h += `
+                            <div class="tech-note">
+                                <div style="font-weight: 800; color: var(--accent); font-size: 0.85em; margin-bottom: 6px; text-transform: uppercase;">⚡ Технологічна нота:</div>
+                                ${phase.techTips.map(tip => `<div>${tip}</div>`).join('')}
+                            </div>
+                            `;
+                        }
+
                         h += `</div></details>`;
                 });
             }
 
-            // Таймінг
             if (s.timing) {
                 h += `
                 <div class="card" style="text-align:center; border-color:var(--accent);">

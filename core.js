@@ -377,8 +377,9 @@ class MathAgent {
         if (inputSnapshot.thickness === Thickness.THIN) localDiagnostics.push("Тонке волосся. Час витримки скорочено.");
         if (inputSnapshot.thickness === Thickness.THICK) localDiagnostics.push("Товсте волосся. Час витримки збільшено.");
         if (inputSnapshot.condition === HairCondition.POROUS) localDiagnostics.push("Пористе волосся. Тонування під жорстким візуальним контролем.");
+        if (inputSnapshot.greyType === "Жорстка") localDiagnostics.push("Жорстка сивина (скловидна). Час витримки збільшено до 45-50 хв.");
 
-        const isMidBand = inputSnapshot.rootLength > 2;
+        const isMidBand = inputSnapshot.isMidActive;
         const hotRoot = (inputSnapshot.rootLength >= 2 && inputSnapshot.rStep > 0);
 
         if (inputSnapshot.lStep > 0 && inputSnapshot.condition === HairCondition.DAMAGED) {
@@ -642,6 +643,9 @@ class MasterNode {
 function calculateProtocol() {
     console.log("⚡ [core.js] Button clicked! Starting calculation...");
     try {
+        const midBandBlock = document.getElementById('midBandBlock');
+        const isMidActive = midBandBlock && midBandBlock.style.display === 'block';
+
         const getV = (id) => {
             const el = document.getElementById(id) || document.querySelector(`[name="${id}"]:checked`);
             if (!el) {
@@ -665,7 +669,10 @@ function calculateProtocol() {
             baseType: getV('baseType'),
             targetLevel: getV('targetLevel'),
             targetDirection: getV('targetDirection'),
-            elasticity: "1"
+            elasticity: "1",
+            midLevel: isMidActive ? getV('midLevel') : null,
+            midBaseType: isMidActive ? getV('midBaseType') : null,
+            isMidActive: isMidActive
         };
 
         console.log("[core.js] Input data:", rawInput);
