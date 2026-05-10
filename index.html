@@ -344,18 +344,15 @@
                     const isOpen = index === 0 ? 'open' : '';
                     h += `
                     <details ${isOpen}>
-                        <summary>Фаза ${index + 1}: ${phase.phaseName}</summary>
+                        <summary>${phase.phaseName}</summary>
                         <div class="phase-content">
                     `;
-                    
+
                         if (phase.steps) {
                             phase.steps.forEach(step => {
                                 h += `
                                 <div class="step-card">
-                                    <div class="step-name">
-                                        <span>${step.stepName}</span>
-                                        ${step.reason ? `<span class="step-reason" onclick="alert('${step.reason.replace(/'/g, "\\'")}')">🧠 Чому?</span>` : ''}
-                                    </div>
+                                    ${step.stepName ? `<div class="step-name" style="font-weight:bold; margin-bottom:4px;"><span>${step.stepName}</span></div>` : ''}
                                     <div class="step-action">${step.action}</div>
                                     ${step.details ? `<div style="color:#aaa; font-size:0.85em; margin-top:6px; border-top:1px dashed #333; padding-top:4px;">${step.details}</div>` : ''}
                                 </div>
@@ -387,7 +384,6 @@
 
             container.innerHTML = h;
         }
-
         // Service Worker
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js');

@@ -181,7 +181,7 @@ const pigmentMap = {
                         phases.push('Фаза 0: Препігментація (тепла підкладка 1:1:1 + вода)');
                     }
 
-                    if (baseType === 'Натуральна' && rootStep >= 1 && rootStep <= 3) {
+                    if (rootStep >= 1 && rootStep <= 3) {
                         phases.push('Підняття кореня: Перманентна фарба на 6% або 9%');
                     }
 

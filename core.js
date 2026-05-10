@@ -22,10 +22,12 @@ class InputMapper {
         return HairCondition.HEALTHY;
     }
     static mapBaseType(raw) {
-        if (raw === 'Натуральна') return BaseType.NATURAL;
-        if (raw === 'Косметична') return BaseType.COSMETIC_FRESH;
-        if (raw === 'Накопичена косметика' || raw === 'COSMETIC_BUILDUP' || raw === 'Косметична (накопичена)') return BaseType.COSMETIC_BUILDUP;
-        if (raw === 'хна / металл' || raw === 'HENNA' || raw === 'Прямий пігмент / Хна') return BaseType.HENNA;
+        if (typeof raw !== 'string') return BaseType.NATURAL;
+        let r = raw.trim().toLowerCase();
+        if (r.includes('натур')) return BaseType.NATURAL;
+        if (r.includes('свіж') || (r.includes('косметична') && !r.includes('накопич'))) return BaseType.COSMETIC_FRESH;
+        if (r.includes('накопич') || r.includes('buildup') || r.includes('build-up')) return BaseType.COSMETIC_BUILDUP;
+        if (r.includes('хна') || r.includes('метал') || r.includes('henna') || r.includes('пігмент')) return BaseType.HENNA;
         return BaseType.NATURAL;
     }
     static mapElasticity(rawNum) {
@@ -224,7 +226,7 @@ class MathAgent {
             phases.push('Фаза 0: Препігментація (тепла підкладка 1:1:1 + вода)');
         }
 
-        if (snapshot.baseType === BaseType.NATURAL && snapshot.rStep >= 1 && snapshot.rStep <= 3) {
+        if (snapshot.rStep >= 1 && snapshot.rStep <= 3) {
             phases.push('Підняття кореня: Перманентна фарба на 6% або 9%');
         }
 
@@ -263,9 +265,11 @@ class MathAgent {
         const protocolPhases = [];
         if (protocolText) {
             protocolText.split('<br><br>').forEach((line, index) => {
+                let pName = line.includes(':') ? line.split(':')[0] : `Етап ${index + 1}`;
+                let action = line.includes(':') ? line.substring(line.indexOf(':') + 1).trim() : line;
                 protocolPhases.push({
-                    phaseName: `Фаза ${index + 1}`,
-                    steps: [{ stepName: `Крок ${index + 1}`, action: line, details: "", reason: "" }]
+                    phaseName: pName,
+                    steps: [{ stepName: '', action: action, details: "", reason: "" }]
                 });
             });
         }

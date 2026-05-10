@@ -100,10 +100,9 @@ function render(s, input) {
                 phase.steps.forEach(step => {
                     h += \`
                     <div class="step-card" style="background:#141414; border-left:4px solid #bb86fc; padding:12px; margin-bottom:10px; border-radius:0 8px 8px 0; position:relative;">
-                        <div style="font-weight:700; color:#fff; font-size:1.05em; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
+                        \${step.stepName ? \`<div style="font-weight:700; color:#fff; font-size:1.05em; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
                             <span>\${step.stepName}</span>
-                            \${step.reason ? \`<span onclick="showReason('\${step.reason}')" style="cursor:pointer; background:#bb86fc; color:#0d0d0d; border-radius:12px; padding:4px 10px; font-size:0.85em; font-weight:bold; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">🧠 Чому?</span>\` : ''}
-                        </div>
+                        </div>\` : ''}
                         <div style="color:#e0e0e0; font-size:0.95em; margin-bottom:4px; font-weight:600;">\${step.action}</div>
                         \${step.details ? \`<div style="color:#aaa; font-size:0.85em; border-top:1px dashed #333; padding-top:6px; margin-top:6px;">\${step.details}</div>\` : ''}
                     </div>
