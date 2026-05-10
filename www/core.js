@@ -167,55 +167,43 @@ const pigmentMap = {
 
                 let isRPowder = rootRec && String(rootRec.process).includes("Порошок");
                 let isLPowder = lenRec && String(lenRec.process).includes("Порошок");
-                let isCold = ['1','11','16','2','61','81','89'].includes(tDir);
-
                 if (hotRoot) {
                     plan.push(`⚠️ ПРАВИЛО ГАРЯЧОГО КОРЕНЯ: Відростання ${rootLength} см. Нанесення на корінь розбити на 2 етапи!`);
                 }
                 let applyRootText = hotRoot ? `Нанести рецепт кореня на відрослу довжину (відступ 1.5-2 см від шкіри). Через 15-20 хв нанести свіжу суміш на прикореневу зону.` : `Нанести рецепт на корінь.`;
 
-                // Маршрутизатор
-                if (isLPowder && lStep >= 4) {
-                    plan.push("⚠️ ЕКСТРЕМАЛЬНЕ ОСВІТЛЕННЯ: Водою не змивати!");
-                    plan.push(`КРОК 1: Нанести порошок на довжину (відступ 2 см). Маса: ${lMass} гр. 40-50 хв.`);
-                    plan.push("КРОК 2 (СУХЕ ЗНЯТТЯ): Стягнути відпрацьований порошок сухими серветками.");
-                    plan.push(`КРОК 3: ${applyRootText} Маса: ${rMass} гр.`);
-                    plan.push("КРОК 4 (МИЙКА): Ретельне змиття. ШГО + Маска.");
-                    plan.push(`КРОК 5: Тонування підготовленого фону.`);
-                    timing = 100 + tMod;
-                    lenRec.ox = "1.9%"; lenRec.dye = `Барвник ${tDye}`; lenRec.ratio = "1:2"; lenRec.process = "Тонування";
-                } else if (lStep <= -2) {
-                    let pMass = Math.round(lMass * 0.5);
-                    let pLevel = Math.min(tLevel + 1, 10);
-                    plan.push("⚠️ РІЗКЕ ЗАТЕМНЕННЯ. ОБОВ'ЯЗКОВА ПРЕПІГМЕНТАЦІЯ.");
-                    plan.push(`КРОК 1: Змішати барвник ${pLevel}.3 або ${pLevel}.4 з теплою водою (БЕЗ ОКСИДУ). ${pMass} гр. Вбити у довжину.`);
-                    plan.push(`КРОК 2: Не змиваючи, ${applyRootText}`);
-                    plan.push(`КРОК 3: Нанести рецепт на довжину.`);
-                    timing = 40 + tMod;
-                    lenRec.ox = "1.9%"; lenRec.ratio = "1:2";
-                } else if (isRPowder && isLPowder) {
-                    plan.push(`КРОК 1: Нанести порошкову змивку на довжину. Маса: ${lMass} гр.`);
-                    plan.push("КРОК 2: Видалення відпрацьованої маси з довжини серветкою (без миття).");
-                    plan.push(`КРОК 3: ${applyRootText}`);
-                    plan.push("КРОК 4 (МИЙКА): Обов'язково ШГО + Маска для зупинки персульфатів.");
-                    plan.push(`КРОК 5: Нанести тонування на вологе підготовлене полотно.`);
-                    timing = 90 + tMod;
-                    lenRec.ox = "1.9%"; lenRec.dye = `Барвник ${tDye}`; lenRec.ratio = "1:2"; lenRec.process = "Тонування";
-                } else if (isRPowder && !isLPowder) {
-                    plan.push(`КРОК 1: ${hotRoot ? applyRootText : "Нанести порошок ТІЛЬКИ на корінь. Крайову НЕ ЧІПАТИ."}`);
-                    if (!hotRoot) plan.push("КРОК 2: Через 15-20 хвилин нанести порошок на крайову лінію.");
-                    if (bType === 'Косметична') plan.push("КРОК 3 (Підчищення): Змочити довжину. Стягнути порошок з кореня на довжину на 1-5 хв.");
-                    plan.push("КРОК 4 (МИЙКА): Змиття ШГО + Маска.");
-                    plan.push(`КРОК 5: Нанести тонування на вологе волосся.`);
-                    plan.push("⏳ ПРАВИЛО: Прочісувати кожні 5-10 хв. При ознаках затемнення кінців — негайно змивати!");
-                    timing = 70 + tMod;
-                    lenRec.ox = "1.9%"; lenRec.ratio = "1:2";
-                } else {
-                    plan.push(`КРОК 1: ${applyRootText}`);
-                    plan.push(`КРОК 2: Нанести суміш на довжину.`);
-                    if (isCold) plan.push("⚠️ ЗАХИСТ КОНТУРУ: На крайову лінію наносити суміш в останню чергу (за 10-15 хв до кінця).");
-                    plan.push("КРОК 3 (Емульгація): За 5-10 хв до кінця зволожити волосся та земульгувати.");
-                    timing = String(rootRec.process).includes("Special Blond") ? 50 : 40 + tMod;
+                function buildFinalProtocolText({ targetLevel, lengthLevel, targetDirection, baseType, rootStep, midActive, midLevel }) {
+                    let phases = [];
+                    const coldShades = ['1','11','16','2','61','81','89'];
+                    const isCold = coldShades.includes(String(targetDirection));
+
+                    if (targetLevel < lengthLevel && isCold) {
+                        phases.push('Фаза 0: Препігментація (тепла підкладка 1:1:1 + вода)');
+                    }
+
+                    if (baseType === 'Натуральна' && rootStep >= 1 && rootStep <= 3) {
+                        phases.push('Підняття кореня: Перманентна фарба на 6% або 9%');
+                    }
+
+                    if (midActive && midLevel === targetLevel) {
+                        phases.push('Нейтралізація зони переходу (Фарба на 1.5% або 3%)');
+                    }
+
+                    return phases.join('<br><br>');
+                }
+
+                let protocolText = buildFinalProtocolText({
+                    targetLevel: tLevel,
+                    lengthLevel: lLevel,
+                    targetDirection: tDir,
+                    baseType: bType,
+                    rootStep: rStep,
+                    midActive: false,
+                    midLevel: null
+                });
+
+                if (protocolText) {
+                    plan = protocolText.split('<br><br>');
                 }
 
                 rootRec.mixtone = calcMixtone(tLevel, tDir, rootRec.process, rootRec.mass, "здоровые");
