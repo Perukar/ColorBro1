@@ -158,6 +158,28 @@ class MathAgent {
             diagnostics: [],
             timing: 0,
             target: `${snapshot.targetLevel}.${snapshot.targetDirection}`,
+            manualDecisions: [],
+            blockers: [],
+            mixtoneInfo: {
+                status: "NOT_CALCULATED",
+                rule: null,
+                totalMixtoneGrams: null,
+                affectsOxidantMass: null,
+                notes: []
+            },
+            massModel: {
+                source: "legacy_root_formula",
+                total: null,
+                root: null,
+                mid: null,
+                length: null,
+                notes: []
+            },
+            timingInfo: {
+                status: "ORIENTING_ONLY",
+                minutes: null,
+                warning: "Час є орієнтиром; потрібен візуальний контроль і регламент бренду."
+            },
             reasons: {}
         };
     }
