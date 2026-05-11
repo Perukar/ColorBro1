@@ -323,10 +323,49 @@ class MasterNode {
     constructor() {
         this.agents = { chemist: new ChemistAgent(), math: new MathAgent(), technologist: new TechnologistAgent() };
     }
+
+    _createBlockedState(chem, snapshot) {
+        return {
+            ...chem,
+            phases: [],
+            warnings: [],
+            diagnostics: [],
+            timing: 0,
+            target: `${snapshot.targetLevel}.${snapshot.targetDirection}`,
+            manualDecisions: [],
+            blockers: chem.stages || [],
+            mixtoneInfo: {
+                status: "NOT_CALCULATED",
+                rule: null,
+                totalMixtoneGrams: null,
+                affectsOxidantMass: null,
+                notes: []
+            },
+            massModel: {
+                source: "not_calculated_blocked",
+                total: null,
+                root: null,
+                mid: null,
+                length: null,
+                notes: []
+            },
+            timingInfo: {
+                status: "BLOCKED",
+                minutes: null,
+                warning: "Час не розраховується, тому що протокол заблоковано."
+            },
+            reasons: {},
+            rootRec: null,
+            midRec: null,
+            lenRec: null,
+            protocolText: ""
+        };
+    }
+
     process(rawInput) {
         const snapshot = InputMapper.buildSnapshot(rawInput);
         const chem = this.agents.chemist.validate(snapshot);
-        if (chem.status === "BLOCKED") return { ...chem, phases: [], timing: 0 };
+        if (chem.status === "BLOCKED") return this._createBlockedState(chem, snapshot);
         
         let state = this.agents.math.process(snapshot);
         const tech = this.agents.technologist.generateRegulation(snapshot, state);
