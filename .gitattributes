@@ -1,0 +1,29 @@
+# Normalize text files in repository.
+* text=auto
+
+# Project text files should stay LF.
+*.js text eol=lf
+*.json text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.xml text eol=lf
+*.gradle text eol=lf
+*.properties text eol=lf
+
+# Windows command files should stay CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Unix shell scripts should stay LF.
+*.sh text eol=lf
+
+# Binary assets.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.jar binary
+*.zip binary
