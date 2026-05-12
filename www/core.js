@@ -97,6 +97,162 @@ const pigmentMap = {
             }
         });
 
+        const PerucarWwwRenderV1 = Object.freeze({
+            escapeHtml(value) {
+                return String(value ?? '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            },
+
+            renderMessageItem(item) {
+                if (item == null) return '';
+                if (typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean') {
+                    return `<li>${this.escapeHtml(item)}</li>`;
+                }
+                const title = item.title || item.code || item.type || '';
+                const message = item.message || item.text || item.reason || JSON.stringify(item);
+                return title
+                    ? `<li><b>${this.escapeHtml(title)}:</b> ${this.escapeHtml(message)}</li>`
+                    : `<li>${this.escapeHtml(message)}</li>`;
+            },
+
+            renderList(title, items, className) {
+                if (!Array.isArray(items) || items.length === 0) return '';
+                return `<div class="${this.escapeHtml(className || 'info')}"><h3>${this.escapeHtml(title)}</h3><ul>${items.map((item) => this.renderMessageItem(item)).join('')}</ul></div>`;
+            },
+
+            renderBlockers(blockers) {
+                return this.renderList('Блокування', blockers, 'alert');
+            },
+
+            renderManualDecisions(manualDecisions) {
+                return this.renderList('Потрібне ручне рішення майстра', manualDecisions, 'manual-required');
+            },
+
+            renderWarnings(warnings) {
+                return this.renderList('Попередження', warnings, 'warning');
+            },
+
+            normalizeReasonsToItems(reasons) {
+                if (!reasons) return [];
+                if (Array.isArray(reasons)) return reasons;
+                if (typeof reasons === 'object') {
+                    return Object.entries(reasons).map(([key, value]) => ({
+                        title: key,
+                        message: typeof value === 'string' ? value : JSON.stringify(value)
+                    }));
+                }
+                return [reasons];
+            },
+
+            renderDiagnostics(diagnostics, reasons) {
+                const items = [];
+                if (Array.isArray(diagnostics)) items.push(...diagnostics);
+                else if (diagnostics) items.push(diagnostics);
+                items.push(...this.normalizeReasonsToItems(reasons));
+                return this.renderList('Діагностика та причини', items, 'diagnostics');
+            },
+
+            renderRecipe(title, recipe, options = {}) {
+                if (!recipe) return '';
+                const className = options.approved === true ? 'recipe approved-recipe' : 'recipe non-final-recipe';
+                const rows = [
+                    ['Процес', recipe.process],
+                    ['Барвник', recipe.dye],
+                    ['Оксид', recipe.ox || recipe.oxidant],
+                    ['Маса', recipe.mass],
+                    ['Пропорція', recipe.ratio],
+                    ['Мікстон', recipe.mixtone],
+                    ['Нотатки', recipe.notes]
+                ].filter(([, value]) => value !== undefined && value !== null && value !== '');
+                const htmlRows = rows.map(([label, value]) => `<li><b>${this.escapeHtml(label)}:</b> ${this.escapeHtml(value)}</li>`).join('');
+                return `<div class="${className}"><h3>${this.escapeHtml(title)}</h3><ul>${htmlRows}</ul></div>`;
+            },
+
+            renderRecipes(state) {
+                if (!state || state.status !== 'APPROVED') return '';
+                return [
+                    this.renderRecipe('Корінь', state.rootRec, { approved: true }),
+                    this.renderRecipe('Mid-band', state.midRec, { approved: true }),
+                    this.renderRecipe('Довжина', state.lenRec, { approved: true })
+                ].join('');
+            },
+
+            renderPhaseSteps(steps) {
+                if (!Array.isArray(steps) || steps.length === 0) return '';
+                return `<ul>${steps.map((step) => this.renderMessageItem(step)).join('')}</ul>`;
+            },
+
+            renderPhase(phase) {
+                if (phase == null) return '';
+                if (typeof phase === 'string') return `<div class="phase"><p>${this.escapeHtml(phase)}</p></div>`;
+                const phaseName = phase.phaseName || phase.title || phase.name || 'Етап';
+                const stepsHtml = this.renderPhaseSteps(phase.steps);
+                const notesHtml = phase.notes ? `<p>${this.escapeHtml(phase.notes)}</p>` : '';
+                if (stepsHtml || notesHtml) return `<div class="phase"><h4>${this.escapeHtml(phaseName)}</h4>${stepsHtml}${notesHtml}</div>`;
+                return `<div class="phase"><h4>${this.escapeHtml(phaseName)}</h4><pre>${this.escapeHtml(JSON.stringify(phase, null, 2))}</pre></div>`;
+            },
+
+            renderPhases(phases) {
+                if (!Array.isArray(phases) || phases.length === 0) return '';
+                return `<div class="phases"><h3>Регламент дій</h3>${phases.map((phase) => this.renderPhase(phase)).join('')}</div>`;
+            },
+
+            renderProtocolText(protocolText) {
+                if (!protocolText) return '';
+                const escapedText = this.escapeHtml(protocolText).replace(/\n/g, '<br>');
+                return `<div class="protocol-text"><h3>Регламент дій</h3><p>${escapedText}</p></div>`;
+            },
+
+            renderMixtoneInfo(mixtoneInfo) {
+                if (!mixtoneInfo) return '';
+                return `<div class="mixtone-info"><h3>Мікстони</h3><pre>${this.escapeHtml(JSON.stringify(mixtoneInfo, null, 2))}</pre></div>`;
+            },
+
+            renderMassModel(massModel) {
+                if (!massModel) return '';
+                return `<div class="mass-model"><h3>Маси</h3><pre>${this.escapeHtml(JSON.stringify(massModel, null, 2))}</pre></div>`;
+            },
+
+            renderTimingInfo(timingInfo) {
+                if (!timingInfo) return '';
+                return `<div class="timing-info"><h3>Таймінги</h3><pre>${this.escapeHtml(JSON.stringify(timingInfo, null, 2))}</pre></div>`;
+            },
+
+            renderStatusHeader(state) {
+                if (!state) return '';
+                const status = state.status || 'UNKNOWN';
+                const target = state.target ? ` | Ціль: ${this.escapeHtml(typeof state.target === 'string' ? state.target : JSON.stringify(state.target))}` : '';
+                return `<div class="status-header"><h2>${this.escapeHtml(status)}${target}</h2></div>`;
+            },
+
+            renderStateToHtml(state) {
+                if (!state) return this.renderFatalError(new Error('State is empty'));
+                if (state.status === 'FATAL_ERROR') return this.renderFatalError(state.error || state.message || 'Fatal error');
+                const hasPhases = Array.isArray(state.phases) && state.phases.length > 0;
+                return [
+                    this.renderBlockers(state.blockers),
+                    this.renderManualDecisions(state.manualDecisions),
+                    this.renderWarnings(state.warnings),
+                    this.renderStatusHeader(state),
+                    this.renderRecipes(state),
+                    hasPhases ? this.renderPhases(state.phases) : this.renderProtocolText(state.protocolText),
+                    this.renderMixtoneInfo(state.mixtoneInfo),
+                    this.renderMassModel(state.massModel),
+                    this.renderTimingInfo(state.timingInfo),
+                    this.renderDiagnostics(state.diagnostics, state.reasons)
+                ].join('');
+            },
+
+            renderFatalError(error) {
+                const message = error && error.message ? error.message : error;
+                return `<div class="alert"><h2>Фатальна помилка</h2><p>${this.escapeHtml(message || 'Неможливо показати результат.')}</p></div>`;
+            }
+        });
+
         function calculateProtocol() {
             try {
                 let history = document.getElementById('history').value;
