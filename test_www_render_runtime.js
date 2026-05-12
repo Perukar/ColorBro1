@@ -250,6 +250,73 @@ assertNotIncludes(adapterHtml, '<br>Нанести');
 assertIncludes(adapterHtml, 'Крок 1');
 assertIncludes(adapterHtml, 'Нанести');
 
+const defaultDomValues = {
+    history: 'натуральні',
+    condition: 'здоровые',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '9',
+    base_type: 'Натуральна',
+    target_level: '9',
+    target_direction: '1'
+};
+
+function runCalculateProtocolWithValues(overrides = {}, options = {}) {
+    const values = { ...defaultDomValues, ...overrides };
+    const output = { innerHTML: '' };
+    const fakeDocument = {
+        getElementById(id) {
+            if (id === 'output') return output;
+            if (options.missingIds && options.missingIds.includes(id)) return undefined;
+            if (!Object.prototype.hasOwnProperty.call(values, id)) {
+                throw new Error('Missing fake DOM value for ' + id);
+            }
+            return { value: values[id] };
+        }
+    };
+
+    const previousDocument = document;
+    try {
+        document = fakeDocument;
+        calculateProtocol();
+    } finally {
+        document = previousDocument;
+    }
+
+    return output.innerHTML;
+}
+
+const blockedOutputHtml = runCalculateProtocolWithValues({
+    history: 'хна / металл',
+    condition: 'пористі'
+});
+
+assertIncludes(blockedOutputHtml, 'BLOCKED');
+assertIncludes(blockedOutputHtml, 'Блокування');
+assertIncludes(blockedOutputHtml, 'ФАТАЛЬНО: Хна/метали');
+assertNotIncludes(blockedOutputHtml, 'approved-recipe');
+assertNotIncludes(blockedOutputHtml, 'ПРОТОКОЛ ЗАТВЕРДЖЕНО');
+
+const approvedOutputHtml = runCalculateProtocolWithValues();
+
+assertIncludes(approvedOutputHtml, 'APPROVED');
+assertIncludes(approvedOutputHtml, 'approved-recipe');
+assertIncludes(approvedOutputHtml, 'Корінь');
+assertIncludes(approvedOutputHtml, 'Довжина');
+assertIncludes(approvedOutputHtml, 'Регламент дій');
+assertNotIncludes(approvedOutputHtml, 'ПРОТОКОЛ ЗАТВЕРДЖЕНО');
+
+const fatalOutputHtml = runCalculateProtocolWithValues({}, { missingIds: ['history'] });
+
+assertIncludes(fatalOutputHtml, 'Фатальна помилка');
+assertNotIncludes(fatalOutputHtml, 'ФАТАЛЬНА ПОМИЛКА СКРИПТА');
+assertNotIncludes(fatalOutputHtml, ' at ');
+
 if (typeof PerucarWwwMappingV1 !== 'object') {
     throw new Error('PerucarWwwMappingV1 presence check failed');
 }

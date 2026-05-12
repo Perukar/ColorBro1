@@ -346,7 +346,15 @@ const pigmentMap = {
                 let totalMass = Math.round(baseMass * denMult);
 
                 if (alerts.length > 0) {
-                    document.getElementById('output').innerHTML = `<div class='alert'><h2>❌ БЛОКУВАННЯ</h2><ul>${alerts.map(a=>`<li>${a}</li>`).join('')}</ul></div>`;
+                    const state = buildWwwRenderState({
+                        status: 'BLOCKED',
+                        target: `${tLevel}.${tDir}`,
+                        blockers: alerts,
+                        warnings,
+                        diagnostics,
+                        massModel: { baseMass, densityMultiplier: denMult, totalMass }
+                    });
+                    document.getElementById('output').innerHTML = PerucarWwwRenderV1.renderStateToHtml(state);
                     return;
                 }
 
@@ -364,7 +372,15 @@ const pigmentMap = {
                 }
 
                 if (lStep > 0 && condition === 'сильно поврежденные') {
-                    document.getElementById('output').innerHTML = `<div class='alert'><h2>❌ БЛОКУВАННЯ</h2><ul><li>ФАТАЛЬНО: Довжина 'сильно пошкоджена'. Будь-яке освітлення заборонено.</li></ul></div>`;
+                    const state = buildWwwRenderState({
+                        status: 'BLOCKED',
+                        target: `${tLevel}.${tDir}`,
+                        blockers: ["ФАТАЛЬНО: Довжина 'сильно пошкоджена'. Будь-яке освітлення заборонено."],
+                        warnings,
+                        diagnostics,
+                        massModel: { baseMass, densityMultiplier: denMult, totalMass }
+                    });
+                    document.getElementById('output').innerHTML = PerucarWwwRenderV1.renderStateToHtml(state);
                     return;
                 }
 
@@ -488,25 +504,26 @@ const pigmentMap = {
                 rootRec.mixtone = calcMixtone(tLevel, tDir, rootRec.process, rootRec.mass, "здоровые");
                 lenRec.mixtone = calcMixtone(tLevel, tDir, lenRec.process, lenRec.mass, condition);
 
-                let html = `<div class='success'><h2 style="color:green; margin-top:0;">✅ ПРОТОКОЛ ЗАТВЕРДЖЕНО</h2>`;
-                html += `<b>🎯 Ціль:</b> <span style="color:blue;">${tLevel}.${tDir}</span> | <b>⚖️ Загальна маса фарби:</b> <span style="color:blue;">${totalMass} гр</span><hr>`;
-                
-                if (warnings.length || diagnostics.length) {
-                    html += `<b>🔹 АНАЛІЗ ТА ПОПЕРЕДЖЕННЯ:</b><ul>`;
-                    warnings.forEach(w => html += `<li><span class="warning">⚠️ ${w}</span></li>`);
-                    diagnostics.forEach(d => html += `<li>🔬 ${d}</li>`);
-                    html += `</ul><hr>`;
-                }
-
-                html += `<b>🧪 КОРІНЬ:</b><ul><li><b>Інструмент:</b> ${rootRec.dye} + ${rootRec.ox}</li><li><b>Загальна маса суміші:</b> ${rootRec.mass} гр (${rootRec.ratio})</li><li><b>Мікстони:</b> ${rootRec.mixtone}</li></ul>`;
-                html += `<b>🧪 ДОВЖИНА:</b><ul><li><b>Інструмент:</b> ${lenRec.dye} + ${lenRec.ox}</li><li><b>Загальна маса суміші:</b> ${lenRec.mass} гр (${lenRec.ratio})</li><li><b>Мікстони:</b> ${lenRec.mixtone}</li></ul><hr>`;
-                
-                html += `<b>📋 РЕГЛАМЕНТ ДІЙ:</b><ul>`;
-                plan.forEach(p => html += `<li>▫️ ${p}</li>`);
-                html += `</ul><b>⏳ Розрахунковий час:</b> ${timing} хв.</div>`;
-
-                document.getElementById('output').innerHTML = html;
+                const state = buildWwwRenderState({
+                    status: 'APPROVED',
+                    target: `${tLevel}.${tDir}`,
+                    warnings,
+                    diagnostics,
+                    rootRec,
+                    midRec: null,
+                    lenRec,
+                    plan,
+                    protocolText,
+                    mixtoneInfo: { root: rootRec.mixtone, length: lenRec.mixtone },
+                    massModel: { baseMass, densityMultiplier: denMult, totalMass, rootMass: rMass, lengthMass: lMass },
+                    timingInfo: { totalMinutes: timing, modifierMinutes: tMod },
+                    reasons: { rootStep: rStep, lengthStep: lStep, hotRoot, grey }
+                });
+                document.getElementById('output').innerHTML = PerucarWwwRenderV1.renderStateToHtml(state);
             } catch (e) {
-                document.getElementById('output').innerHTML = `<div class='alert'><h2>❌ ФАТАЛЬНА ПОМИЛКА СКРИПТА</h2><p><b>Опис:</b> ${e.message}</p></div>`;
+                document.getElementById('output').innerHTML = PerucarWwwRenderV1.renderStateToHtml({
+                    status: 'FATAL_ERROR',
+                    error: e
+                });
             }
         }
