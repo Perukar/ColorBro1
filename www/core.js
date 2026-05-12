@@ -40,6 +40,63 @@ const pigmentMap = {
             return resStr;
         }
 
+        const PerucarWwwMappingV1 = Object.freeze({
+            getWwwValue(id) {
+                const element = document.getElementById(id);
+                return element ? String(element.value).trim() : '';
+            },
+
+            gatherWwwFormData() {
+                return {
+                    history: this.getWwwValue('history'),
+                    condition: this.getWwwValue('condition'),
+                    thickness: this.getWwwValue('thickness'),
+                    density: this.getWwwValue('density'),
+                    length: this.getWwwValue('length'),
+                    grey_percent: this.getWwwValue('grey_percent'),
+                    grey_type: this.getWwwValue('grey_type'),
+                    root_level: this.getWwwValue('root_level'),
+                    root_length: this.getWwwValue('root_length'),
+                    length_level: this.getWwwValue('length_level'),
+                    base_type: this.getWwwValue('base_type'),
+                    target_level: this.getWwwValue('target_level'),
+                    target_direction: this.getWwwValue('target_direction')
+                };
+            },
+
+            normalizeWwwToRootRawInput(wwwValues) {
+                const toIntegerOrNull = (value) => {
+                    const parsed = parseInt(value, 10);
+                    return Number.isNaN(parsed) ? null : parsed;
+                };
+
+                const toGrey = (value) => {
+                    const parsed = parseInt(value, 10);
+                    return Number.isNaN(parsed) ? 0 : parsed;
+                };
+
+                return {
+                    history: String(wwwValues.history || '').trim(),
+                    condition: String(wwwValues.condition || '').trim(),
+                    thickness: String(wwwValues.thickness || '').trim(),
+                    density: String(wwwValues.density || '').trim(),
+                    length: String(wwwValues.length || '').trim(),
+                    grey: toGrey(wwwValues.grey_percent),
+                    greyType: String(wwwValues.grey_type || '').trim(),
+                    rootLevel: toIntegerOrNull(wwwValues.root_level),
+                    rootLength: toIntegerOrNull(wwwValues.root_length),
+                    lengthLevel: toIntegerOrNull(wwwValues.length_level),
+                    baseType: String(wwwValues.base_type || '').trim(),
+                    targetLevel: toIntegerOrNull(wwwValues.target_level),
+                    targetDirection: String(wwwValues.target_direction || '').trim(),
+                    elasticity: '1',
+                    isMidActive: false,
+                    midLevel: null,
+                    midBaseType: null
+                };
+            }
+        });
+
         function calculateProtocol() {
             try {
                 let history = document.getElementById('history').value;
