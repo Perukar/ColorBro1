@@ -1,4 +1,4 @@
-# Codex behavior rules for Perucar
+# Codex behavior rules for ПЕРУКАР
 
 You are working with a user who is not deeply technical.
 
@@ -104,19 +104,19 @@ After writing this approval brief, stop and wait. Do not run the command. Do not
 
 If the user is not a technical specialist, prioritize explanation over speed. It is better to ask one extra confirmation than to silently perform a confusing action.
 
-For Perucar specifically:
-- Do not refer to the old project folder as Color.
-- The current project root is Perucar.
-- The app/project may be called Perucar.
-- Use prucar only as an internal/lowercase product slug when appropriate.
+For ПЕРУКАР specifically:
+- Do not use deprecated project/product names in user-facing text, docs, code comments, commit messages, or reports.
+- The current project root is PERUKAR.
+- The official product name is ПЕРУКАР.
+- Use perukar only as an internal/lowercase product slug when appropriate.
 - Before changing architecture, formulas, colorist logic, client-card logic, or calculation logic, first explain the reason and expected effect.
 - Keep all changes small, reversible, and easy to review.
 
-## Додаткові правила для Perucar
+## Додаткові правила для ПЕРУКАР
 
 - Відповідати користувачу українською, якщо користувач пише українською або змішаною українсько-російською мовою.
 - Не виконувати `git add`, `commit` або `push` без окремого прямого дозволу користувача.
-- Перед зміною бізнес-логіки Perucar коротко описувати:
+- Перед зміною бізнес-логіки ПЕРУКАР коротко описувати:
   - яку поведінку застосунку змінить правка;
   - які колористичні сценарії вона зачепить;
   - які ризики може створити.
