@@ -253,6 +253,63 @@ const pigmentMap = {
             }
         });
 
+        function stripWwwHtmlText(value) {
+            if (value === undefined || value === null) return '';
+            return String(value)
+                .replace(/<br\s*\/?>/gi, '\n')
+                .replace(/&lt;br\s*\/?&gt;/gi, '\n')
+                .replace(/<\/(p|div|li|ul|ol|h[1-6])>/gi, '\n')
+                .replace(/&nbsp;/gi, ' ')
+                .replace(/&lt;\/?[^&]*&gt;/gi, '')
+                .replace(/<[^>]*>/g, '')
+                .replace(/&amp;/gi, '&')
+                .replace(/&quot;/gi, '"')
+                .replace(/&#39;/gi, "'")
+                .split('\n')
+                .map((line) => line.replace(/\s+/g, ' ').trim())
+                .filter(Boolean)
+                .join('\n');
+        }
+
+        function normalizeWwwRecipeForRender(recipe) {
+            if (!recipe) return null;
+            const normalized = { ...recipe };
+            ['process', 'dye', 'ox', 'oxidant', 'mass', 'ratio', 'mixtone', 'notes'].forEach((field) => {
+                if (Object.prototype.hasOwnProperty.call(normalized, field)) {
+                    normalized[field] = stripWwwHtmlText(normalized[field]);
+                }
+            });
+            return normalized;
+        }
+
+        function buildWwwRenderState(runtime = {}) {
+            const plan = Array.isArray(runtime.plan) ? runtime.plan : [];
+            const phases = Array.isArray(runtime.phases) && runtime.phases.length > 0
+                ? runtime.phases
+                : plan.map((item, index) => ({
+                    phaseName: `Етап ${index + 1}`,
+                    steps: [stripWwwHtmlText(item)]
+                })).filter((phase) => phase.steps[0] !== '');
+
+            return {
+                status: runtime.status || 'APPROVED',
+                target: runtime.target,
+                blockers: Array.isArray(runtime.blockers) ? runtime.blockers : [],
+                manualDecisions: Array.isArray(runtime.manualDecisions) ? runtime.manualDecisions : [],
+                warnings: Array.isArray(runtime.warnings) ? runtime.warnings : [],
+                rootRec: normalizeWwwRecipeForRender(runtime.rootRec),
+                midRec: normalizeWwwRecipeForRender(runtime.midRec),
+                lenRec: normalizeWwwRecipeForRender(runtime.lenRec),
+                phases,
+                protocolText: stripWwwHtmlText(runtime.protocolText),
+                mixtoneInfo: runtime.mixtoneInfo || null,
+                massModel: runtime.massModel || null,
+                timingInfo: runtime.timingInfo || null,
+                diagnostics: Array.isArray(runtime.diagnostics) ? runtime.diagnostics : [],
+                reasons: runtime.reasons || []
+            };
+        }
+
         function calculateProtocol() {
             try {
                 let history = document.getElementById('history').value;

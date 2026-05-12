@@ -21,6 +21,18 @@ if (typeof calculateProtocol !== 'function') {
     throw new Error('calculateProtocol presence check failed');
 }
 
+if (typeof stripWwwHtmlText !== 'function') {
+    throw new Error('stripWwwHtmlText presence check failed');
+}
+
+if (typeof normalizeWwwRecipeForRender !== 'function') {
+    throw new Error('normalizeWwwRecipeForRender presence check failed');
+}
+
+if (typeof buildWwwRenderState !== 'function') {
+    throw new Error('buildWwwRenderState presence check failed');
+}
+
 function assertIncludes(html, text) {
     assert.ok(html.includes(text), 'Expected HTML to include: ' + text + '\\nHTML:\\n' + html);
 }
@@ -165,6 +177,78 @@ assertIncludes(structuredPhasesHtml, 'action');
 assertIncludes(structuredPhasesHtml, 'Нанести');
 assertIncludes(structuredPhasesHtml, 'details');
 assertIncludes(structuredPhasesHtml, 'Пасмо 1 см');
+
+assert.strictEqual(stripWwwHtmlText('<b>Test</b><br>Line'), 'Test\\nLine');
+
+const normalizedRecipe = normalizeWwwRecipeForRender({
+    process: '<b>Перманент</b>',
+    dye: '<b>Барвник</b><br><script>alert(1)</script>8.1',
+    ox: '<i>6%</i>',
+    oxidant: '<b>6%</b>',
+    mass: 30,
+    ratio: '<b>1:1</b>',
+    mixtone: '<u>1 г</u>',
+    notes: '<b>Note</b><br>Safe'
+});
+
+assert.strictEqual(normalizedRecipe.process, 'Перманент');
+assertNotIncludes(normalizedRecipe.dye, '<b>');
+assertNotIncludes(normalizedRecipe.dye, '<script>');
+assertIncludes(normalizedRecipe.dye, 'Барвник');
+assert.strictEqual(normalizedRecipe.notes, 'Note\\nSafe');
+assert.strictEqual(normalizedRecipe.ox, '6%');
+assert.strictEqual(normalizedRecipe.oxidant, '6%');
+assert.strictEqual(normalizedRecipe.mass, '30');
+assert.strictEqual(normalizedRecipe.ratio, '1:1');
+assert.strictEqual(normalizedRecipe.mixtone, '1 г');
+
+const originalCalculateProtocol = calculateProtocol;
+let calculateProtocolCalls = 0;
+let adapterState;
+try {
+    calculateProtocol = function () {
+        calculateProtocolCalls += 1;
+        throw new Error('buildWwwRenderState must not call calculateProtocol');
+    };
+
+    adapterState = buildWwwRenderState({
+        status: 'APPROVED',
+        target: '<script>alert(1)</script>',
+        warnings: ['<b>Warning</b>'],
+        rootRec: normalizedRecipe,
+        plan: [
+            '<b>Крок 1</b><br>Нанести',
+            '<script>alert(1)</script>Контроль'
+        ],
+        protocolText: '<b>Fallback</b><br>Text'
+    });
+} finally {
+    calculateProtocol = originalCalculateProtocol;
+}
+
+assert.strictEqual(calculateProtocolCalls, 0);
+assert.strictEqual(adapterState.status, 'APPROVED');
+assert.strictEqual(adapterState.rootRec.dye.includes('<'), false);
+assert.strictEqual(adapterState.phases.length, 2);
+assert.strictEqual(adapterState.phases[0].phaseName, 'Етап 1');
+assert.strictEqual(adapterState.phases[0].steps[0], 'Крок 1\\nНанести');
+assert.strictEqual(adapterState.phases[1].steps[0], 'alert(1)Контроль');
+
+const blockedAdapterState = buildWwwRenderState({
+    status: 'BLOCKED',
+    blockers: ['ФАТАЛЬНО: stop']
+});
+
+assert.strictEqual(blockedAdapterState.status, 'BLOCKED');
+assert.deepStrictEqual(blockedAdapterState.blockers, ['ФАТАЛЬНО: stop']);
+
+const adapterHtml = PerucarWwwRenderV1.renderStateToHtml(adapterState);
+assertNotIncludes(adapterHtml, '<script>alert(1)</script>');
+assertNotIncludes(adapterHtml, '<b>Крок 1</b>');
+assertNotIncludes(adapterHtml, '<b>Барвник</b>');
+assertNotIncludes(adapterHtml, '<br>Нанести');
+assertIncludes(adapterHtml, 'Крок 1');
+assertIncludes(adapterHtml, 'Нанести');
 
 if (typeof PerucarWwwMappingV1 !== 'object') {
     throw new Error('PerucarWwwMappingV1 presence check failed');
