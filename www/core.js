@@ -328,7 +328,7 @@ const pigmentMap = {
                 let tLevel = parseInt(document.getElementById('target_level').value);
                 let tDir = document.getElementById('target_direction').value;
 
-                let alerts = [], warnings = [], diagnostics = [];
+                let alerts = [], warnings = [], diagnostics = [], manualDecisions = [];
                 if (history === 'хна / металл' && ['пористі', 'сильно поврежденные'].includes(condition)) alerts.push("ФАТАЛЬНО: Хна/метали на пошкодженому волоссі. Оксиданти заборонені.");
                 if (condition === 'сильно поврежденные') warnings.push("⚠️ КРИТИЧНИЙ СТАН: Блондування порошком ЗАБОРОНЕНО. Тільки пастельне тонування.");
                 
@@ -504,9 +504,22 @@ const pigmentMap = {
                 rootRec.mixtone = calcMixtone(tLevel, tDir, rootRec.process, rootRec.mass, "здоровые");
                 lenRec.mixtone = calcMixtone(tLevel, tDir, lenRec.process, lenRec.mass, condition);
 
+                let specialBlondBase6NeedsConfirmation =
+                    (rLevel === 6 && rootRec && String(rootRec.process).includes("Special Blond")) ||
+                    (lLevel === 6 && lenRec && String(lenRec.process).includes("Special Blond"));
+
+                if (specialBlondBase6NeedsConfirmation) {
+                    warnings.push("⚠️ SPECIAL BLOND З БАЗИ 6: Потрібне підтвердження технології бренду або рішення майстра. Не вважати безумовно безпечним approved-рецептом.");
+                    manualDecisions.push({
+                        title: "Special Blond з бази 6",
+                        message: "Підтвердити технологію бренду або рішення майстра перед виконанням рецепта."
+                    });
+                }
+
                 const state = buildWwwRenderState({
-                    status: 'APPROVED',
+                    status: manualDecisions.length > 0 ? 'MANUAL_REQUIRED' : 'APPROVED',
                     target: `${tLevel}.${tDir}`,
+                    manualDecisions,
                     warnings,
                     diagnostics,
                     rootRec,
@@ -517,7 +530,7 @@ const pigmentMap = {
                     mixtoneInfo: { root: rootRec.mixtone, length: lenRec.mixtone },
                     massModel: { baseMass, densityMultiplier: denMult, totalMass, rootMass: rMass, lengthMass: lMass },
                     timingInfo: { totalMinutes: timing, modifierMinutes: tMod },
-                    reasons: { rootStep: rStep, lengthStep: lStep, hotRoot, grey }
+                    reasons: { rootStep: rStep, lengthStep: lStep, hotRoot, grey, specialBlondBase6NeedsConfirmation }
                 });
                 document.getElementById('output').innerHTML = PerucarWwwRenderV1.renderStateToHtml(state);
             } catch (e) {

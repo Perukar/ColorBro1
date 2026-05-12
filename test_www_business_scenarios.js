@@ -54,6 +54,8 @@ const hasManualSignal = html.includes('MANUAL_REQUIRED')
     || html.includes('needs_confirmation')
     || html.includes('risk warning')
     || html.includes('Потрібне ручне рішення');
+const hasBaseSixWarning = html.includes('Special Blond з бази 6')
+    && html.includes('технологію бренду');
 
 const unsafeApprovedSpecialBlond = hasApproved
     && hasApprovedRecipe
@@ -67,20 +69,24 @@ assert.ok(
 );
 
 if (unsafeApprovedSpecialBlond) {
-    console.log('KNOWN_RISK SB-6-83: current logic renders APPROVED Special Blond + 9% without manual confirmation.');
+    throw new Error('SB-6-83 must not render APPROVED Special Blond + 9% without manual confirmation.');
 } else {
     assert.ok(hasManualSignal || !hasApproved || !hasApprovedRecipe, 'SB-6-83 should not be unconditional APPROVED Special Blond');
+    assert.ok(hasManualSignal, 'SB-6-83 should require manual confirmation');
+    assert.ok(hasBaseSixWarning, 'SB-6-83 should warn about Special Blond from base 6');
+    assert.ok(!hasApprovedRecipe, 'SB-6-83 should not render approved recipe blocks');
     console.log('SB-6-83 safe behavior observed.');
 }
 
 globalThis.__testResult = {
-    status: unsafeApprovedSpecialBlond ? 'KNOWN_RISK' : 'SAFE',
+    status: unsafeApprovedSpecialBlond ? 'UNSAFE' : 'SAFE',
     hasApproved,
     hasApprovedRecipe,
     hasSpecialBlond,
     hasSbDye,
     hasNinePercent,
-    hasManualSignal
+    hasManualSignal,
+    hasBaseSixWarning
 };
 `;
 
@@ -93,9 +99,10 @@ const sandbox = {
 vm.createContext(sandbox);
 vm.runInContext(code + '\n' + assertions, sandbox, { filename: 'www/core.js' });
 
-assert.strictEqual(sandbox.__testResult.status, 'KNOWN_RISK');
-assert.strictEqual(sandbox.__testResult.hasApproved, true);
-assert.strictEqual(sandbox.__testResult.hasApprovedRecipe, true);
-assert.strictEqual(sandbox.__testResult.hasNinePercent, true);
+assert.strictEqual(sandbox.__testResult.status, 'SAFE');
+assert.strictEqual(sandbox.__testResult.hasApproved, false);
+assert.strictEqual(sandbox.__testResult.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__testResult.hasManualSignal, true);
+assert.strictEqual(sandbox.__testResult.hasBaseSixWarning, true);
 
-console.log('WWW business scenario diagnostic test passed');
+console.log('WWW business scenario test passed');
