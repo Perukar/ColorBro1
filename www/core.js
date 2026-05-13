@@ -516,6 +516,18 @@ const pigmentMap = {
                     });
                 }
 
+                let significantDarkeningNeedsPrepig =
+                    (rLevel >= 9 && (rLevel - tLevel) >= 3) ||
+                    (lLevel >= 9 && (lLevel - tLevel) >= 3);
+
+                if (significantDarkeningNeedsPrepig) {
+                    warnings.push("⚠️ ЗНАЧНЕ ЗАТЕМНЕННЯ ЗІ СВІТЛОЇ БАЗИ: Потрібне ручне рішення щодо передпігментації або заповнення пігменту перед виконанням рецепта.");
+                    manualDecisions.push({
+                        title: "Передпігментація / заповнення пігменту",
+                        message: "Підтвердити, як буде заповнений відсутній пігмент при затемненні на 3+ рівні зі світлої бази."
+                    });
+                }
+
                 const state = buildWwwRenderState({
                     status: manualDecisions.length > 0 ? 'MANUAL_REQUIRED' : 'APPROVED',
                     target: `${tLevel}.${tDir}`,
@@ -530,7 +542,7 @@ const pigmentMap = {
                     mixtoneInfo: { root: rootRec.mixtone, length: lenRec.mixtone },
                     massModel: { baseMass, densityMultiplier: denMult, totalMass, rootMass: rMass, lengthMass: lMass },
                     timingInfo: { totalMinutes: timing, modifierMinutes: tMod },
-                    reasons: { rootStep: rStep, lengthStep: lStep, hotRoot, grey, specialBlondBase6NeedsConfirmation }
+                    reasons: { rootStep: rStep, lengthStep: lStep, hotRoot, grey, specialBlondBase6NeedsConfirmation, significantDarkeningNeedsPrepig }
                 });
                 document.getElementById('output').innerHTML = PerucarWwwRenderV1.renderStateToHtml(state);
             } catch (e) {

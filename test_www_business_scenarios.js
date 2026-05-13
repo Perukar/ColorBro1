@@ -151,13 +151,16 @@ assert.ok(
 );
 
 if (prepigUnsafeUnconditionalApproved) {
-    console.log('PREPIG-10-6 known risk observed: approved darkening without prepigmentation/manual signal.');
+    throw new Error('PREPIG-10-6 must not render unconditional approved darkening without prepigmentation/manual signal.');
 } else {
-    console.log('PREPIG-10-6 diagnostic behavior observed.');
+    assert.ok(prepigHasManualSignal, 'PREPIG-10-6 should require manual decision');
+    assert.ok(prepigHasPrePigSignal, 'PREPIG-10-6 should mention prepigmentation or pigment filling');
+    assert.ok(!prepigHasApproved, 'PREPIG-10-6 should not remain APPROVED after repair');
+    console.log('PREPIG-10-6 safe behavior observed.');
 }
 
 globalThis.__prepigResult = {
-    status: prepigUnsafeUnconditionalApproved ? 'KNOWN_RISK' : 'DIAGNOSTIC_OK',
+    status: prepigUnsafeUnconditionalApproved ? 'UNSAFE' : 'SAFE',
     hasApproved: prepigHasApproved,
     hasRecipe: prepigHasRecipe,
     hasManualSignal: prepigHasManualSignal,
@@ -179,6 +182,9 @@ assert.strictEqual(sandbox.__testResult.hasApproved, false);
 assert.strictEqual(sandbox.__testResult.hasApprovedRecipe, false);
 assert.strictEqual(sandbox.__testResult.hasManualSignal, true);
 assert.strictEqual(sandbox.__testResult.hasBaseSixWarning, true);
-assert.ok(['KNOWN_RISK', 'DIAGNOSTIC_OK'].includes(sandbox.__prepigResult.status));
+assert.strictEqual(sandbox.__prepigResult.status, 'SAFE');
+assert.strictEqual(sandbox.__prepigResult.hasApproved, false);
+assert.strictEqual(sandbox.__prepigResult.hasManualSignal, true);
+assert.strictEqual(sandbox.__prepigResult.hasPrePigSignal, true);
 
 console.log('WWW business scenario test passed');
