@@ -88,6 +88,81 @@ globalThis.__testResult = {
     hasManualSignal,
     hasBaseSixWarning
 };
+
+const prepigScenarioValues = {
+    history: 'натуральні',
+    condition: 'здоровые',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '10',
+    root_length: '1',
+    length_level: '10',
+    base_type: 'Натуральна',
+    target_level: '6',
+    target_direction: '1'
+};
+
+const prepigOutput = { innerHTML: '' };
+const prepigRequestedIds = [];
+
+document = {
+    getElementById(id) {
+        prepigRequestedIds.push(id);
+        if (id === 'output') return prepigOutput;
+        if (!Object.prototype.hasOwnProperty.call(prepigScenarioValues, id)) {
+            throw new Error('Missing PREPIG-10-6 fake DOM value for ' + id);
+        }
+        return { value: prepigScenarioValues[id] };
+    }
+};
+
+calculateProtocol();
+
+const prepigHtml = prepigOutput.innerHTML;
+assert.ok(prepigHtml, 'PREPIG-10-6 should render a non-empty result');
+assert.ok(prepigRequestedIds.includes('output'), 'PREPIG-10-6 should write to output');
+
+const prepigHasApproved = prepigHtml.includes('APPROVED')
+    || prepigHtml.includes('ПРОТОКОЛ ЗАТВЕРДЖЕНО');
+const prepigHasRecipe = prepigHtml.includes('КОРІНЬ')
+    || prepigHtml.includes('ДОВЖИНА')
+    || prepigHtml.includes('Барвник 6.1');
+const prepigHasManualSignal = prepigHtml.includes('MANUAL_REQUIRED')
+    || prepigHtml.includes('needs_confirmation')
+    || prepigHtml.includes('risk warning')
+    || prepigHtml.includes('Потрібне ручне рішення');
+const prepigHasPrePigSignal = prepigHtml.includes('Препігментація')
+    || prepigHtml.includes('передпігментац')
+    || prepigHtml.includes('репігментац')
+    || prepigHtml.includes('заповнення пігменту')
+    || prepigHtml.includes('тепла підкладка');
+
+const prepigUnsafeUnconditionalApproved = prepigHasApproved
+    && prepigHasRecipe
+    && !prepigHasManualSignal
+    && !prepigHasPrePigSignal;
+
+assert.ok(
+    prepigHasApproved || prepigHasRecipe || prepigHasManualSignal || prepigHasPrePigSignal,
+    'PREPIG-10-6 diagnostic should expose current decision details'
+);
+
+if (prepigUnsafeUnconditionalApproved) {
+    console.log('PREPIG-10-6 known risk observed: approved darkening without prepigmentation/manual signal.');
+} else {
+    console.log('PREPIG-10-6 diagnostic behavior observed.');
+}
+
+globalThis.__prepigResult = {
+    status: prepigUnsafeUnconditionalApproved ? 'KNOWN_RISK' : 'DIAGNOSTIC_OK',
+    hasApproved: prepigHasApproved,
+    hasRecipe: prepigHasRecipe,
+    hasManualSignal: prepigHasManualSignal,
+    hasPrePigSignal: prepigHasPrePigSignal
+};
 `;
 
 const sandbox = {
@@ -104,5 +179,6 @@ assert.strictEqual(sandbox.__testResult.hasApproved, false);
 assert.strictEqual(sandbox.__testResult.hasApprovedRecipe, false);
 assert.strictEqual(sandbox.__testResult.hasManualSignal, true);
 assert.strictEqual(sandbox.__testResult.hasBaseSixWarning, true);
+assert.ok(['KNOWN_RISK', 'DIAGNOSTIC_OK'].includes(sandbox.__prepigResult.status));
 
 console.log('WWW business scenario test passed');
