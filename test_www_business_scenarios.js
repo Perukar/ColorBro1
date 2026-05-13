@@ -342,12 +342,16 @@ const missingKnownRisk = !missingCriticalDataScenario.error
 
 console.log(
     missingKnownRisk
-        ? 'MISSING-CRITICAL-DATA KNOWN_RISK: empty critical fields can still render a pseudo-specific result.'
-        : 'MISSING-CRITICAL-DATA diagnostic observed: missing data is blocked, manual, or rejected.'
+        ? 'MISSING-CRITICAL-DATA UNSAFE: empty critical fields can still render a pseudo-specific result.'
+        : 'MISSING-CRITICAL-DATA safe behavior observed: missing data is blocked, manual, or rejected.'
 );
 
+if (missingKnownRisk) {
+    throw new Error('MISSING-CRITICAL-DATA must not render a pseudo-specific result for empty critical fields.');
+}
+
 globalThis.__missingCriticalDataResult = {
-    status: missingKnownRisk ? 'KNOWN_RISK' : 'DIAGNOSTIC_OBSERVED',
+    status: missingKnownRisk ? 'UNSAFE' : 'SAFE',
     hasApproved: missingHasApproved,
     hasRecipe: missingHasRecipe,
     hasManualSignal: missingHasManualSignal,
@@ -376,6 +380,9 @@ assert.strictEqual(sandbox.__prepigResult.hasManualSignal, true);
 assert.strictEqual(sandbox.__prepigResult.hasPrePigSignal, true);
 assert.ok(['KNOWN_RISK', 'DIAGNOSTIC_OBSERVED'].includes(sandbox.__blackExitResult.status));
 assert.ok(['KNOWN_RISK', 'DIAGNOSTIC_OBSERVED'].includes(sandbox.__zonesResult.status));
-assert.ok(['KNOWN_RISK', 'DIAGNOSTIC_OBSERVED'].includes(sandbox.__missingCriticalDataResult.status));
+assert.strictEqual(sandbox.__missingCriticalDataResult.status, 'SAFE');
+assert.strictEqual(sandbox.__missingCriticalDataResult.hasApproved, false);
+assert.strictEqual(sandbox.__missingCriticalDataResult.hasRecipe, false);
+assert.strictEqual(sandbox.__missingCriticalDataResult.hasBlockingSignal, true);
 
 console.log('WWW business scenario test passed');

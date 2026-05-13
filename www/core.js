@@ -329,6 +329,36 @@ const pigmentMap = {
                 let tDir = document.getElementById('target_direction').value;
 
                 let alerts = [], warnings = [], diagnostics = [], manualDecisions = [];
+                const missingCriticalFields = [];
+                if (!Number.isFinite(rLevel)) missingCriticalFields.push("поточний рівень кореня");
+                if (!Number.isFinite(lLevel)) missingCriticalFields.push("поточний рівень довжини");
+                if (!Number.isFinite(tLevel)) missingCriticalFields.push("бажаний рівень");
+                if (!String(history || '').trim()) missingCriticalFields.push("історія фарбування");
+                if (!String(bType || '').trim()) missingCriticalFields.push("тип бази");
+                if (!String(condition || '').trim()) missingCriticalFields.push("стан волосся");
+
+                if (missingCriticalFields.length > 0) {
+                    const state = buildWwwRenderState({
+                        status: 'BLOCKED',
+                        target: Number.isFinite(tLevel) ? `${tLevel}.${tDir}` : 'не визначено',
+                        blockers: [
+                            `Недостатньо критичних даних для безпечного рецепта: ${missingCriticalFields.join(', ')}.`
+                        ],
+                        warnings: [
+                            "Фінальний рецепт не може бути підтверджений без заповнення критичних полів."
+                        ],
+                        diagnostics: [
+                            "Заповніть поточний рівень, бажаний рівень, історію, тип бази та стан волосся перед розрахунком."
+                        ],
+                        reasons: {
+                            insufficient_data: true,
+                            missingCriticalFields
+                        }
+                    });
+                    document.getElementById('output').innerHTML = PerucarWwwRenderV1.renderStateToHtml(state);
+                    return;
+                }
+
                 if (history === 'хна / металл' && ['пористі', 'сильно поврежденные'].includes(condition)) alerts.push("ФАТАЛЬНО: Хна/метали на пошкодженому волоссі. Оксиданти заборонені.");
                 if (condition === 'сильно поврежденные') warnings.push("⚠️ КРИТИЧНИЙ СТАН: Блондування порошком ЗАБОРОНЕНО. Тільки пастельне тонування.");
                 
