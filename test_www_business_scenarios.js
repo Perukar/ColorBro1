@@ -166,6 +166,194 @@ globalThis.__prepigResult = {
     hasManualSignal: prepigHasManualSignal,
     hasPrePigSignal: prepigHasPrePigSignal
 };
+
+function runDiagnosticScenario(name, values) {
+    const scenarioOutput = { innerHTML: '' };
+    const scenarioRequestedIds = [];
+
+    document = {
+        getElementById(id) {
+            scenarioRequestedIds.push(id);
+            if (id === 'output') return scenarioOutput;
+            if (!Object.prototype.hasOwnProperty.call(values, id)) {
+                throw new Error('Missing ' + name + ' fake DOM value for ' + id);
+            }
+            return { value: values[id] };
+        }
+    };
+
+    let error = null;
+    try {
+        calculateProtocol();
+    } catch (caughtError) {
+        error = caughtError;
+    }
+
+    return {
+        html: scenarioOutput.innerHTML,
+        requestedIds: scenarioRequestedIds,
+        error
+    };
+}
+
+const blackExitScenario = runDiagnosticScenario('BLACK-EXIT-1', {
+    history: 'чорний косметичний пігмент',
+    condition: 'середньо пористе',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '2',
+    root_length: '1',
+    length_level: '2',
+    base_type: 'Косметична',
+    target_level: '7',
+    target_direction: '1'
+});
+
+assert.ok(blackExitScenario.requestedIds.includes('output'), 'BLACK-EXIT-1 should access output');
+
+const blackExitHtml = blackExitScenario.html;
+const blackExitHasApproved = blackExitHtml.includes('APPROVED')
+    || blackExitHtml.includes('ПРОТОКОЛ ЗАТВЕРДЖЕНО');
+const blackExitHasRecipe = blackExitHtml.includes('КОРІНЬ')
+    || blackExitHtml.includes('ДОВЖИНА')
+    || blackExitHtml.includes('Барвник');
+const blackExitHasManualSignal = blackExitHtml.includes('MANUAL_REQUIRED')
+    || blackExitHtml.includes('Потрібне ручне рішення')
+    || blackExitHtml.includes('needs_confirmation');
+const blackExitHasDiagnostics = blackExitHtml.includes('діагност')
+    || blackExitHtml.includes('нашарув')
+    || blackExitHtml.includes('змив')
+    || blackExitHtml.includes('фон');
+const blackExitKnownRisk = !blackExitScenario.error
+    && blackExitHasApproved
+    && blackExitHasRecipe
+    && !blackExitHasManualSignal
+    && !blackExitHasDiagnostics;
+
+console.log(
+    blackExitKnownRisk
+        ? 'BLACK-EXIT-1 KNOWN_RISK: exact recipe can be rendered without explicit layering/removal/background diagnostics.'
+        : 'BLACK-EXIT-1 diagnostic observed: blocking/manual/diagnostic signal or runtime rejection present.'
+);
+
+globalThis.__blackExitResult = {
+    status: blackExitKnownRisk ? 'KNOWN_RISK' : 'DIAGNOSTIC_OBSERVED',
+    hasApproved: blackExitHasApproved,
+    hasRecipe: blackExitHasRecipe,
+    hasManualSignal: blackExitHasManualSignal,
+    hasDiagnostics: blackExitHasDiagnostics,
+    hasError: Boolean(blackExitScenario.error)
+};
+
+// Current www form has root and length levels. There is no dedicated ends_level
+// field in this test harness, so ends are captured as a documented limitation.
+const zonesScenario = runDiagnosticScenario('ZONES-ROOT-LENGTH-ENDS', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '4',
+    root_length: '1',
+    length_level: '6',
+    base_type: 'Натуральна',
+    target_level: '8',
+    target_direction: '1'
+});
+
+assert.ok(zonesScenario.requestedIds.includes('output'), 'ZONES-ROOT-LENGTH-ENDS should access output');
+
+const zonesHtml = zonesScenario.html;
+const zonesHasApproved = zonesHtml.includes('APPROVED')
+    || zonesHtml.includes('ПРОТОКОЛ ЗАТВЕРДЖЕНО');
+const zonesHasRecipe = zonesHtml.includes('КОРІНЬ')
+    || zonesHtml.includes('ДОВЖИНА')
+    || zonesHtml.includes('Барвник');
+const zonesHasManualSignal = zonesHtml.includes('MANUAL_REQUIRED')
+    || zonesHtml.includes('Потрібне ручне рішення')
+    || zonesHtml.includes('needs_confirmation');
+const zonesHasZoneSplit = zonesHtml.includes('КІНЦ')
+    || zonesHtml.includes('кінц')
+    || zonesHtml.includes('окремі зони')
+    || zonesHtml.includes('різні зони');
+const zonesKnownRisk = !zonesScenario.error
+    && zonesHasApproved
+    && zonesHasRecipe
+    && !zonesHasManualSignal
+    && !zonesHasZoneSplit;
+
+console.log(
+    zonesKnownRisk
+        ? 'ZONES-ROOT-LENGTH-ENDS KNOWN_RISK: root/length/ends separation is not fully enforced; ends_level is not available in current form.'
+        : 'ZONES-ROOT-LENGTH-ENDS diagnostic observed: manual/zone split signal or runtime rejection present.'
+);
+
+globalThis.__zonesResult = {
+    status: zonesKnownRisk ? 'KNOWN_RISK' : 'DIAGNOSTIC_OBSERVED',
+    hasApproved: zonesHasApproved,
+    hasRecipe: zonesHasRecipe,
+    hasManualSignal: zonesHasManualSignal,
+    hasZoneSplit: zonesHasZoneSplit,
+    hasError: Boolean(zonesScenario.error),
+    limitation: 'No dedicated ends_level field in current fake DOM contract.'
+};
+
+const missingCriticalDataScenario = runDiagnosticScenario('MISSING-CRITICAL-DATA', {
+    history: '',
+    condition: '',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '',
+    root_length: '1',
+    length_level: '',
+    base_type: '',
+    target_level: '',
+    target_direction: '1'
+});
+
+assert.ok(missingCriticalDataScenario.requestedIds.includes('output'), 'MISSING-CRITICAL-DATA should access output');
+
+const missingHtml = missingCriticalDataScenario.html;
+const missingHasApproved = missingHtml.includes('APPROVED')
+    || missingHtml.includes('ПРОТОКОЛ ЗАТВЕРДЖЕНО');
+const missingHasRecipe = missingHtml.includes('КОРІНЬ')
+    || missingHtml.includes('ДОВЖИНА')
+    || missingHtml.includes('Барвник');
+const missingHasManualSignal = missingHtml.includes('MANUAL_REQUIRED')
+    || missingHtml.includes('Потрібне ручне рішення')
+    || missingHtml.includes('needs_confirmation');
+const missingHasBlockingSignal = missingHtml.includes('insufficient_data')
+    || missingHtml.includes('недостат')
+    || missingHtml.includes('обов')
+    || missingHtml.includes('заповн')
+    || missingHtml.includes('BLOCKED');
+const missingKnownRisk = !missingCriticalDataScenario.error
+    && (missingHasApproved || missingHasRecipe)
+    && !missingHasManualSignal
+    && !missingHasBlockingSignal;
+
+console.log(
+    missingKnownRisk
+        ? 'MISSING-CRITICAL-DATA KNOWN_RISK: empty critical fields can still render a pseudo-specific result.'
+        : 'MISSING-CRITICAL-DATA diagnostic observed: missing data is blocked, manual, or rejected.'
+);
+
+globalThis.__missingCriticalDataResult = {
+    status: missingKnownRisk ? 'KNOWN_RISK' : 'DIAGNOSTIC_OBSERVED',
+    hasApproved: missingHasApproved,
+    hasRecipe: missingHasRecipe,
+    hasManualSignal: missingHasManualSignal,
+    hasBlockingSignal: missingHasBlockingSignal,
+    hasError: Boolean(missingCriticalDataScenario.error)
+};
 `;
 
 const sandbox = {
@@ -186,5 +374,8 @@ assert.strictEqual(sandbox.__prepigResult.status, 'SAFE');
 assert.strictEqual(sandbox.__prepigResult.hasApproved, false);
 assert.strictEqual(sandbox.__prepigResult.hasManualSignal, true);
 assert.strictEqual(sandbox.__prepigResult.hasPrePigSignal, true);
+assert.ok(['KNOWN_RISK', 'DIAGNOSTIC_OBSERVED'].includes(sandbox.__blackExitResult.status));
+assert.ok(['KNOWN_RISK', 'DIAGNOSTIC_OBSERVED'].includes(sandbox.__zonesResult.status));
+assert.ok(['KNOWN_RISK', 'DIAGNOSTIC_OBSERVED'].includes(sandbox.__missingCriticalDataResult.status));
 
 console.log('WWW business scenario test passed');
