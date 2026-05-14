@@ -237,3 +237,55 @@ Commit:
 - Немає окремого поля стану кінців.
 - Немає окремої історії / `base_type` саме для кінців.
 - Повний `endsRec` і mass model ще не реалізовані.
+
+## FORM CONTRACT: ends_condition
+
+Commit:
+
+`bda9bd8 Add ends condition form contract`
+
+## Що змінено
+
+- Додано поле `ends_condition` у форму поруч із `ends_level`.
+- Додано mapping `ends_condition` → `endsCondition`.
+- `calculateProtocol()` тепер optional читає стан кінців.
+- Додано manual guard для ризикового стану кінців.
+- Якщо `ends_condition` пористі/ламкі/сильно пошкоджені/критично пошкоджені і сценарій передбачає освітлення або хімічне втручання, результат переходить у `MANUAL_REQUIRED` або diagnostic/manual signal.
+- Якщо `ends_condition` не вказано, але `ends_level` відрізняється від `root_level` або `length_level`, система додає manual/diagnostic signal про недостатню оцінку стану кінців.
+- Додано business tests `ENDS-CONDITION-POROUS-LIFT`, `ENDS-CONDITION-BRITTLE-HIGH-LIFT`, `ENDS-CONDITION-DAMAGED-CHEMISTRY`, `ENDS-CONDITION-MISSING-WITH-DIFFERENT-LEVEL`.
+- Runtime fake DOM contract оновлено `ends_condition: здорові` для базового `APPROVED`-сценарію.
+
+## Що не змінювалось
+
+- Формули.
+- Грамовки.
+- Оксид.
+- `calcMixtone`.
+- `endsRec` не створювався.
+- Mass model не змінювався.
+- Окрема формула кінців не додавалась.
+- Docs до цього commit не змінювались.
+
+## Перевірки
+
+- `node --check www/core.js`;
+- `node --check test_www_mapping.js`;
+- `node test_www_mapping.js`;
+- `node --check test_www_business_scenarios.js`;
+- `node test_www_business_scenarios.js`;
+- `node --check test_www_render_runtime.js`;
+- `node test_www_render_runtime.js`.
+
+## Результат
+
+- Safe: `SB-6-83`, `PREPIG-10-6`, `ZONES-ROOT-LENGTH-ENDS`, `MISSING-CRITICAL-DATA`.
+- Safe: `ENDS-LIGHTER-THAN-LENGTH`, `ENDS-DARKER-THAN-LENGTH`, `ENDS-10-6-PREPIG`, `ENDS-DAMAGED-LIFT`, `ENDS-TARGET-BETWEEN-LENGTH-ENDS`.
+- Safe: `ENDS-CONDITION-*` scenarios.
+- Diagnostic / limitation: `ENDS-COSMETIC-UNKNOWN-HISTORY`, бо окремої історії/base_type саме для кінців ще немає.
+
+## Залишкові ризики
+
+- Немає окремої історії кінців.
+- Немає окремого `base_type` саме для кінців.
+- Повний `endsRec` і mass model ще не реалізовані.
+- Автоматичний рецепт кінців все ще не дозволений.
