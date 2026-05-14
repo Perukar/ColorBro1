@@ -58,6 +58,7 @@ const pigmentMap = {
                     root_level: this.getWwwValue('root_level'),
                     root_length: this.getWwwValue('root_length'),
                     length_level: this.getWwwValue('length_level'),
+                    ends_level: this.getWwwValue('ends_level'),
                     base_type: this.getWwwValue('base_type'),
                     target_level: this.getWwwValue('target_level'),
                     target_direction: this.getWwwValue('target_direction')
@@ -86,6 +87,7 @@ const pigmentMap = {
                     rootLevel: toIntegerOrNull(wwwValues.root_level),
                     rootLength: toIntegerOrNull(wwwValues.root_length),
                     lengthLevel: toIntegerOrNull(wwwValues.length_level),
+                    endsLevel: toIntegerOrNull(wwwValues.ends_level),
                     baseType: String(wwwValues.base_type || '').trim(),
                     targetLevel: toIntegerOrNull(wwwValues.target_level),
                     targetDirection: String(wwwValues.target_direction || '').trim(),
@@ -323,6 +325,9 @@ const pigmentMap = {
                 let rLevel = parseInt(document.getElementById('root_level').value);
                 let rootLength = parseInt(document.getElementById('root_length').value);
                 let lLevel = parseInt(document.getElementById('length_level').value);
+                const endsLevelElement = document.getElementById('ends_level');
+                const endsLevelRaw = endsLevelElement ? String(endsLevelElement.value).trim() : '';
+                let eLevel = endsLevelRaw ? parseInt(endsLevelRaw) : null;
                 let bType = document.getElementById('base_type').value;
                 
                 let tLevel = parseInt(document.getElementById('target_level').value);
@@ -583,13 +588,25 @@ const pigmentMap = {
                 const rootProcess = rootRec ? String(rootRec.process || '') : '';
                 const lengthProcess = lenRec ? String(lenRec.process || '') : '';
                 const zoneProcessesDiffer = rootProcess !== lengthProcess;
+                const endsLevelProvided = Number.isFinite(eLevel);
+                const endsDiffersFromRoot = endsLevelProvided && eLevel !== rLevel;
+                const endsDiffersFromLength = endsLevelProvided && eLevel !== lLevel;
+                const endsLevelNeedsConfirmation = endsDiffersFromRoot || endsDiffersFromLength;
                 const zoneDecisionNeedsConfirmation = zoneLevelDifference >= 2 || zoneProcessesDiffer;
 
                 if (zoneDecisionNeedsConfirmation) {
-                    warnings.push("⚠️ ЗОНАЛЬНЕ РІШЕННЯ: рівень кореня і довжини суттєво відрізняється або процеси для зон різні. У поточній формі немає окремого поля ends_level, тому кінці потребують окремої оцінки майстром.");
+                    warnings.push("⚠️ ЗОНАЛЬНЕ РІШЕННЯ: рівень кореня і довжини суттєво відрізняється або процеси для зон різні. Потрібне ручне підтвердження зонального рішення майстром.");
                     manualDecisions.push({
-                        title: "Зональне рішення корінь / довжина / кінці",
-                        message: `Підтвердити окреме рішення для зон перед виконанням рецепта. root_level: ${rLevel}, length_level: ${lLevel}, процес кореня: ${rootProcess || 'не визначено'}, процес довжини: ${lengthProcess || 'не визначено'}. Кінці не мають окремого поля ends_level у поточній формі.`
+                        title: "Зональне рішення корінь / довжина",
+                        message: `Підтвердити окреме рішення для зон перед виконанням рецепта. root_level: ${rLevel}, length_level: ${lLevel}, процес кореня: ${rootProcess || 'не визначено'}, процес довжини: ${lengthProcess || 'не визначено'}.`
+                    });
+                }
+
+                if (endsLevelNeedsConfirmation) {
+                    warnings.push("⚠️ КІНЦІ МАЮТЬ ОКРЕМИЙ РІВЕНЬ: ends_level відрізняється від кореня або довжини. Кінці потребують окремої оцінки майстром; на цьому етапі окремий рецепт кінців ще не рахується.");
+                    manualDecisions.push({
+                        title: "Окрема оцінка кінців",
+                        message: `Підтвердити рішення для кінців перед виконанням рецепта. root_level: ${rLevel}, length_level: ${lLevel}, ends_level: ${eLevel}. Окремий рецепт кінців на цьому етапі не рахується.`
                     });
                 }
 
@@ -607,7 +624,7 @@ const pigmentMap = {
                     mixtoneInfo: { root: rootRec.mixtone, length: lenRec.mixtone },
                     massModel: { baseMass, densityMultiplier: denMult, totalMass, rootMass: rMass, lengthMass: lMass },
                     timingInfo: { totalMinutes: timing, modifierMinutes: tMod },
-                    reasons: { rootStep: rStep, lengthStep: lStep, hotRoot, grey, specialBlondBase6NeedsConfirmation, significantDarkeningNeedsPrepig, zoneLevelDifference, zoneProcessesDiffer, zoneDecisionNeedsConfirmation }
+                    reasons: { rootStep: rStep, lengthStep: lStep, endsLevel: eLevel, hotRoot, grey, specialBlondBase6NeedsConfirmation, significantDarkeningNeedsPrepig, zoneLevelDifference, zoneProcessesDiffer, zoneDecisionNeedsConfirmation, endsLevelProvided, endsDiffersFromRoot, endsDiffersFromLength, endsLevelNeedsConfirmation }
                 });
                 document.getElementById('output').innerHTML = PerucarWwwRenderV1.renderStateToHtml(state);
             } catch (e) {

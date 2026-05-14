@@ -20,6 +20,7 @@ const scenarioValues = {
     root_level: '6',
     root_length: '1',
     length_level: '6',
+    ends_level: '6',
     base_type: 'Натуральна',
     target_level: '8',
     target_direction: '3'
@@ -100,6 +101,7 @@ const prepigScenarioValues = {
     root_level: '10',
     root_length: '1',
     length_level: '10',
+    ends_level: '10',
     base_type: 'Натуральна',
     target_level: '6',
     target_direction: '1'
@@ -207,6 +209,7 @@ const blackExitScenario = runDiagnosticScenario('BLACK-EXIT-1', {
     root_level: '2',
     root_length: '1',
     length_level: '2',
+    ends_level: '2',
     base_type: 'Косметична',
     target_level: '7',
     target_direction: '1'
@@ -248,8 +251,8 @@ globalThis.__blackExitResult = {
     hasError: Boolean(blackExitScenario.error)
 };
 
-// Current www form has root and length levels. There is no dedicated ends_level
-// field in this test harness, so ends are captured as a documented limitation.
+// The www form exposes root, length, and ends levels. The first structural
+// ends_level phase requires manual confirmation when ends differ.
 const zonesScenario = runDiagnosticScenario('ZONES-ROOT-LENGTH-ENDS', {
     history: 'натуральні',
     condition: 'здоровые',
@@ -260,7 +263,8 @@ const zonesScenario = runDiagnosticScenario('ZONES-ROOT-LENGTH-ENDS', {
     grey_type: 'мягкая',
     root_level: '4',
     root_length: '1',
-    length_level: '6',
+    length_level: '7',
+    ends_level: '9',
     base_type: 'Натуральна',
     target_level: '8',
     target_direction: '1'
@@ -283,7 +287,9 @@ const zonesHasZoneSplit = zonesHtml.includes('КІНЦ')
     || zonesHtml.includes('різні зони');
 const zonesHasZoneWarning = zonesHtml.includes('ЗОНАЛЬНЕ РІШЕННЯ')
     && zonesHtml.includes('ends_level')
-    && zonesHtml.includes('кінці потребують окремої оцінки майстром');
+    && zonesHtml.includes('КІНЦІ МАЮТЬ ОКРЕМИЙ РІВЕНЬ')
+    && zonesHtml.includes('Кінці потребують окремої оцінки майстром')
+    && zonesHtml.includes('Окремий рецепт кінців на цьому етапі не рахується');
 
 assert.ok(!zonesScenario.error, 'ZONES-ROOT-LENGTH-ENDS should not throw at runtime');
 assert.ok(!zonesHasApproved, 'ZONES-ROOT-LENGTH-ENDS should not be unconditional APPROVED');
@@ -304,7 +310,7 @@ globalThis.__zonesResult = {
     hasZoneSplit: zonesHasZoneSplit,
     hasZoneWarning: zonesHasZoneWarning,
     hasError: Boolean(zonesScenario.error),
-    limitation: 'No dedicated ends_level field in current fake DOM contract.'
+    limitation: 'ends_level is present, but no separate ends recipe is calculated in this phase.'
 };
 
 const missingCriticalDataScenario = runDiagnosticScenario('MISSING-CRITICAL-DATA', {
@@ -318,6 +324,7 @@ const missingCriticalDataScenario = runDiagnosticScenario('MISSING-CRITICAL-DATA
     root_level: '',
     root_length: '1',
     length_level: '',
+    ends_level: '',
     base_type: '',
     target_level: '',
     target_direction: '1'
