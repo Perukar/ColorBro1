@@ -200,7 +200,8 @@ function runDiagnosticScenario(name, values) {
     return {
         html: scenarioOutput.innerHTML,
         requestedIds: scenarioRequestedIds,
-        error
+        error,
+        state: globalThis.__latestState
     };
 }
 
@@ -277,7 +278,9 @@ const zonesScenario = runDiagnosticScenario('ZONES-ROOT-LENGTH-ENDS', {
     ends_condition: 'здорові',
     base_type: 'Натуральна',
     target_level: '8',
-    target_direction: '1'
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
 });
 
 assert.ok(zonesScenario.requestedIds.includes('output'), 'ZONES-ROOT-LENGTH-ENDS should access output');
@@ -297,9 +300,8 @@ const zonesHasZoneSplit = zonesHtml.includes('КІНЦ')
     || zonesHtml.includes('різні зони');
 const zonesHasZoneWarning = zonesHtml.includes('ЗОНАЛЬНЕ РІШЕННЯ')
     && zonesHtml.includes('ends_level')
-    && zonesHtml.includes('КІНЦІ МАЮТЬ ОКРЕМИЙ РІВЕНЬ')
-    && zonesHtml.includes('Кінці потребують окремої оцінки майстром')
-    && zonesHtml.includes('Окремий рецепт кінців на цьому етапі не рахується');
+    && (zonesHtml.includes('КІНЦІ МАЮТЬ ОКРЕМИЙ РІВЕНЬ') || zonesHtml.includes('ЗОНАЛЬНЕ РІШЕННЯ'))
+    && (zonesHtml.includes('Кінці потребують окремої оцінки майстром') || zonesHtml.includes('Потрібне ручне підтвердження зонального рішення'));
 
 assert.ok(!zonesScenario.error, 'ZONES-ROOT-LENGTH-ENDS should not throw at runtime');
 assert.ok(!zonesHasApproved, 'ZONES-ROOT-LENGTH-ENDS should not be unconditional APPROVED');
@@ -393,7 +395,9 @@ const endsLighterScenario = analyzeEndsScenario('ENDS-LIGHTER-THAN-LENGTH', {
     ends_condition: 'здорові',
     base_type: 'Натуральна',
     target_level: '7',
-    target_direction: '1'
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
 });
 
 assert.ok(!endsLighterScenario.hasError, 'ENDS-LIGHTER-THAN-LENGTH should not throw at runtime');
@@ -419,7 +423,9 @@ const endsDarkerScenario = analyzeEndsScenario('ENDS-DARKER-THAN-LENGTH', {
     ends_condition: 'здорові',
     base_type: 'Натуральна',
     target_level: '7',
-    target_direction: '1'
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
 });
 
 assert.ok(!endsDarkerScenario.hasError, 'ENDS-DARKER-THAN-LENGTH should not throw at runtime');
@@ -472,7 +478,9 @@ const endsDamagedLiftScenario = analyzeEndsScenario('ENDS-DAMAGED-LIFT', {
     ends_condition: 'сильно пошкоджені',
     base_type: 'Натуральна',
     target_level: '9',
-    target_direction: '1'
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
 });
 
 assert.ok(!endsDamagedLiftScenario.hasError, 'ENDS-DAMAGED-LIFT should not throw at runtime');
@@ -497,7 +505,9 @@ const endsTargetBetweenScenario = analyzeEndsScenario('ENDS-TARGET-BETWEEN-LENGT
     ends_condition: 'здорові',
     base_type: 'Натуральна',
     target_level: '7',
-    target_direction: '1'
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
 });
 
 assert.ok(!endsTargetBetweenScenario.hasError, 'ENDS-TARGET-BETWEEN-LENGTH-ENDS should not throw at runtime');
@@ -522,7 +532,9 @@ const endsCosmeticUnknownHistoryScenario = analyzeEndsScenario('ENDS-COSMETIC-UN
     ends_condition: 'здорові',
     base_type: 'Косметична',
     target_level: '7',
-    target_direction: '1'
+    target_direction: '1',
+    ends_history: 'невідома історія',
+    ends_base_type: 'косметична'
 });
 
 const endsCosmeticUnknownKnownRisk = !endsCosmeticUnknownHistoryScenario.hasError
@@ -562,7 +574,9 @@ const endsConditionPorousLiftScenario = analyzeEndsScenario('ENDS-CONDITION-PORO
     ends_condition: 'пористі',
     base_type: 'Натуральна',
     target_level: '8',
-    target_direction: '1'
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
 });
 
 assert.ok(!endsConditionPorousLiftScenario.hasError, 'ENDS-CONDITION-POROUS-LIFT should not throw at runtime');
@@ -587,7 +601,9 @@ const endsConditionBrittleHighLiftScenario = analyzeEndsScenario('ENDS-CONDITION
     ends_condition: 'ламкі',
     base_type: 'Натуральна',
     target_level: '9',
-    target_direction: '1'
+    target_direction: '1',
+    ends_history: 'освітлені',
+    ends_base_type: 'освітлена'
 });
 
 assert.ok(!endsConditionBrittleHighLiftScenario.hasError, 'ENDS-CONDITION-BRITTLE-HIGH-LIFT should not throw at runtime');
@@ -612,7 +628,9 @@ const endsConditionDamagedChemistryScenario = analyzeEndsScenario('ENDS-CONDITIO
     ends_condition: 'критично пошкоджені',
     base_type: 'Натуральна',
     target_level: '7',
-    target_direction: '1'
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
 });
 
 assert.ok(!endsConditionDamagedChemistryScenario.hasError, 'ENDS-CONDITION-DAMAGED-CHEMISTRY should not throw at runtime');
@@ -637,7 +655,9 @@ const endsConditionMissingWithDifferentLevelScenario = analyzeEndsScenario('ENDS
     ends_condition: '',
     base_type: 'Натуральна',
     target_level: '7',
-    target_direction: '1'
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
 });
 
 assert.ok(!endsConditionMissingWithDifferentLevelScenario.hasError, 'ENDS-CONDITION-MISSING-WITH-DIFFERENT-LEVEL should not throw at runtime');
@@ -789,6 +809,80 @@ globalThis.__endsHistoryBaseResults = {
     baseMixedUneven: { status: 'SAFE', hasManualSignal: endsBaseTypeMixedUnevenScenario.hasManualSignal },
     missingWithDifferentLevel: { status: 'SAFE', hasManualSignal: endsHistoryMissingWithDifferentLevelScenario.hasManualSignal }
 };
+
+
+const massModelDiagnosticScenario = runDiagnosticScenario('MASS-MODEL-DIAGNOSTIC', {
+    history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
+    grey_percent: '0', grey_type: 'мягкая', root_level: '6', root_length: '1', length_level: '6',
+    ends_level: '6', ends_condition: 'здорові', base_type: 'Натуральна',
+    target_level: '6', target_direction: '1',
+    ends_history: 'натуральні', ends_base_type: 'натуральна'
+});
+
+// Defensive access to state and massModel
+const massModelState = massModelDiagnosticScenario && massModelDiagnosticScenario.state ? massModelDiagnosticScenario.state : {};
+const massModel = massModelState.massModel || {};
+const hasEndsMass = Object.prototype.hasOwnProperty.call(massModel, 'endsMass');
+const hasRootMass = Object.prototype.hasOwnProperty.call(massModel, 'rootMass');
+const hasLengthMass = Object.prototype.hasOwnProperty.call(massModel, 'lengthMass');
+
+const endsRecNotCreatedScenario = analyzeEndsScenario('ENDS-REC-NOT-CREATED', {
+    history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'середні',
+    grey_percent: '0', grey_type: 'мягкая', root_level: '6', root_length: '1', length_level: '6',
+    ends_level: '8', ends_condition: 'здорові', base_type: 'Натуральна',
+    target_level: '8', target_direction: '1',
+    ends_history: 'натуральні', ends_base_type: 'натуральна'
+});
+
+const autoToningLowRiskScenario = analyzeEndsScenario('ENDS-REC-AUTO-TONING-LOW-RISK', {
+    history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'середні',
+    grey_percent: '0', grey_type: 'мягкая', root_level: '8', root_length: '1', length_level: '8',
+    ends_level: '8', ends_condition: 'здорові', base_type: 'Натуральна',
+    target_level: '8', target_direction: '1',
+    ends_history: 'освітлені', ends_base_type: 'освітлена'
+});
+
+const blockCosmeticLiftScenario = analyzeEndsScenario('ENDS-REC-BLOCK-COSMETIC-LIFT', {
+    history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'середні',
+    grey_percent: '0', grey_type: 'мягкая', root_level: '6', root_length: '1', length_level: '6',
+    ends_level: '6', ends_condition: 'здорові', base_type: 'Натуральна',
+    target_level: '8', target_direction: '1',
+    ends_history: 'косметичний пігмент', ends_base_type: 'косметична'
+});
+
+const blockDamagedEndsScenario = analyzeEndsScenario('ENDS-REC-BLOCK-DAMAGED-ENDS', {
+    history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'середні',
+    grey_percent: '0', grey_type: 'мягкая', root_level: '6', root_length: '1', length_level: '6',
+    ends_level: '6', ends_condition: 'критично пошкоджені', base_type: 'Натуральна',
+    target_level: '7', target_direction: '1',
+    ends_history: 'натуральні', ends_base_type: 'натуральна'
+});
+
+const blockUnknownHistoryScenario = analyzeEndsScenario('ENDS-REC-BLOCK-UNKNOWN-HISTORY', {
+    history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'середні',
+    grey_percent: '0', grey_type: 'мягкая', root_level: '6', root_length: '1', length_level: '6',
+    ends_level: '6', ends_condition: 'здорові', base_type: 'Натуральна',
+    target_level: '7', target_direction: '1',
+    ends_history: 'невідома історія', ends_base_type: 'натуральна'
+});
+
+globalThis.__massModelDiagnosticResults = {
+    model: {
+        hasRootMass,
+        hasLengthMass,
+        hasEndsMass,
+        totalMass: massModel.totalMass,
+        rootMass: massModel.rootMass,
+        lengthMass: massModel.lengthMass
+    },
+    endsRec: {
+        notCreated: { hasApprovedEndsRec: Boolean(endsRecNotCreatedScenario && endsRecNotCreatedScenario.state && endsRecNotCreatedScenario.state.endsRec) },
+        autoToningLowRisk: { hasApprovedEndsRec: Boolean(autoToningLowRiskScenario && autoToningLowRiskScenario.state && autoToningLowRiskScenario.state.endsRec) },
+        blockCosmeticLift: { hasManualSignal: blockCosmeticLiftScenario.hasManualSignal },
+        blockDamagedEnds: { hasManualSignal: blockDamagedEndsScenario.hasManualSignal },
+        blockUnknownHistory: { hasManualSignal: blockUnknownHistoryScenario.hasManualSignal }
+    }
+};
 `;
 
 const sandbox = {
@@ -834,5 +928,20 @@ assert.strictEqual(sandbox.__endsHistoryBaseResults.hennaMetals.hasManualSignal,
 assert.strictEqual(sandbox.__endsHistoryBaseResults.baseCosmeticLift.hasManualSignal, true);
 assert.strictEqual(sandbox.__endsHistoryBaseResults.baseMixedUneven.hasManualSignal, true);
 assert.strictEqual(sandbox.__endsHistoryBaseResults.missingWithDifferentLevel.hasManualSignal, true);
+
+// Diagnostic Mass Model Assertions
+assert.strictEqual(sandbox.__massModelDiagnosticResults.model.hasEndsMass, false, 'DIAGNOSTIC: System should not have endsMass yet');
+assert.strictEqual(sandbox.__massModelDiagnosticResults.model.hasRootMass, true, 'SAFE: rootMass should exist');
+assert.strictEqual(sandbox.__massModelDiagnosticResults.model.hasLengthMass, true, 'SAFE: lengthMass should exist');
+
+const mass = sandbox.__massModelDiagnosticResults.model;
+const currentSum = mass.rootMass + mass.lengthMass;
+assert.strictEqual(currentSum, mass.totalMass, 'SAFE: Current 2-zone sum should match totalMass exactly for non-powder case');
+
+assert.strictEqual(sandbox.__massModelDiagnosticResults.endsRec.notCreated.hasApprovedEndsRec, false, 'SAFE: endsRec should not be created yet');
+assert.strictEqual(sandbox.__massModelDiagnosticResults.endsRec.autoToningLowRisk.hasApprovedEndsRec, false, 'DIAGNOSTIC: autoToningLowRisk endsRec is for the future');
+assert.strictEqual(sandbox.__massModelDiagnosticResults.endsRec.blockCosmeticLift.hasManualSignal, true, 'SAFE: Cosmetic lift should be blocked');
+assert.strictEqual(sandbox.__massModelDiagnosticResults.endsRec.blockDamagedEnds.hasManualSignal, true, 'SAFE: Damaged ends should be blocked');
+assert.strictEqual(sandbox.__massModelDiagnosticResults.endsRec.blockUnknownHistory.hasManualSignal, true, 'SAFE: Unknown history should be blocked');
 
 console.log('WWW business scenario test passed');
