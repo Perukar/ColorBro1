@@ -604,3 +604,52 @@ Commit:
 - `endsRec` ще не реалізований.
 - Powder surcharge contract ще не перенесений у production як явне поле `nominalTotalMass`.
 - Наступна фаза має бути окремим планом 3-zone helper support.
+
+## Three zone mass model contract tests
+
+Commit:
+
+`558ce0b Add three zone mass model contract tests`
+
+## Що змінено
+
+- Додано helper-level contract tests для майбутньої 3-zone mass model.
+- Зафіксовано test candidate 30/50/20.
+- Перевірено rounding policy через remainder-формулу.
+- Зафіксовано, що production `buildMassModel()` лишається `2-zone`.
+- Зафіксовано, що `endsMass` не активується без `endsRec`.
+- Зафіксовано, що risky/missing ends fields не мають автоматично вмикати 3-zone.
+- Зафіксовано future contract для powder surcharge після zone split.
+
+## Що не змінювалось
+
+- `www/core.js`.
+- Production mass model.
+- `buildMassModel` production code.
+- `endsMass` runtime.
+- `endsRec`.
+- 3-zone runtime.
+- Формули.
+- Оксид.
+- `calcMixtone`.
+- UI.
+
+## Перевірки
+
+- `node --check test_www_mass_model.js`;
+- `node test_www_mass_model.js`;
+- `node --check www/core.js`;
+- `node --check test_www_mapping.js`;
+- `node test_www_mapping.js`;
+- `node --check test_www_business_scenarios.js`;
+- `node test_www_business_scenarios.js`;
+- `node --check test_www_render_runtime.js`;
+- `node test_www_render_runtime.js`.
+
+## Залишкові ризики
+
+- 3-zone runtime ще не реалізований.
+- `endsMass` лишається `null` у production.
+- `endsRec` ще не реалізований.
+- Powder surcharge contract ще не перенесений у production.
+- Наступна фаза має бути окремим планом 3-zone helper support.
