@@ -104,3 +104,43 @@ Commit:
 - Правило залежить від текстових маркерів у `history` і `base_type`.
 - Якщо користувач описує чорний/темний косметичний пігмент іншими словами, guard може не спрацювати.
 - У майбутньому треба формалізувати поля історії: black pigment, cosmetic layering, remover history, current background, strand test.
+
+## Ремонт бізнес-логіки ZONES-ROOT-LENGTH
+
+Commit:
+
+`7f9ac41 Guard zonal level mismatch scenario`
+
+## Що змінено
+
+- Додано manual guard для різниці між `root_level` і `length_level`.
+- Якщо різниця між коренем і довжиною >= 2 рівні, результат переходить у `MANUAL_REQUIRED`.
+- Якщо процеси для кореня і довжини різні, результат переходить у `MANUAL_REQUIRED`.
+- Додано warning про потребу зонального рішення.
+- Warning фіксує, що в поточній формі немає `ends_level`, тому кінці потребують окремої оцінки майстром.
+- `ZONES-ROOT-LENGTH-ENDS` у business test тепер перевіряє safe behavior.
+- Runtime test залишено базовим `APPROVED`-сценарієм через мінімальну зміну fake input.
+
+## Що не змінювалось
+
+- Формули.
+- Грамовки.
+- Оксид.
+- `calcMixtone`.
+- `www/index.html`.
+- DOM-контракт.
+- `ends_level` не додано.
+
+## Перевірки
+
+- `node --check www/core.js`;
+- `node --check test_www_business_scenarios.js`;
+- `node test_www_business_scenarios.js`;
+- `node --check test_www_render_runtime.js`;
+- `node test_www_render_runtime.js`.
+
+## Залишкові ризики
+
+- Повноцінне розділення корінь / довжина / кінці ще не реалізоване.
+- `ends_level` відсутній у формі.
+- Для повного ремонту потрібна окрема фаза зміни DOM-контракту.
