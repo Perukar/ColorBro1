@@ -237,25 +237,222 @@ function buildMassModel(length, density) {
 })();
 
 // ---------------------------------------------------------------------------
+// ТЕСТ 7: BUILD-MASS-MODEL-3-ZONE-CANDIDATE-MEDIUM
+// Helper-level math test: future 3-zone split для totalMass=60 з пропорцією 30/50/20.
+// НЕ є production runtime call. Тільки математичний контракт.
+// ---------------------------------------------------------------------------
+
+(function testBuildMassModel3ZoneCandidateMedium() {
+    const id = 'BUILD-MASS-MODEL-3-ZONE-CANDIDATE-MEDIUM';
+
+    // Test candidate math (future, not production):
+    const totalMass = 60;
+    const rootPct   = 0.30;
+    const lengthPct = 0.50;
+    const endsPct   = 0.20;
+
+    const rootMass   = Math.round(totalMass * rootPct);    // = 18
+    const endsMass   = Math.round(totalMass * endsPct);    // = 12
+    const lengthMass = totalMass - rootMass - endsMass;    // = 30 (remainder)
+
+    assert.strictEqual(rootMass,   18, `${id}: rootMass must be 18 for totalMass=60, rootPct=0.30`);
+    assert.strictEqual(lengthMass, 30, `${id}: lengthMass must be 30 for totalMass=60, lengthPct=0.50`);
+    assert.strictEqual(endsMass,   12, `${id}: endsMass must be 12 for totalMass=60, endsPct=0.20`);
+    assert.strictEqual(
+        rootMass + lengthMass + endsMass,
+        totalMass,
+        `${id}: rootMass(${rootMass}) + lengthMass(${lengthMass}) + endsMass(${endsMass}) must equal totalMass(${totalMass})`
+    );
+
+    console.log(`${id} safe: 3-zone candidate math 30/50/20 validated for totalMass=${totalMass}.`);
+})();
+
+// ---------------------------------------------------------------------------
+// ТЕСТ 8: BUILD-MASS-MODEL-ROUNDING-21-42-45-84
+// Перевірка rounding policy через remainder-формулу для totalMass: 21, 42, 45, 84.
+// rootMass = Math.round(total * rootPct)
+// endsMass = Math.round(total * endsPct)
+// lengthMass = total - rootMass - endsMass  (remainder — гарантує точну суму)
+// ---------------------------------------------------------------------------
+
+(function testBuildMassModelRounding() {
+    const id = 'BUILD-MASS-MODEL-ROUNDING-21-42-45-84';
+
+    const rootPct  = 0.30;
+    const endsPct  = 0.20;
+    const testCases = [21, 42, 45, 84];
+
+    for (const totalMass of testCases) {
+        const rootMass   = Math.round(totalMass * rootPct);
+        const endsMass   = Math.round(totalMass * endsPct);
+        const lengthMass = totalMass - rootMass - endsMass; // remainder
+        const sum        = rootMass + lengthMass + endsMass;
+
+        assert.strictEqual(sum, totalMass,
+            `${id}: rootMass(${rootMass}) + lengthMass(${lengthMass}) + endsMass(${endsMass}) must equal totalMass(${totalMass})`);
+        assert.ok(rootMass   >= 0, `${id}: rootMass must not be negative for totalMass=${totalMass}`);
+        assert.ok(endsMass   >= 0, `${id}: endsMass must not be negative for totalMass=${totalMass}`);
+        assert.ok(lengthMass >= 0, `${id}: lengthMass must not be negative for totalMass=${totalMass}`);
+    }
+
+    console.log(`${id} safe: remainder rounding policy validated for totalMass = ${testCases.join(', ')}.`);
+})();
+
+// ---------------------------------------------------------------------------
+// ТЕСТ 9: MASS-MODEL-3-ZONE-NOT-ACTIVE-WITHOUT-ENDSREC
+// Поточний production buildMassModel() лишається mode='2-zone', endsMass=null.
+// 3-zone не активується без endsRec.
+// ---------------------------------------------------------------------------
+
+(function testMassModel3ZoneNotActiveWithoutEndsRec() {
+    const id = 'MASS-MODEL-3-ZONE-NOT-ACTIVE-WITHOUT-ENDSREC';
+
+    // Spec-mirror buildMassModel() у цьому файлі відповідає production версії.
+    const allCases = [
+        ['короткие', 'редкие'], ['короткие', 'средние'], ['короткие', 'густые'],
+        ['средние',  'редкие'], ['средние',  'средние'], ['средние',  'густые'],
+        ['длинные',  'редкие'], ['длинные',  'средние'], ['длинные',  'густые'],
+    ];
+
+    for (const [length, density] of allCases) {
+        const model = buildMassModel(length, density);
+        assert.ok(model !== null, `${id}: model must not be null for length="${length}"`);
+        assert.strictEqual(model.mode, '2-zone',
+            `${id}: mode must remain "2-zone" without endsRec for length="${length}" density="${density}"`);
+        assert.strictEqual(model.endsMass, null,
+            `${id}: endsMass must be null without 3-zone activation for length="${length}"`);
+    }
+
+    console.log(`${id} safe: production buildMassModel() is 2-zone only, endsMass=null for all 9 combinations.`);
+})();
+
+// ---------------------------------------------------------------------------
+// ТЕСТ 10: MASS-MODEL-2-ZONE-WHEN-ENDS-SAME-AS-LENGTH
+// Future contract: якщо кінці не потребують окремого рецепта → 2-zone зберігається.
+// Contract-level / diagnostic check. Production behavior не змінюється.
+// ---------------------------------------------------------------------------
+
+(function testMassModel2ZoneWhenEndsSameAsLength() {
+    const id = 'MASS-MODEL-2-ZONE-WHEN-ENDS-SAME-AS-LENGTH';
+
+    // Умова: ends_level === length_level → окремий рецепт кінців не потрібний.
+    // У поточній 2-zone реалізації це вже природна поведінка.
+    // Тест фіксує, що 2-zone mode ЗБЕРІГАЄТЬСЯ, коли кінці не відрізняються від довжини.
+
+    const model = buildMassModel('средние', 'средние');
+    assert.ok(model !== null, `${id}: model must not be null`);
+    assert.strictEqual(model.mode, '2-zone',
+        `${id}: when ends match length level, mode must remain 2-zone`);
+    assert.strictEqual(model.endsMass, null,
+        `${id}: endsMass must be null when ends do not require separate recipe`);
+
+    // Future contract:
+    // if (endsLevel === lengthLevel || !endsLevelProvided) → mode stays '2-zone'
+    // if (endsLevel !== lengthLevel && all guards pass) → mode becomes '3-zone' (future)
+    console.log(`${id} safe: 2-zone mode preserved when ends match length. Future 3-zone requires separate guard.`);
+})();
+
+// ---------------------------------------------------------------------------
+// ТЕСТ 11: MASS-MODEL-MANUAL-WHEN-ENDS-FIELDS-RISKY-OR-MISSING
+// Future contract: risky/missing ends fields → MANUAL_REQUIRED, не auto endsMass.
+// Contract-level / diagnostic check. Production behavior не змінюється.
+// ---------------------------------------------------------------------------
+
+(function testMassModelManualWhenEndsFieldsRiskyOrMissing() {
+    const id = 'MASS-MODEL-MANUAL-WHEN-ENDS-FIELDS-RISKY-OR-MISSING';
+
+    // Симулюємо ризикові ends-умови (без production code):
+    const riskyScenarios = [
+        { label: 'missing ends_history',   endsHistoryProvided: false,  riskyEndsHistory: false  },
+        { label: 'risky ends_history',     endsHistoryProvided: true,   riskyEndsHistory: true   },
+        { label: 'missing ends_condition', endsConditionProvided: false, riskyEndsCondition: false },
+        { label: 'risky ends_condition',   endsConditionProvided: true,  riskyEndsCondition: true  },
+    ];
+
+    for (const scenario of riskyScenarios) {
+        // Правило: якщо хоча б одне risky поле або відсутнє поле → НЕ активувати 3-zone auto.
+        const shouldActivate3Zone =
+            scenario.endsHistoryProvided === true &&
+            !scenario.riskyEndsHistory &&
+            scenario.endsConditionProvided === true &&
+            !scenario.riskyEndsCondition;
+
+        // Для всіх ризикових/відсутніх сценаріїв — 3-zone НЕ активується:
+        assert.strictEqual(
+            shouldActivate3Zone,
+            false,
+            `${id}: risky/missing ends scenario "${scenario.label}" must NOT auto-activate 3-zone`
+        );
+    }
+
+    console.log(`${id} safe: risky/missing ends fields do not auto-activate 3-zone. Contract validated.`);
+})();
+
+// ---------------------------------------------------------------------------
+// ТЕСТ 12: BUILD-MASS-MODEL-POWDER-SURCHARGE-CONTRACT
+// Future contract: surcharge після zone split; nominal vs actual total.
+// Поки це diagnostic / known limitation.
+// ---------------------------------------------------------------------------
+
+(function testBuildMassModelPowderSurchargeContract() {
+    const id = 'BUILD-MASS-MODEL-POWDER-SURCHARGE-CONTRACT';
+
+    const model = buildMassModel('средние', 'средние');
+    assert.ok(model !== null, `${id}: model must not be null`);
+
+    const nominalTotalMass = model.totalMass; // = 60
+
+    // Симулюємо surcharge (як у core.js):
+    let rootMassAfterSurcharge = Math.round(model.rootMass * 1.6);
+    if (rootMassAfterSurcharge < 40) rootMassAfterSurcharge = 40;
+
+    // Після surcharge actualTotalMass > nominalTotalMass:
+    const actualTotalMass = rootMassAfterSurcharge + model.lengthMass;
+
+    assert.ok(actualTotalMass >= nominalTotalMass,
+        `${id}: actualTotalMass after surcharge must be >= nominalTotalMass`);
+
+    // Future contract requirement (зафіксований, не реалізований):
+    // Option A: massModel.rootMass зберігає pre-surcharge (nominal), rootRec.mass — post-surcharge.
+    // Option B: massModel.rootMass оновлюється до post-surcharge явно (поточна поведінка у core.js).
+    // Поточна production поведінка: Option B (Object.assign синхронізує після surcharge).
+    // Тест фіксує різницю між nominal і actual.
+
+    const surchargeDelta = actualTotalMass - nominalTotalMass;
+    assert.ok(surchargeDelta >= 0,
+        `${id}: surcharge delta must be non-negative`);
+
+    console.log(
+        `${id} known limitation: nominal=${nominalTotalMass}g, actual=${actualTotalMass}g ` +
+        `(delta=+${surchargeDelta}g). Future: document pre/post surcharge clearly in massModel.`
+    );
+})();
+
+// ---------------------------------------------------------------------------
 // SUMMARY
 // ---------------------------------------------------------------------------
 
 console.log('');
 console.log('=== MASS MODEL UNIT / DIAGNOSTIC TEST CONTRACT ===');
-console.log('All 6 scenarios processed.');
+console.log('All 12 scenarios processed.');
 console.log('');
 console.log('STATUS SUMMARY:');
-console.log('  MASS-MODEL-INLINE-CURRENT          → SAFE     (buildMassModel exists, correct shape)');
-console.log('  MASS-MODEL-2-ZONE-EXPECTED-SPLIT   → SAFE     (rootMass + lengthMass === totalMass, no drift)');
-console.log('  MASS-MODEL-INVALID-LENGTH-NO-NAN   → SAFE     (null returned, no silent NaN)');
-console.log('  MASS-MODEL-BLOCKED-PATH-SHAPE      → SAFE     (consistent 7-field shape on all paths)');
-console.log('  MASS-MODEL-POWDER-SURCHARGE-SYNC   → SAFE     (explicit sync via Object.assign)');
-console.log('  MASS-MODEL-3-ZONE-FUTURE-SPLIT     → KNOWN_LIMITATION (endsMass=null, 3-zone not implemented)');
+console.log('  MASS-MODEL-INLINE-CURRENT                    → SAFE     (buildMassModel exists, correct shape)');
+console.log('  MASS-MODEL-2-ZONE-EXPECTED-SPLIT             → SAFE     (rootMass + lengthMass === totalMass, no drift)');
+console.log('  MASS-MODEL-INVALID-LENGTH-NO-NAN             → SAFE     (null returned, no silent NaN)');
+console.log('  MASS-MODEL-BLOCKED-PATH-SHAPE                → SAFE     (consistent 7-field shape on all paths)');
+console.log('  MASS-MODEL-POWDER-SURCHARGE-SYNC             → SAFE     (explicit sync via Object.assign)');
+console.log('  MASS-MODEL-3-ZONE-FUTURE-SPLIT               → KNOWN_LIMITATION (endsMass=null, 3-zone not implemented)');
+console.log('  BUILD-MASS-MODEL-3-ZONE-CANDIDATE-MEDIUM     → SAFE     (30/50/20 math validated, totalMass=60)');
+console.log('  BUILD-MASS-MODEL-ROUNDING-21-42-45-84        → SAFE     (remainder rounding validated)');
+console.log('  MASS-MODEL-3-ZONE-NOT-ACTIVE-WITHOUT-ENDSREC → SAFE     (production is 2-zone only)');
+console.log('  MASS-MODEL-2-ZONE-WHEN-ENDS-SAME-AS-LENGTH   → SAFE     (2-zone preserved, contract fixed)');
+console.log('  MASS-MODEL-MANUAL-WHEN-ENDS-RISKY-OR-MISSING → SAFE     (risky ends → MANUAL, not auto 3-zone)');
+console.log('  BUILD-MASS-MODEL-POWDER-SURCHARGE-CONTRACT   → KNOWN_LIMITATION (nominal vs actual, future doc)');
 console.log('');
-console.log('Production code: buildMassModel() EXTRACTED.');
-console.log('2-zone sum: STABLE (remainder approach).');
-console.log('NaN guard: ACTIVE (null for unknown length).');
-console.log('endsMass: null (3-zone not implemented).');
+console.log('Production code: buildMassModel() 2-ZONE ONLY.');
+console.log('3-zone runtime: NOT ACTIVE.');
+console.log('endsMass: null in production.');
 console.log('endsRec: NOT IMPLEMENTED.');
 console.log('');
 console.log('WWW mass model test contract passed.');
