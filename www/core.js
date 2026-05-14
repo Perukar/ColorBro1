@@ -579,6 +579,20 @@ const pigmentMap = {
                     });
                 }
 
+                const zoneLevelDifference = Math.abs(rLevel - lLevel);
+                const rootProcess = rootRec ? String(rootRec.process || '') : '';
+                const lengthProcess = lenRec ? String(lenRec.process || '') : '';
+                const zoneProcessesDiffer = rootProcess !== lengthProcess;
+                const zoneDecisionNeedsConfirmation = zoneLevelDifference >= 2 || zoneProcessesDiffer;
+
+                if (zoneDecisionNeedsConfirmation) {
+                    warnings.push("⚠️ ЗОНАЛЬНЕ РІШЕННЯ: рівень кореня і довжини суттєво відрізняється або процеси для зон різні. У поточній формі немає окремого поля ends_level, тому кінці потребують окремої оцінки майстром.");
+                    manualDecisions.push({
+                        title: "Зональне рішення корінь / довжина / кінці",
+                        message: `Підтвердити окреме рішення для зон перед виконанням рецепта. root_level: ${rLevel}, length_level: ${lLevel}, процес кореня: ${rootProcess || 'не визначено'}, процес довжини: ${lengthProcess || 'не визначено'}. Кінці не мають окремого поля ends_level у поточній формі.`
+                    });
+                }
+
                 const state = buildWwwRenderState({
                     status: manualDecisions.length > 0 ? 'MANUAL_REQUIRED' : 'APPROVED',
                     target: `${tLevel}.${tDir}`,
@@ -593,7 +607,7 @@ const pigmentMap = {
                     mixtoneInfo: { root: rootRec.mixtone, length: lenRec.mixtone },
                     massModel: { baseMass, densityMultiplier: denMult, totalMass, rootMass: rMass, lengthMass: lMass },
                     timingInfo: { totalMinutes: timing, modifierMinutes: tMod },
-                    reasons: { rootStep: rStep, lengthStep: lStep, hotRoot, grey, specialBlondBase6NeedsConfirmation, significantDarkeningNeedsPrepig }
+                    reasons: { rootStep: rStep, lengthStep: lStep, hotRoot, grey, specialBlondBase6NeedsConfirmation, significantDarkeningNeedsPrepig, zoneLevelDifference, zoneProcessesDiffer, zoneDecisionNeedsConfirmation }
                 });
                 document.getElementById('output').innerHTML = PerucarWwwRenderV1.renderStateToHtml(state);
             } catch (e) {

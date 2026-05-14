@@ -258,9 +258,9 @@ const defaultDomValues = {
     length: 'средние',
     grey_percent: '0',
     grey_type: 'мягкая',
-    root_level: '7',
+    root_level: '8',
     root_length: '1',
-    length_level: '9',
+    length_level: '8',
     base_type: 'Натуральна',
     target_level: '9',
     target_direction: '1'

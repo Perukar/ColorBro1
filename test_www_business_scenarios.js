@@ -281,24 +281,28 @@ const zonesHasZoneSplit = zonesHtml.includes('КІНЦ')
     || zonesHtml.includes('кінц')
     || zonesHtml.includes('окремі зони')
     || zonesHtml.includes('різні зони');
-const zonesKnownRisk = !zonesScenario.error
-    && zonesHasApproved
-    && zonesHasRecipe
-    && !zonesHasManualSignal
-    && !zonesHasZoneSplit;
+const zonesHasZoneWarning = zonesHtml.includes('ЗОНАЛЬНЕ РІШЕННЯ')
+    && zonesHtml.includes('ends_level')
+    && zonesHtml.includes('кінці потребують окремої оцінки майстром');
 
-console.log(
-    zonesKnownRisk
-        ? 'ZONES-ROOT-LENGTH-ENDS KNOWN_RISK: root/length/ends separation is not fully enforced; ends_level is not available in current form.'
-        : 'ZONES-ROOT-LENGTH-ENDS diagnostic observed: manual/zone split signal or runtime rejection present.'
+assert.ok(!zonesScenario.error, 'ZONES-ROOT-LENGTH-ENDS should not throw at runtime');
+assert.ok(!zonesHasApproved, 'ZONES-ROOT-LENGTH-ENDS should not be unconditional APPROVED');
+assert.ok(zonesHasManualSignal, 'ZONES-ROOT-LENGTH-ENDS should require manual confirmation');
+assert.ok(zonesHasZoneSplit, 'ZONES-ROOT-LENGTH-ENDS should mention zone separation');
+assert.ok(
+    zonesHasZoneWarning,
+    'ZONES-ROOT-LENGTH-ENDS should warn that ends_level is absent and ends need separate evaluation'
 );
 
+console.log('ZONES-ROOT-LENGTH-ENDS safe behavior observed.');
+
 globalThis.__zonesResult = {
-    status: zonesKnownRisk ? 'KNOWN_RISK' : 'DIAGNOSTIC_OBSERVED',
+    status: 'SAFE',
     hasApproved: zonesHasApproved,
     hasRecipe: zonesHasRecipe,
     hasManualSignal: zonesHasManualSignal,
     hasZoneSplit: zonesHasZoneSplit,
+    hasZoneWarning: zonesHasZoneWarning,
     hasError: Boolean(zonesScenario.error),
     limitation: 'No dedicated ends_level field in current fake DOM contract.'
 };
@@ -379,7 +383,7 @@ assert.strictEqual(sandbox.__prepigResult.hasApproved, false);
 assert.strictEqual(sandbox.__prepigResult.hasManualSignal, true);
 assert.strictEqual(sandbox.__prepigResult.hasPrePigSignal, true);
 assert.ok(['KNOWN_RISK', 'DIAGNOSTIC_OBSERVED'].includes(sandbox.__blackExitResult.status));
-assert.ok(['KNOWN_RISK', 'DIAGNOSTIC_OBSERVED'].includes(sandbox.__zonesResult.status));
+assert.strictEqual(sandbox.__zonesResult.status, 'SAFE');
 assert.strictEqual(sandbox.__missingCriticalDataResult.status, 'SAFE');
 assert.strictEqual(sandbox.__missingCriticalDataResult.hasApproved, false);
 assert.strictEqual(sandbox.__missingCriticalDataResult.hasRecipe, false);
