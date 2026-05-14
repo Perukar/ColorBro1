@@ -144,3 +144,45 @@ Commit:
 - Повноцінне розділення корінь / довжина / кінці ще не реалізоване.
 - `ends_level` відсутній у формі.
 - Для повного ремонту потрібна окрема фаза зміни DOM-контракту.
+
+## FORM CONTRACT: ends_level
+
+Commit:
+
+`edce036 Add ends level form contract`
+
+## Що змінено
+
+- Додано поле `ends_level` у форму.
+- Додано mapping `ends_level` → `endsLevel`.
+- `calculateProtocol()` тепер optional читає рівень кінців.
+- Якщо `ends_level` заповнений і відрізняється від `root_level` або `length_level`, результат переходить у `MANUAL_REQUIRED`.
+- Додано warning/manual decision про потребу окремої оцінки кінців майстром.
+- Business test `ZONES-ROOT-LENGTH-ENDS` тепер використовує реальний `ends_level`.
+- Runtime fake DOM contract оновлено так, щоб базовий `APPROVED` сценарій не потрапляв під ZONES guard.
+
+## Що не змінювалось
+
+- Формули.
+- Грамовки.
+- Оксид.
+- `calcMixtone`.
+- `endsRec` не створювався.
+- Окрема формула для кінців не рахується.
+- Розподіл маси між зонами не змінювався.
+
+## Перевірки
+
+- `node --check www/core.js`;
+- `node --check test_www_mapping.js`;
+- `node test_www_mapping.js`;
+- `node --check test_www_business_scenarios.js`;
+- `node test_www_business_scenarios.js`;
+- `node --check test_www_render_runtime.js`;
+- `node test_www_render_runtime.js`.
+
+## Залишкові ризики
+
+- `ends_level` вже є у формі, але повний окремий рецепт кінців ще не реалізований.
+- Потрібна окрема майбутня фаза для `endsRec` / логіки кінців / маси / оксиду.
+- На поточному етапі система тільки зупиняє ризик через `MANUAL_REQUIRED`.
