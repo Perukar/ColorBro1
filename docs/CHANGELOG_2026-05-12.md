@@ -289,3 +289,57 @@ Commit:
 - Немає окремого `base_type` саме для кінців.
 - Повний `endsRec` і mass model ще не реалізовані.
 - Автоматичний рецепт кінців все ще не дозволений.
+
+## FORM CONTRACT: ends_history / ends_base_type
+
+Commit:
+
+`c9e5eaf Add ends history and base type contract`
+
+## Що змінено
+
+- додано поле ends_history у форму;
+- додано поле ends_base_type у форму;
+- додано mapping ends_history → endsHistory;
+- додано mapping ends_base_type → endsBaseType;
+- calculateProtocol() optional читає історію та тип бази кінців;
+- якщо ends_level відрізняється від інших зон, але історія або тип бази кінців не вказані — додається manual/diagnostic signal;
+- якщо ends_history вказує на косметичний пігмент, темний косметичний пігмент, змивку, хну/метали або невідому історію — результат переходить у MANUAL_REQUIRED;
+- якщо ends_base_type косметична, змішана або невідома при освітленні — результат переходить у MANUAL_REQUIRED;
+- додано business tests:
+  - ENDS-HISTORY-UNKNOWN;
+  - ENDS-HISTORY-COSMETIC-LIFT;
+  - ENDS-HISTORY-DARK-COSMETIC;
+  - ENDS-HISTORY-AFTER-REMOVER;
+  - ENDS-HISTORY-HENNA-METALS;
+  - ENDS-BASE-TYPE-COSMETIC-LIFT;
+  - ENDS-BASE-TYPE-MIXED-UNEVEN;
+  - ENDS-HISTORY-MISSING-WITH-DIFFERENT-LEVEL;
+- runtime fake DOM contract оновлено для нових полів.
+
+## Що не змінювалось
+
+- формули;
+- грамовки;
+- оксид;
+- calcMixtone;
+- endsRec не створювався;
+- mass model не змінювався;
+- окрема формула кінців не додавалась;
+- розподіл продукту на 3 зони не реалізовувався.
+
+## Перевірки
+
+- node --check www/core.js;
+- node --check test_www_mapping.js;
+- node test_www_mapping.js;
+- node --check test_www_business_scenarios.js;
+- node test_www_business_scenarios.js;
+- node --check test_www_render_runtime.js;
+- node test_www_render_runtime.js.
+
+## Залишкові ризики
+
+- система вже бачить історію й тип бази кінців, але не рахує окремий рецепт кінців;
+- повний endsRec, mass model, оксид і формула кінців залишаються окремою майбутньою фазою;
+- автоматичний рецепт кінців все ще заборонений без окремого проєктування.
