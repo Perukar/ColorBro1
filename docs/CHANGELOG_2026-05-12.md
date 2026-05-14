@@ -343,3 +343,71 @@ Commit:
 - система вже бачить історію й тип бази кінців, але не рахує окремий рецепт кінців;
 - повний endsRec, mass model, оксид і формула кінців залишаються окремою майбутньою фазою;
 - автоматичний рецепт кінців все ще заборонений без окремого проєктування.
+
+## Mass model diagnostic tests і recovery fix
+
+Commits:
+
+- `eedf476 Add diagnostic mass model scenarios`
+- `7a76091 Fix mass model diagnostic tests`
+
+## Що зроблено
+
+- Додано diagnostic / known-limitation business tests для майбутньої 3-зонної mass model.
+- Зафіксовано, що поточна система ще не має `endsMass`.
+- Зафіксовано, що `endsRec` не має створюватися без mass model.
+- Зафіксовано future requirement для округлення: `rootMass + lengthMass + endsMass` має дорівнювати `totalMass` або мати похибку не більше 1 г.
+- Зафіксовано, що low-risk endsRec auto-toning є майбутньою можливістю, а не поточною поведінкою.
+- Зафіксовано блокування cosmetic lift / damaged ends / unknown history для кінців.
+- Зафіксовано, що powder surcharge per zone є майбутньою вимогою.
+
+## Recovery note
+
+- Commit `eedf476` спочатку створив залежність тестів від внутрішнього state через `globalThis.__latestState`.
+- Це було визнано порушенням, бо production code змінювати було заборонено.
+- Незатверджена зміна у `www/core.js` була відкотена (`git restore www/core.js`).
+- Commit `7a76091` переписав diagnostic tests так, щоб вони не залежали від hidden production state.
+- Після fix тести працюють тільки через public test surface / HTML output / manual-warning signals.
+
+## Що не змінювалось
+
+- Production code.
+- `www/core.js` у фінальному стані.
+- `www/index.html`.
+- Формули.
+- Грамовки.
+- Оксид.
+- `calcMixtone`.
+- `endsRec` не створювався.
+- Mass model не змінювався.
+- Окрема формула кінців не додавалась.
+
+## Перевірки
+
+- `node --check www/core.js`;
+- `node --check test_www_mapping.js`;
+- `node test_www_mapping.js`;
+- `node --check test_www_business_scenarios.js`;
+- `node test_www_business_scenarios.js`;
+- `node --check test_www_render_runtime.js`;
+- `node test_www_render_runtime.js`.
+
+## Mass model scenarios: класифікація
+
+| Сценарій | Статус |
+|---|---|
+| `MASS-MODEL-3-ZONES-TOTAL` | KNOWN_LIMITATION |
+| `MASS-MODEL-ROUNDING` | KNOWN_LIMITATION |
+| `ENDS-REC-NOT-CREATED-WITHOUT-MASS` | SAFE |
+| `ENDS-REC-AUTO-TONING-LOW-RISK` | DIAGNOSTIC |
+| `ENDS-REC-BLOCK-COSMETIC-LIFT` | SAFE |
+| `ENDS-REC-BLOCK-DAMAGED-ENDS` | SAFE |
+| `ENDS-REC-BLOCK-UNKNOWN-HISTORY` | SAFE |
+| `ENDS-REC-POWDER-SURCHARGE-PER-ZONE` | KNOWN_LIMITATION |
+
+## Залишкові ризики
+
+- 3-зонна mass model ще не реалізована.
+- `endsMass` ще не існує.
+- `endsRec` ще не реалізований.
+- Автоматичний рецепт кінців усе ще заборонений до окремого mass model refactor.
