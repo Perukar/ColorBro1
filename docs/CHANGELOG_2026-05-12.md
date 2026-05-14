@@ -475,3 +475,66 @@ Commit:
 - BLOCKED/APPROVED massModel shape ще не уніфікований.
 - 3-зонна mass model ще не реалізована.
 - `endsRec` усе ще заборонений до окремого refactor.
+
+## Two zone mass model helper
+
+Commit:
+
+`8037531 Extract two zone mass model helper`
+
+## Що змінено
+
+- Створено helper `buildMassModel()` як окрему функцію перед `calculateProtocol()`.
+- Inline-розрахунок mass model винесено з `calculateProtocol()`.
+- 2-зонний режим залишено основним і єдиним активним режимом.
+- `rootMass` рахується як `Math.round(totalMass * 0.3)`.
+- `lengthMass` рахується як `totalMass - rootMass`, щоб уникнути double-round drift.
+- `endsMass` залишається `null`.
+- `mode` зафіксовано як `"2-zone"`.
+- Невідомий `length` більше не має створювати тихий `NaN` — `buildMassModel()` повертає `null`, виклик-код додає diagnostic і застосовує safe fallback.
+- BLOCKED і APPROVED/MANUAL шляхи отримують консистентну `massModel`-структуру (7 полів: `baseMass`, `densityMultiplier`, `totalMass`, `rootMass`, `lengthMass`, `endsMass`, `mode`).
+- Powder surcharge для кореня синхронізує `massModel.rootMass` із фактичним `rootRec.mass` через `Object.assign()`.
+
+## Що не змінювалось
+
+- `endsRec` не створювався.
+- `endsMass` не реалізований.
+- 3-зонна mass model не вмикалась.
+- Пропорції 25/45/30 не додавались.
+- Окрема формула кінців не додавалась.
+- Оксид не змінювався.
+- `calcMixtone` не змінювався.
+- `www/index.html` не змінювався.
+
+## Перевірки
+
+- `node --check www/core.js`;
+- `node --check test_www_mass_model.js`;
+- `node test_www_mass_model.js`;
+- `node --check test_www_mapping.js`;
+- `node test_www_mapping.js`;
+- `node --check test_www_business_scenarios.js`;
+- `node test_www_business_scenarios.js`;
+- `node --check test_www_render_runtime.js`;
+- `node test_www_render_runtime.js`.
+
+## Результат
+
+| Перевірка | Статус |
+|---|---|
+| `buildMassModel()` створено | ✅ |
+| 2-zone mass sum стабільна | ✅ `rootMass + lengthMass === totalMass` для всіх 9 комбінацій |
+| NaN fallback прибраний | ✅ null для невідомого length |
+| `endsMass === null` | ✅ |
+| `endsRec` не створюється | ✅ |
+| Production behavior не розширено до 3-zone | ✅ |
+| Powder surcharge синхронізований | ✅ |
+| BLOCKED/APPROVED shape уніфікований | ✅ |
+
+## Залишкові ризики
+
+- 3-зонна mass model ще не реалізована.
+- `endsMass` ще не використовується у рецептах.
+- `endsRec` ще не реалізований.
+- Автоматичний рецепт кінців усе ще заборонений.
+- Наступна фаза має бути окремим планом 3-zone activation, не прямим `endsRec`.
