@@ -538,3 +538,69 @@ Commit:
 - `endsRec` ще не реалізований.
 - Автоматичний рецепт кінців усе ще заборонений.
 - Наступна фаза має бути окремим планом 3-zone activation, не прямим `endsRec`.
+
+## Three zone mass model contract tests
+
+Commit:
+
+`5f3318a Add three zone mass model contract tests`
+
+## Що змінено
+
+- Додано 6 нових helper-level contract tests у `test_www_mass_model.js` (тести 7–12).
+- Зафіксовано test candidate 30/50/20 для `totalMass=60`: `rootMass=18`, `lengthMass=30`, `endsMass=12`.
+- Перевірено rounding policy через remainder-формулу для `totalMass`: 21, 42, 45, 84.
+- Зафіксовано, що production `buildMassModel()` лишається `mode='2-zone'` для всіх 9 комбінацій.
+- Зафіксовано, що `endsMass` не активується без `endsRec`.
+- Зафіксовано, що risky/missing ends fields не мають автоматично вмикати 3-zone.
+- Зафіксовано future contract для powder surcharge: `nominalTotalMass=60g`, `actualTotalMass=82g`, `delta=+22g`.
+
+## Що не змінювалось
+
+- `www/core.js`.
+- Production mass model.
+- `buildMassModel` production code.
+- `endsMass` runtime.
+- `endsRec`.
+- 3-zone runtime.
+- Формули.
+- Оксид.
+- `calcMixtone`.
+- UI.
+
+## Перевірки
+
+- `node --check test_www_mass_model.js`;
+- `node test_www_mass_model.js`;
+- `node --check www/core.js`;
+- `node --check test_www_mapping.js`;
+- `node test_www_mapping.js`;
+- `node --check test_www_business_scenarios.js`;
+- `node test_www_business_scenarios.js`;
+- `node --check test_www_render_runtime.js`;
+- `node test_www_render_runtime.js`.
+
+## Статус 12 тестів
+
+| Тест | Статус |
+|---|---|
+| `MASS-MODEL-INLINE-CURRENT` | SAFE |
+| `MASS-MODEL-2-ZONE-EXPECTED-SPLIT` | SAFE |
+| `MASS-MODEL-INVALID-LENGTH-NO-NAN` | SAFE |
+| `MASS-MODEL-BLOCKED-PATH-SHAPE` | SAFE |
+| `MASS-MODEL-POWDER-SURCHARGE-SYNC` | SAFE |
+| `MASS-MODEL-3-ZONE-FUTURE-SPLIT` | KNOWN_LIMITATION |
+| `BUILD-MASS-MODEL-3-ZONE-CANDIDATE-MEDIUM` | SAFE |
+| `BUILD-MASS-MODEL-ROUNDING-21-42-45-84` | SAFE |
+| `MASS-MODEL-3-ZONE-NOT-ACTIVE-WITHOUT-ENDSREC` | SAFE |
+| `MASS-MODEL-2-ZONE-WHEN-ENDS-SAME-AS-LENGTH` | SAFE |
+| `MASS-MODEL-MANUAL-WHEN-ENDS-RISKY-OR-MISSING` | SAFE |
+| `BUILD-MASS-MODEL-POWDER-SURCHARGE-CONTRACT` | KNOWN_LIMITATION |
+
+## Залишкові ризики
+
+- 3-zone runtime ще не реалізований.
+- `endsMass` лишається `null` у production.
+- `endsRec` ще не реалізований.
+- Powder surcharge contract ще не перенесений у production як явне поле `nominalTotalMass`.
+- Наступна фаза має бути окремим планом 3-zone helper support.
