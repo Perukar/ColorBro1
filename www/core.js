@@ -60,6 +60,8 @@ const pigmentMap = {
                     length_level: this.getWwwValue('length_level'),
                     ends_level: this.getWwwValue('ends_level'),
                     ends_condition: this.getWwwValue('ends_condition'),
+                    ends_history: this.getWwwValue('ends_history'),
+                    ends_base_type: this.getWwwValue('ends_base_type'),
                     base_type: this.getWwwValue('base_type'),
                     target_level: this.getWwwValue('target_level'),
                     target_direction: this.getWwwValue('target_direction')
@@ -90,6 +92,8 @@ const pigmentMap = {
                     lengthLevel: toIntegerOrNull(wwwValues.length_level),
                     endsLevel: toIntegerOrNull(wwwValues.ends_level),
                     endsCondition: String(wwwValues.ends_condition || '').trim(),
+                    endsHistory: String(wwwValues.ends_history || '').trim(),
+                    endsBaseType: String(wwwValues.ends_base_type || '').trim(),
                     baseType: String(wwwValues.base_type || '').trim(),
                     targetLevel: toIntegerOrNull(wwwValues.target_level),
                     targetDirection: String(wwwValues.target_direction || '').trim(),
@@ -332,6 +336,10 @@ const pigmentMap = {
                 let eLevel = endsLevelRaw ? parseInt(endsLevelRaw) : null;
                 const endsConditionElement = document.getElementById('ends_condition');
                 const endsCondition = endsConditionElement ? String(endsConditionElement.value).trim() : '';
+                const endsHistoryElement = document.getElementById('ends_history');
+                const endsHistory = endsHistoryElement ? String(endsHistoryElement.value).trim() : '';
+                const endsBaseTypeElement = document.getElementById('ends_base_type');
+                const endsBaseType = endsBaseTypeElement ? String(endsBaseTypeElement.value).trim() : '';
                 let bType = document.getElementById('base_type').value;
                 
                 let tLevel = parseInt(document.getElementById('target_level').value);
@@ -639,6 +647,53 @@ const pigmentMap = {
                     manualDecisions.push({
                         title: "Не вказано стан кінців",
                         message: `Заповнити або вручну оцінити стан кінців перед виконанням рецепта. root_level: ${rLevel}, length_level: ${lLevel}, ends_level: ${eLevel}.`
+                     });
+                }
+
+                const endsHistoryText = String(endsHistory || '').toLowerCase();
+                const endsBaseTypeText = String(endsBaseType || '').toLowerCase();
+                const endsHistoryProvided = Boolean(endsHistoryText);
+                const endsBaseTypeProvided = Boolean(endsBaseTypeText);
+                const riskyEndsHistory = [
+                    'косметичний пігмент', 'темний косметичний пігмент', 
+                    'після змивки', 'хна / метали', 'невідома історія'
+                ].includes(endsHistoryText) || endsHistoryText.includes('невідома');
+                const riskyEndsBaseType = [
+                    'косметична', 'змішана / нерівномірна', 'невідома'
+                ].includes(endsBaseTypeText);
+
+                const endsHistoryNeedsConfirmation = endsLevelProvided && !endsHistoryProvided && endsLevelNeedsConfirmation;
+                const endsBaseTypeNeedsConfirmation = endsLevelProvided && !endsBaseTypeProvided && endsLevelNeedsConfirmation;
+
+                if (endsHistoryNeedsConfirmation) {
+                    warnings.push("⚠️ НЕДОСТАТНЬО ІСТОРІЇ КІНЦІВ: ends_level відрізняється, але ends_history не вказано. Потрібно уточнити історію кінців.");
+                    manualDecisions.push({
+                        title: "Не вказано історію кінців",
+                        message: `Уточніть історію кінців для безпечного рішення. root_level: ${rLevel}, length_level: ${lLevel}, ends_level: ${eLevel}.`
+                    });
+                }
+
+                if (endsBaseTypeNeedsConfirmation) {
+                    warnings.push("⚠️ НЕДОСТАТНЬО ТИПУ БАЗИ КІНЦІВ: ends_level відрізняється, але ends_base_type не вказано. Потрібно уточнити тип бази кінців.");
+                    manualDecisions.push({
+                        title: "Не вказано тип бази кінців",
+                        message: `Уточніть тип бази кінців для безпечного рішення. root_level: ${rLevel}, length_level: ${lLevel}, ends_level: ${eLevel}.`
+                    });
+                }
+
+                if (riskyEndsHistory) {
+                    warnings.push(`⚠️ РИЗИКОВА ІСТОРІЯ КІНЦІВ: ${endsHistory}. Потрібна окрема діагностика та тест-пасмо перед хімічним втручанням.`);
+                    manualDecisions.push({
+                        title: "Ризикова історія кінців",
+                        message: `Історія кінців "${endsHistory}" потребує ручного контролю та оцінки тест-пасма. Окремий рецепт на цьому етапі не рахується.`
+                    });
+                }
+
+                if (riskyEndsBaseType && endsLighteningNeeded) {
+                    warnings.push(`⚠️ РИЗИКОВИЙ ТИП БАЗИ КІНЦІВ ПРИ ОСВІТЛЕННІ: ${endsBaseType}. Освітлення косметичної або нерівномірної бази на кінцях потребує ручного контролю.`);
+                    manualDecisions.push({
+                        title: "Ризикова база кінців",
+                        message: `Тип бази "${endsBaseType}" при цільовому рівні ${tLevel} потребує ручного рішення майстра.`
                     });
                 }
 
@@ -656,7 +711,7 @@ const pigmentMap = {
                     mixtoneInfo: { root: rootRec.mixtone, length: lenRec.mixtone },
                     massModel: { baseMass, densityMultiplier: denMult, totalMass, rootMass: rMass, lengthMass: lMass },
                     timingInfo: { totalMinutes: timing, modifierMinutes: tMod },
-                    reasons: { rootStep: rStep, lengthStep: lStep, endsLevel: eLevel, endsCondition, hotRoot, grey, specialBlondBase6NeedsConfirmation, significantDarkeningNeedsPrepig, zoneLevelDifference, zoneProcessesDiffer, zoneDecisionNeedsConfirmation, endsLevelProvided, endsDiffersFromRoot, endsDiffersFromLength, endsLevelNeedsConfirmation, endsConditionProvided, riskyEndsCondition, endsLighteningNeeded, endsChemicalInterventionLikely, endsConditionNeedsConfirmation, endsConditionMissingWithDifferentLevel }
+                    reasons: { rootStep: rStep, lengthStep: lStep, endsLevel: eLevel, endsCondition, endsHistory, endsBaseType, hotRoot, grey, specialBlondBase6NeedsConfirmation, significantDarkeningNeedsPrepig, zoneLevelDifference, zoneProcessesDiffer, zoneDecisionNeedsConfirmation, endsLevelProvided, endsDiffersFromRoot, endsDiffersFromLength, endsLevelNeedsConfirmation, endsConditionProvided, riskyEndsCondition, endsLighteningNeeded, endsChemicalInterventionLikely, endsConditionNeedsConfirmation, endsConditionMissingWithDifferentLevel, endsHistoryProvided, endsBaseTypeProvided, riskyEndsHistory, riskyEndsBaseType, endsHistoryNeedsConfirmation, endsBaseTypeNeedsConfirmation }
                 });
                 document.getElementById('output').innerHTML = PerucarWwwRenderV1.renderStateToHtml(state);
             } catch (e) {
