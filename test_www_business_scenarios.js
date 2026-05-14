@@ -21,6 +21,7 @@ const scenarioValues = {
     root_length: '1',
     length_level: '6',
     ends_level: '6',
+    ends_condition: 'здорові',
     base_type: 'Натуральна',
     target_level: '8',
     target_direction: '3'
@@ -102,6 +103,7 @@ const prepigScenarioValues = {
     root_length: '1',
     length_level: '10',
     ends_level: '10',
+    ends_condition: 'здорові',
     base_type: 'Натуральна',
     target_level: '6',
     target_direction: '1'
@@ -210,6 +212,7 @@ const blackExitScenario = runDiagnosticScenario('BLACK-EXIT-1', {
     root_length: '1',
     length_level: '2',
     ends_level: '2',
+    ends_condition: 'здорові',
     base_type: 'Косметична',
     target_level: '7',
     target_direction: '1'
@@ -265,6 +268,7 @@ const zonesScenario = runDiagnosticScenario('ZONES-ROOT-LENGTH-ENDS', {
     root_length: '1',
     length_level: '7',
     ends_level: '9',
+    ends_condition: 'здорові',
     base_type: 'Натуральна',
     target_level: '8',
     target_direction: '1'
@@ -297,7 +301,7 @@ assert.ok(zonesHasManualSignal, 'ZONES-ROOT-LENGTH-ENDS should require manual co
 assert.ok(zonesHasZoneSplit, 'ZONES-ROOT-LENGTH-ENDS should mention zone separation');
 assert.ok(
     zonesHasZoneWarning,
-    'ZONES-ROOT-LENGTH-ENDS should warn that ends_level is absent and ends need separate evaluation'
+    'ZONES-ROOT-LENGTH-ENDS should warn that ends_level differs and ends need separate evaluation'
 );
 
 console.log('ZONES-ROOT-LENGTH-ENDS safe behavior observed.');
@@ -328,6 +332,13 @@ function analyzeEndsScenario(name, values) {
         || html.includes('КІНЦІ')
         || html.includes('кінц')
         || html.includes('Окрема оцінка кінців');
+    const hasEndsConditionSignal = html.includes('ends_condition')
+        || html.includes('СТАН КІНЦІВ')
+        || html.includes('Стан кінців')
+        || html.includes('оцінки кінців')
+        || html.includes('порист')
+        || html.includes('ламк')
+        || html.includes('пошкод');
     const hasNoEndsRecipeSignal = html.includes('Окремий рецепт кінців на цьому етапі не рахується')
         || !html.includes('<h3>Кінці</h3>');
     const hasPrePigSignal = html.includes('Препігментація')
@@ -353,6 +364,7 @@ function analyzeEndsScenario(name, values) {
         hasApprovedRecipe,
         hasManualSignal,
         hasEndsLevelSignal,
+        hasEndsConditionSignal,
         hasNoEndsRecipeSignal,
         hasPrePigSignal,
         hasBlockingSignal,
@@ -372,6 +384,7 @@ const endsLighterScenario = analyzeEndsScenario('ENDS-LIGHTER-THAN-LENGTH', {
     root_length: '1',
     length_level: '6',
     ends_level: '9',
+    ends_condition: 'здорові',
     base_type: 'Натуральна',
     target_level: '7',
     target_direction: '1'
@@ -397,6 +410,7 @@ const endsDarkerScenario = analyzeEndsScenario('ENDS-DARKER-THAN-LENGTH', {
     root_length: '1',
     length_level: '7',
     ends_level: '5',
+    ends_condition: 'здорові',
     base_type: 'Натуральна',
     target_level: '7',
     target_direction: '1'
@@ -421,6 +435,7 @@ const endsPrepigScenario = analyzeEndsScenario('ENDS-10-6-PREPIG', {
     root_length: '1',
     length_level: '10',
     ends_level: '10',
+    ends_condition: 'здорові',
     base_type: 'Натуральна',
     target_level: '6',
     target_direction: '1'
@@ -436,7 +451,7 @@ console.log('ENDS-10-6-PREPIG safe behavior observed.');
 
 const endsDamagedLiftScenario = analyzeEndsScenario('ENDS-DAMAGED-LIFT', {
     history: 'натуральні',
-    condition: 'сильно поврежденные',
+    condition: 'здоровые',
     thickness: 'средние',
     density: 'средние',
     length: 'средние',
@@ -446,16 +461,18 @@ const endsDamagedLiftScenario = analyzeEndsScenario('ENDS-DAMAGED-LIFT', {
     root_length: '1',
     length_level: '6',
     ends_level: '6',
+    ends_condition: 'сильно пошкоджені',
     base_type: 'Натуральна',
     target_level: '9',
     target_direction: '1'
 });
 
 assert.ok(!endsDamagedLiftScenario.hasError, 'ENDS-DAMAGED-LIFT should not throw at runtime');
-assert.ok(endsDamagedLiftScenario.hasBlockingSignal || endsDamagedLiftScenario.hasManualSignal || endsDamagedLiftScenario.hasDiagnosticSignal, 'ENDS-DAMAGED-LIFT should show blocking/manual/diagnostic signal');
+assert.ok(endsDamagedLiftScenario.hasManualSignal, 'ENDS-DAMAGED-LIFT should require manual confirmation');
+assert.ok(endsDamagedLiftScenario.hasEndsConditionSignal, 'ENDS-DAMAGED-LIFT should mention risky ends condition');
 assert.ok(!endsDamagedLiftScenario.hasApproved, 'ENDS-DAMAGED-LIFT should not be unconditional APPROVED');
 assert.ok(!endsDamagedLiftScenario.hasApprovedRecipe, 'ENDS-DAMAGED-LIFT should not render approved recipe blocks');
-console.log('ENDS-DAMAGED-LIFT diagnostic observed: blocked/manual signal present; separate ends condition is still a limitation.');
+console.log('ENDS-DAMAGED-LIFT safe behavior observed.');
 
 const endsTargetBetweenScenario = analyzeEndsScenario('ENDS-TARGET-BETWEEN-LENGTH-ENDS', {
     history: 'натуральні',
@@ -469,6 +486,7 @@ const endsTargetBetweenScenario = analyzeEndsScenario('ENDS-TARGET-BETWEEN-LENGT
     root_length: '1',
     length_level: '6',
     ends_level: '9',
+    ends_condition: 'здорові',
     base_type: 'Натуральна',
     target_level: '7',
     target_direction: '1'
@@ -493,6 +511,7 @@ const endsCosmeticUnknownHistoryScenario = analyzeEndsScenario('ENDS-COSMETIC-UN
     root_length: '1',
     length_level: '6',
     ends_level: '8',
+    ends_condition: 'здорові',
     base_type: 'Косметична',
     target_level: '7',
     target_direction: '1'
@@ -515,9 +534,116 @@ globalThis.__endsResults = {
     lighter: { status: 'SAFE', hasManualSignal: endsLighterScenario.hasManualSignal, hasApproved: endsLighterScenario.hasApproved, hasApprovedRecipe: endsLighterScenario.hasApprovedRecipe },
     darker: { status: 'SAFE', hasManualSignal: endsDarkerScenario.hasManualSignal, hasApproved: endsDarkerScenario.hasApproved, hasApprovedRecipe: endsDarkerScenario.hasApprovedRecipe },
     prepig: { status: 'SAFE', hasManualSignal: endsPrepigScenario.hasManualSignal, hasPrePigSignal: endsPrepigScenario.hasPrePigSignal, hasApproved: endsPrepigScenario.hasApproved, hasApprovedRecipe: endsPrepigScenario.hasApprovedRecipe },
-    damagedLift: { status: 'DIAGNOSTIC_OBSERVED', hasBlockingSignal: endsDamagedLiftScenario.hasBlockingSignal, hasManualSignal: endsDamagedLiftScenario.hasManualSignal, limitation: 'No separate ends condition field in current contract.' },
+    damagedLift: { status: 'SAFE', hasManualSignal: endsDamagedLiftScenario.hasManualSignal, hasEndsConditionSignal: endsDamagedLiftScenario.hasEndsConditionSignal, hasApproved: endsDamagedLiftScenario.hasApproved, hasApprovedRecipe: endsDamagedLiftScenario.hasApprovedRecipe },
     targetBetween: { status: 'SAFE', hasManualSignal: endsTargetBetweenScenario.hasManualSignal, hasApproved: endsTargetBetweenScenario.hasApproved, hasApprovedRecipe: endsTargetBetweenScenario.hasApprovedRecipe },
     cosmeticUnknownHistory: { status: endsCosmeticUnknownKnownRisk ? 'KNOWN_RISK' : 'DIAGNOSTIC_OBSERVED', hasManualSignal: endsCosmeticUnknownHistoryScenario.hasManualSignal, hasDiagnosticSignal: endsCosmeticUnknownHistoryScenario.hasDiagnosticSignal, limitation: 'No separate ends history/base_type field in current contract.' }
+};
+
+const endsConditionPorousLiftScenario = analyzeEndsScenario('ENDS-CONDITION-POROUS-LIFT', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '6',
+    root_length: '1',
+    length_level: '6',
+    ends_level: '6',
+    ends_condition: 'пористі',
+    base_type: 'Натуральна',
+    target_level: '8',
+    target_direction: '1'
+});
+
+assert.ok(!endsConditionPorousLiftScenario.hasError, 'ENDS-CONDITION-POROUS-LIFT should not throw at runtime');
+assert.ok(endsConditionPorousLiftScenario.hasManualSignal, 'ENDS-CONDITION-POROUS-LIFT should require manual confirmation');
+assert.ok(endsConditionPorousLiftScenario.hasEndsConditionSignal, 'ENDS-CONDITION-POROUS-LIFT should mention porous ends condition');
+assert.ok(!endsConditionPorousLiftScenario.hasApproved, 'ENDS-CONDITION-POROUS-LIFT should not be unconditional APPROVED');
+assert.ok(!endsConditionPorousLiftScenario.hasApprovedRecipe, 'ENDS-CONDITION-POROUS-LIFT should not render approved recipe blocks');
+console.log('ENDS-CONDITION-POROUS-LIFT safe behavior observed.');
+
+const endsConditionBrittleHighLiftScenario = analyzeEndsScenario('ENDS-CONDITION-BRITTLE-HIGH-LIFT', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '6',
+    root_length: '1',
+    length_level: '6',
+    ends_level: '6',
+    ends_condition: 'ламкі',
+    base_type: 'Натуральна',
+    target_level: '9',
+    target_direction: '1'
+});
+
+assert.ok(!endsConditionBrittleHighLiftScenario.hasError, 'ENDS-CONDITION-BRITTLE-HIGH-LIFT should not throw at runtime');
+assert.ok(endsConditionBrittleHighLiftScenario.hasManualSignal, 'ENDS-CONDITION-BRITTLE-HIGH-LIFT should require manual confirmation');
+assert.ok(endsConditionBrittleHighLiftScenario.hasEndsConditionSignal, 'ENDS-CONDITION-BRITTLE-HIGH-LIFT should mention brittle ends condition');
+assert.ok(!endsConditionBrittleHighLiftScenario.hasApproved, 'ENDS-CONDITION-BRITTLE-HIGH-LIFT should not be unconditional APPROVED');
+assert.ok(!endsConditionBrittleHighLiftScenario.hasApprovedRecipe, 'ENDS-CONDITION-BRITTLE-HIGH-LIFT should not render approved recipe blocks');
+console.log('ENDS-CONDITION-BRITTLE-HIGH-LIFT safe behavior observed.');
+
+const endsConditionDamagedChemistryScenario = analyzeEndsScenario('ENDS-CONDITION-DAMAGED-CHEMISTRY', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'критично пошкоджені',
+    base_type: 'Натуральна',
+    target_level: '7',
+    target_direction: '1'
+});
+
+assert.ok(!endsConditionDamagedChemistryScenario.hasError, 'ENDS-CONDITION-DAMAGED-CHEMISTRY should not throw at runtime');
+assert.ok(endsConditionDamagedChemistryScenario.hasManualSignal, 'ENDS-CONDITION-DAMAGED-CHEMISTRY should require manual confirmation');
+assert.ok(endsConditionDamagedChemistryScenario.hasEndsConditionSignal, 'ENDS-CONDITION-DAMAGED-CHEMISTRY should mention damaged ends condition');
+assert.ok(!endsConditionDamagedChemistryScenario.hasApproved, 'ENDS-CONDITION-DAMAGED-CHEMISTRY should not be unconditional APPROVED');
+assert.ok(!endsConditionDamagedChemistryScenario.hasApprovedRecipe, 'ENDS-CONDITION-DAMAGED-CHEMISTRY should not render approved recipe blocks');
+console.log('ENDS-CONDITION-DAMAGED-CHEMISTRY safe behavior observed.');
+
+const endsConditionMissingWithDifferentLevelScenario = analyzeEndsScenario('ENDS-CONDITION-MISSING-WITH-DIFFERENT-LEVEL', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '6',
+    root_length: '1',
+    length_level: '6',
+    ends_level: '9',
+    ends_condition: '',
+    base_type: 'Натуральна',
+    target_level: '7',
+    target_direction: '1'
+});
+
+assert.ok(!endsConditionMissingWithDifferentLevelScenario.hasError, 'ENDS-CONDITION-MISSING-WITH-DIFFERENT-LEVEL should not throw at runtime');
+assert.ok(endsConditionMissingWithDifferentLevelScenario.hasManualSignal, 'ENDS-CONDITION-MISSING-WITH-DIFFERENT-LEVEL should require manual confirmation');
+assert.ok(endsConditionMissingWithDifferentLevelScenario.hasEndsConditionSignal, 'ENDS-CONDITION-MISSING-WITH-DIFFERENT-LEVEL should mention missing ends condition');
+assert.ok(!endsConditionMissingWithDifferentLevelScenario.hasApproved, 'ENDS-CONDITION-MISSING-WITH-DIFFERENT-LEVEL should not be unconditional APPROVED');
+assert.ok(!endsConditionMissingWithDifferentLevelScenario.hasApprovedRecipe, 'ENDS-CONDITION-MISSING-WITH-DIFFERENT-LEVEL should not render approved recipe blocks');
+console.log('ENDS-CONDITION-MISSING-WITH-DIFFERENT-LEVEL safe behavior observed.');
+
+globalThis.__endsConditionResults = {
+    porousLift: { status: 'SAFE', hasManualSignal: endsConditionPorousLiftScenario.hasManualSignal, hasEndsConditionSignal: endsConditionPorousLiftScenario.hasEndsConditionSignal },
+    brittleHighLift: { status: 'SAFE', hasManualSignal: endsConditionBrittleHighLiftScenario.hasManualSignal, hasEndsConditionSignal: endsConditionBrittleHighLiftScenario.hasEndsConditionSignal },
+    damagedChemistry: { status: 'SAFE', hasManualSignal: endsConditionDamagedChemistryScenario.hasManualSignal, hasEndsConditionSignal: endsConditionDamagedChemistryScenario.hasEndsConditionSignal },
+    missingWithDifferentLevel: { status: 'SAFE', hasManualSignal: endsConditionMissingWithDifferentLevelScenario.hasManualSignal, hasEndsConditionSignal: endsConditionMissingWithDifferentLevelScenario.hasEndsConditionSignal }
 };
 
 const missingCriticalDataScenario = runDiagnosticScenario('MISSING-CRITICAL-DATA', {
@@ -532,6 +658,7 @@ const missingCriticalDataScenario = runDiagnosticScenario('MISSING-CRITICAL-DATA
     root_length: '1',
     length_level: '',
     ends_level: '',
+    ends_condition: '',
     base_type: '',
     target_level: '',
     target_direction: '1'
@@ -601,9 +728,13 @@ assert.strictEqual(sandbox.__zonesResult.status, 'SAFE');
 assert.strictEqual(sandbox.__endsResults.lighter.status, 'SAFE');
 assert.strictEqual(sandbox.__endsResults.darker.status, 'SAFE');
 assert.strictEqual(sandbox.__endsResults.prepig.status, 'SAFE');
-assert.strictEqual(sandbox.__endsResults.damagedLift.status, 'DIAGNOSTIC_OBSERVED');
+assert.strictEqual(sandbox.__endsResults.damagedLift.status, 'SAFE');
 assert.strictEqual(sandbox.__endsResults.targetBetween.status, 'SAFE');
 assert.ok(['KNOWN_RISK', 'DIAGNOSTIC_OBSERVED'].includes(sandbox.__endsResults.cosmeticUnknownHistory.status));
+assert.strictEqual(sandbox.__endsConditionResults.porousLift.status, 'SAFE');
+assert.strictEqual(sandbox.__endsConditionResults.brittleHighLift.status, 'SAFE');
+assert.strictEqual(sandbox.__endsConditionResults.damagedChemistry.status, 'SAFE');
+assert.strictEqual(sandbox.__endsConditionResults.missingWithDifferentLevel.status, 'SAFE');
 assert.strictEqual(sandbox.__missingCriticalDataResult.status, 'SAFE');
 assert.strictEqual(sandbox.__missingCriticalDataResult.hasApproved, false);
 assert.strictEqual(sandbox.__missingCriticalDataResult.hasRecipe, false);

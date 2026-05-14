@@ -59,6 +59,7 @@ const pigmentMap = {
                     root_length: this.getWwwValue('root_length'),
                     length_level: this.getWwwValue('length_level'),
                     ends_level: this.getWwwValue('ends_level'),
+                    ends_condition: this.getWwwValue('ends_condition'),
                     base_type: this.getWwwValue('base_type'),
                     target_level: this.getWwwValue('target_level'),
                     target_direction: this.getWwwValue('target_direction')
@@ -88,6 +89,7 @@ const pigmentMap = {
                     rootLength: toIntegerOrNull(wwwValues.root_length),
                     lengthLevel: toIntegerOrNull(wwwValues.length_level),
                     endsLevel: toIntegerOrNull(wwwValues.ends_level),
+                    endsCondition: String(wwwValues.ends_condition || '').trim(),
                     baseType: String(wwwValues.base_type || '').trim(),
                     targetLevel: toIntegerOrNull(wwwValues.target_level),
                     targetDirection: String(wwwValues.target_direction || '').trim(),
@@ -328,6 +330,8 @@ const pigmentMap = {
                 const endsLevelElement = document.getElementById('ends_level');
                 const endsLevelRaw = endsLevelElement ? String(endsLevelElement.value).trim() : '';
                 let eLevel = endsLevelRaw ? parseInt(endsLevelRaw) : null;
+                const endsConditionElement = document.getElementById('ends_condition');
+                const endsCondition = endsConditionElement ? String(endsConditionElement.value).trim() : '';
                 let bType = document.getElementById('base_type').value;
                 
                 let tLevel = parseInt(document.getElementById('target_level').value);
@@ -592,6 +596,18 @@ const pigmentMap = {
                 const endsDiffersFromRoot = endsLevelProvided && eLevel !== rLevel;
                 const endsDiffersFromLength = endsLevelProvided && eLevel !== lLevel;
                 const endsLevelNeedsConfirmation = endsDiffersFromRoot || endsDiffersFromLength;
+                const endsConditionText = String(endsCondition || '').toLowerCase();
+                const endsConditionProvided = Boolean(endsConditionText);
+                const riskyEndsCondition = ['пористі', 'ламкі', 'сильно пошкоджені', 'критично пошкоджені'].includes(endsConditionText)
+                    || endsConditionText.includes('порист')
+                    || endsConditionText.includes('ламк')
+                    || endsConditionText.includes('пошкод')
+                    || endsConditionText.includes('повреж');
+                const endsLighteningNeeded = endsLevelProvided && tLevel > eLevel;
+                const endsChemicalInterventionLikely = Boolean(rootRec || lenRec);
+                const endsConditionNeedsConfirmation = riskyEndsCondition
+                    && (endsLighteningNeeded || endsChemicalInterventionLikely);
+                const endsConditionMissingWithDifferentLevel = !endsConditionProvided && endsLevelNeedsConfirmation;
                 const zoneDecisionNeedsConfirmation = zoneLevelDifference >= 2 || zoneProcessesDiffer;
 
                 if (zoneDecisionNeedsConfirmation) {
@@ -610,6 +626,22 @@ const pigmentMap = {
                     });
                 }
 
+                if (endsConditionNeedsConfirmation) {
+                    warnings.push("⚠️ РИЗИКОВИЙ СТАН КІНЦІВ: ends_condition вказує на пористі, ламкі або пошкоджені кінці. Потрібна окрема оцінка майстром перед освітленням або хімічним втручанням; окремий рецепт кінців на цьому етапі не рахується.");
+                    manualDecisions.push({
+                        title: "Стан кінців",
+                        message: `Підтвердити рішення для кінців перед виконанням рецепта. ends_condition: ${endsCondition}, ends_level: ${endsLevelProvided ? eLevel : 'не вказано'}. Не застосовувати універсальний рецепт до кінців без ручної оцінки.`
+                    });
+                }
+
+                if (endsConditionMissingWithDifferentLevel) {
+                    warnings.push("⚠️ НЕДОСТАТНЬО ОЦІНКИ КІНЦІВ: ends_level відрізняється від кореня або довжини, але ends_condition не вказано. Стан кінців треба оцінити окремо перед виконанням рецепта.");
+                    manualDecisions.push({
+                        title: "Не вказано стан кінців",
+                        message: `Заповнити або вручну оцінити стан кінців перед виконанням рецепта. root_level: ${rLevel}, length_level: ${lLevel}, ends_level: ${eLevel}.`
+                    });
+                }
+
                 const state = buildWwwRenderState({
                     status: manualDecisions.length > 0 ? 'MANUAL_REQUIRED' : 'APPROVED',
                     target: `${tLevel}.${tDir}`,
@@ -624,7 +656,7 @@ const pigmentMap = {
                     mixtoneInfo: { root: rootRec.mixtone, length: lenRec.mixtone },
                     massModel: { baseMass, densityMultiplier: denMult, totalMass, rootMass: rMass, lengthMass: lMass },
                     timingInfo: { totalMinutes: timing, modifierMinutes: tMod },
-                    reasons: { rootStep: rStep, lengthStep: lStep, endsLevel: eLevel, hotRoot, grey, specialBlondBase6NeedsConfirmation, significantDarkeningNeedsPrepig, zoneLevelDifference, zoneProcessesDiffer, zoneDecisionNeedsConfirmation, endsLevelProvided, endsDiffersFromRoot, endsDiffersFromLength, endsLevelNeedsConfirmation }
+                    reasons: { rootStep: rStep, lengthStep: lStep, endsLevel: eLevel, endsCondition, hotRoot, grey, specialBlondBase6NeedsConfirmation, significantDarkeningNeedsPrepig, zoneLevelDifference, zoneProcessesDiffer, zoneDecisionNeedsConfirmation, endsLevelProvided, endsDiffersFromRoot, endsDiffersFromLength, endsLevelNeedsConfirmation, endsConditionProvided, riskyEndsCondition, endsLighteningNeeded, endsChemicalInterventionLikely, endsConditionNeedsConfirmation, endsConditionMissingWithDifferentLevel }
                 });
                 document.getElementById('output').innerHTML = PerucarWwwRenderV1.renderStateToHtml(state);
             } catch (e) {

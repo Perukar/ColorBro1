@@ -262,6 +262,7 @@ const defaultDomValues = {
     root_length: '1',
     length_level: '8',
     ends_level: '8',
+    ends_condition: 'здорові',
     base_type: 'Натуральна',
     target_level: '9',
     target_direction: '1'

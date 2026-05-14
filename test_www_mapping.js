@@ -16,6 +16,7 @@ const fakeValues = {
     root_length: '3',
     length_level: '7',
     ends_level: '8',
+    ends_condition: 'пористі',
     base_type: 'Натуральна',
     target_level: '8',
     target_direction: '1'
@@ -58,6 +59,7 @@ const expectedWwwValues = {
     root_length: '3',
     length_level: '7',
     ends_level: '8',
+    ends_condition: 'пористі',
     base_type: 'Натуральна',
     target_level: '8',
     target_direction: '1'
@@ -77,6 +79,7 @@ const expectedRawInput = {
     rootLength: 3,
     lengthLevel: 7,
     endsLevel: 8,
+    endsCondition: 'пористі',
     baseType: 'Натуральна',
     targetLevel: 8,
     targetDirection: '1',
