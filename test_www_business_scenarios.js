@@ -313,6 +313,213 @@ globalThis.__zonesResult = {
     limitation: 'ends_level is present, but no separate ends recipe is calculated in this phase.'
 };
 
+function analyzeEndsScenario(name, values) {
+    const scenario = runDiagnosticScenario(name, values);
+    assert.ok(scenario.requestedIds.includes('output'), name + ' should access output');
+
+    const html = scenario.html;
+    const hasApproved = html.includes('APPROVED')
+        || html.includes('ПРОТОКОЛ ЗАТВЕРДЖЕНО');
+    const hasApprovedRecipe = html.includes('approved-recipe');
+    const hasManualSignal = html.includes('MANUAL_REQUIRED')
+        || html.includes('Потрібне ручне рішення')
+        || html.includes('needs_confirmation');
+    const hasEndsLevelSignal = html.includes('ends_level')
+        || html.includes('КІНЦІ')
+        || html.includes('кінц')
+        || html.includes('Окрема оцінка кінців');
+    const hasNoEndsRecipeSignal = html.includes('Окремий рецепт кінців на цьому етапі не рахується')
+        || !html.includes('<h3>Кінці</h3>');
+    const hasPrePigSignal = html.includes('Препігментація')
+        || html.includes('передпігментац')
+        || html.includes('репігментац')
+        || html.includes('заповнення пігменту')
+        || html.includes('тепла підкладка');
+    const hasBlockingSignal = html.includes('BLOCKED')
+        || html.includes('ФАТАЛЬНО')
+        || html.includes('заборонено');
+    const hasDiagnosticSignal = hasManualSignal
+        || hasEndsLevelSignal
+        || hasPrePigSignal
+        || hasBlockingSignal
+        || html.includes('Діагностика')
+        || html.includes('Пористе волосся');
+
+    return {
+        name,
+        html,
+        hasError: Boolean(scenario.error),
+        hasApproved,
+        hasApprovedRecipe,
+        hasManualSignal,
+        hasEndsLevelSignal,
+        hasNoEndsRecipeSignal,
+        hasPrePigSignal,
+        hasBlockingSignal,
+        hasDiagnosticSignal
+    };
+}
+
+const endsLighterScenario = analyzeEndsScenario('ENDS-LIGHTER-THAN-LENGTH', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '6',
+    root_length: '1',
+    length_level: '6',
+    ends_level: '9',
+    base_type: 'Натуральна',
+    target_level: '7',
+    target_direction: '1'
+});
+
+assert.ok(!endsLighterScenario.hasError, 'ENDS-LIGHTER-THAN-LENGTH should not throw at runtime');
+assert.ok(endsLighterScenario.hasManualSignal, 'ENDS-LIGHTER-THAN-LENGTH should require manual confirmation');
+assert.ok(endsLighterScenario.hasEndsLevelSignal, 'ENDS-LIGHTER-THAN-LENGTH should mention ends-level decision');
+assert.ok(!endsLighterScenario.hasApproved, 'ENDS-LIGHTER-THAN-LENGTH should not be unconditional APPROVED');
+assert.ok(!endsLighterScenario.hasApprovedRecipe, 'ENDS-LIGHTER-THAN-LENGTH should not render approved recipe blocks');
+assert.ok(endsLighterScenario.hasNoEndsRecipeSignal, 'ENDS-LIGHTER-THAN-LENGTH should not expose an approved ends recipe');
+console.log('ENDS-LIGHTER-THAN-LENGTH safe behavior observed.');
+
+const endsDarkerScenario = analyzeEndsScenario('ENDS-DARKER-THAN-LENGTH', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '5',
+    base_type: 'Натуральна',
+    target_level: '7',
+    target_direction: '1'
+});
+
+assert.ok(!endsDarkerScenario.hasError, 'ENDS-DARKER-THAN-LENGTH should not throw at runtime');
+assert.ok(endsDarkerScenario.hasManualSignal, 'ENDS-DARKER-THAN-LENGTH should require manual confirmation');
+assert.ok(endsDarkerScenario.hasEndsLevelSignal, 'ENDS-DARKER-THAN-LENGTH should warn that ends have another level');
+assert.ok(!endsDarkerScenario.hasApproved, 'ENDS-DARKER-THAN-LENGTH should not be unconditional APPROVED');
+assert.ok(!endsDarkerScenario.hasApprovedRecipe, 'ENDS-DARKER-THAN-LENGTH should not render approved recipe blocks');
+console.log('ENDS-DARKER-THAN-LENGTH safe behavior observed.');
+
+const endsPrepigScenario = analyzeEndsScenario('ENDS-10-6-PREPIG', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '10',
+    root_length: '1',
+    length_level: '10',
+    ends_level: '10',
+    base_type: 'Натуральна',
+    target_level: '6',
+    target_direction: '1'
+});
+
+assert.ok(!endsPrepigScenario.hasError, 'ENDS-10-6-PREPIG should not throw at runtime');
+assert.ok(endsPrepigScenario.hasManualSignal, 'ENDS-10-6-PREPIG should require manual confirmation');
+assert.ok(endsPrepigScenario.hasPrePigSignal, 'ENDS-10-6-PREPIG should mention prepigmentation or pigment filling');
+assert.ok(!endsPrepigScenario.hasApproved, 'ENDS-10-6-PREPIG should not be unconditional APPROVED');
+assert.ok(!endsPrepigScenario.hasApprovedRecipe, 'ENDS-10-6-PREPIG should not render approved recipe blocks');
+assert.ok(endsPrepigScenario.hasNoEndsRecipeSignal, 'ENDS-10-6-PREPIG should not expose an automatic approved ends recipe');
+console.log('ENDS-10-6-PREPIG safe behavior observed.');
+
+const endsDamagedLiftScenario = analyzeEndsScenario('ENDS-DAMAGED-LIFT', {
+    history: 'натуральні',
+    condition: 'сильно поврежденные',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '6',
+    root_length: '1',
+    length_level: '6',
+    ends_level: '6',
+    base_type: 'Натуральна',
+    target_level: '9',
+    target_direction: '1'
+});
+
+assert.ok(!endsDamagedLiftScenario.hasError, 'ENDS-DAMAGED-LIFT should not throw at runtime');
+assert.ok(endsDamagedLiftScenario.hasBlockingSignal || endsDamagedLiftScenario.hasManualSignal || endsDamagedLiftScenario.hasDiagnosticSignal, 'ENDS-DAMAGED-LIFT should show blocking/manual/diagnostic signal');
+assert.ok(!endsDamagedLiftScenario.hasApproved, 'ENDS-DAMAGED-LIFT should not be unconditional APPROVED');
+assert.ok(!endsDamagedLiftScenario.hasApprovedRecipe, 'ENDS-DAMAGED-LIFT should not render approved recipe blocks');
+console.log('ENDS-DAMAGED-LIFT diagnostic observed: blocked/manual signal present; separate ends condition is still a limitation.');
+
+const endsTargetBetweenScenario = analyzeEndsScenario('ENDS-TARGET-BETWEEN-LENGTH-ENDS', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '6',
+    root_length: '1',
+    length_level: '6',
+    ends_level: '9',
+    base_type: 'Натуральна',
+    target_level: '7',
+    target_direction: '1'
+});
+
+assert.ok(!endsTargetBetweenScenario.hasError, 'ENDS-TARGET-BETWEEN-LENGTH-ENDS should not throw at runtime');
+assert.ok(endsTargetBetweenScenario.hasManualSignal, 'ENDS-TARGET-BETWEEN-LENGTH-ENDS should require manual confirmation');
+assert.ok(endsTargetBetweenScenario.hasEndsLevelSignal, 'ENDS-TARGET-BETWEEN-LENGTH-ENDS should mention ends-level decision');
+assert.ok(!endsTargetBetweenScenario.hasApproved, 'ENDS-TARGET-BETWEEN-LENGTH-ENDS should not be unconditional APPROVED');
+assert.ok(!endsTargetBetweenScenario.hasApprovedRecipe, 'ENDS-TARGET-BETWEEN-LENGTH-ENDS should not render approved recipe blocks');
+console.log('ENDS-TARGET-BETWEEN-LENGTH-ENDS safe behavior observed.');
+
+const endsCosmeticUnknownHistoryScenario = analyzeEndsScenario('ENDS-COSMETIC-UNKNOWN-HISTORY', {
+    history: 'невідома',
+    condition: 'здоровые',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '6',
+    root_length: '1',
+    length_level: '6',
+    ends_level: '8',
+    base_type: 'Косметична',
+    target_level: '7',
+    target_direction: '1'
+});
+
+const endsCosmeticUnknownKnownRisk = !endsCosmeticUnknownHistoryScenario.hasError
+    && (endsCosmeticUnknownHistoryScenario.hasApproved || endsCosmeticUnknownHistoryScenario.hasApprovedRecipe)
+    && !endsCosmeticUnknownHistoryScenario.hasManualSignal
+    && !endsCosmeticUnknownHistoryScenario.hasDiagnosticSignal;
+
+assert.ok(!endsCosmeticUnknownHistoryScenario.hasError, 'ENDS-COSMETIC-UNKNOWN-HISTORY should not throw at runtime');
+assert.ok(!endsCosmeticUnknownKnownRisk, 'ENDS-COSMETIC-UNKNOWN-HISTORY should not be silent unconditional APPROVED');
+assert.ok(
+    endsCosmeticUnknownHistoryScenario.hasManualSignal || endsCosmeticUnknownHistoryScenario.hasDiagnosticSignal,
+    'ENDS-COSMETIC-UNKNOWN-HISTORY should expose manual/diagnostic signal'
+);
+console.log('ENDS-COSMETIC-UNKNOWN-HISTORY diagnostic observed: separate ends history is not available in current contract.');
+
+globalThis.__endsResults = {
+    lighter: { status: 'SAFE', hasManualSignal: endsLighterScenario.hasManualSignal, hasApproved: endsLighterScenario.hasApproved, hasApprovedRecipe: endsLighterScenario.hasApprovedRecipe },
+    darker: { status: 'SAFE', hasManualSignal: endsDarkerScenario.hasManualSignal, hasApproved: endsDarkerScenario.hasApproved, hasApprovedRecipe: endsDarkerScenario.hasApprovedRecipe },
+    prepig: { status: 'SAFE', hasManualSignal: endsPrepigScenario.hasManualSignal, hasPrePigSignal: endsPrepigScenario.hasPrePigSignal, hasApproved: endsPrepigScenario.hasApproved, hasApprovedRecipe: endsPrepigScenario.hasApprovedRecipe },
+    damagedLift: { status: 'DIAGNOSTIC_OBSERVED', hasBlockingSignal: endsDamagedLiftScenario.hasBlockingSignal, hasManualSignal: endsDamagedLiftScenario.hasManualSignal, limitation: 'No separate ends condition field in current contract.' },
+    targetBetween: { status: 'SAFE', hasManualSignal: endsTargetBetweenScenario.hasManualSignal, hasApproved: endsTargetBetweenScenario.hasApproved, hasApprovedRecipe: endsTargetBetweenScenario.hasApprovedRecipe },
+    cosmeticUnknownHistory: { status: endsCosmeticUnknownKnownRisk ? 'KNOWN_RISK' : 'DIAGNOSTIC_OBSERVED', hasManualSignal: endsCosmeticUnknownHistoryScenario.hasManualSignal, hasDiagnosticSignal: endsCosmeticUnknownHistoryScenario.hasDiagnosticSignal, limitation: 'No separate ends history/base_type field in current contract.' }
+};
+
 const missingCriticalDataScenario = runDiagnosticScenario('MISSING-CRITICAL-DATA', {
     history: '',
     condition: '',
@@ -391,6 +598,12 @@ assert.strictEqual(sandbox.__prepigResult.hasManualSignal, true);
 assert.strictEqual(sandbox.__prepigResult.hasPrePigSignal, true);
 assert.ok(['KNOWN_RISK', 'DIAGNOSTIC_OBSERVED'].includes(sandbox.__blackExitResult.status));
 assert.strictEqual(sandbox.__zonesResult.status, 'SAFE');
+assert.strictEqual(sandbox.__endsResults.lighter.status, 'SAFE');
+assert.strictEqual(sandbox.__endsResults.darker.status, 'SAFE');
+assert.strictEqual(sandbox.__endsResults.prepig.status, 'SAFE');
+assert.strictEqual(sandbox.__endsResults.damagedLift.status, 'DIAGNOSTIC_OBSERVED');
+assert.strictEqual(sandbox.__endsResults.targetBetween.status, 'SAFE');
+assert.ok(['KNOWN_RISK', 'DIAGNOSTIC_OBSERVED'].includes(sandbox.__endsResults.cosmeticUnknownHistory.status));
 assert.strictEqual(sandbox.__missingCriticalDataResult.status, 'SAFE');
 assert.strictEqual(sandbox.__missingCriticalDataResult.hasApproved, false);
 assert.strictEqual(sandbox.__missingCriticalDataResult.hasRecipe, false);
