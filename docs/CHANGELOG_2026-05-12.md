@@ -411,3 +411,67 @@ Commits:
 - `endsMass` ще не існує.
 - `endsRec` ще не реалізований.
 - Автоматичний рецепт кінців усе ще заборонений до окремого mass model refactor.
+
+## Mass model diagnostic test contract
+
+Commit:
+
+`6e25afd Add mass model diagnostic test contract`
+
+## Що змінено
+
+- Створено окремий diagnostic test file `test_www_mass_model.js`.
+- Зафіксовано, що `buildMassModel()` ще не існує як production helper.
+- Зафіксовано майбутню вимогу для 2-зонного split: `rootMass + lengthMass === totalMass`.
+- Підтверджено double-round drift у поточній формулі для окремих значень (`totalMass=35`: `11+25=36≠35`).
+- Зафіксовано майбутню вимогу: невідомий `length` не має давати тихий `NaN` (підтверджено для 7 значень, включаючи `'середні'`).
+- Зафіксовано різну форму `massModel` у BLOCKED (3 поля) і APPROVED (5 полів) шляхах.
+- Зафіксовано вимогу синхронізації powder surcharge з `massModel.rootMass` після refactor.
+- Зафіксовано майбутню вимогу для 3-зонного split: `rootMass + lengthMass + endsMass === totalMass` з похибкою не більше 1 г.
+
+## Що не змінювалось
+
+- Production code.
+- `www/core.js`.
+- `www/index.html`.
+- Існуючі тести.
+- Формули.
+- Грамовки.
+- Оксид.
+- `calcMixtone`.
+- `buildMassModel` не реалізовано.
+- `endsMass` не реалізовано.
+- `endsRec` не реалізовано.
+- Mass model не змінювалась.
+
+## Перевірки
+
+- `node --check test_www_mass_model.js`;
+- `node test_www_mass_model.js`;
+- `node --check www/core.js`;
+- `node --check test_www_mapping.js`;
+- `node test_www_mapping.js`;
+- `node --check test_www_business_scenarios.js`;
+- `node test_www_business_scenarios.js`;
+- `node --check test_www_render_runtime.js`;
+- `node test_www_render_runtime.js`.
+
+## Знахідки diagnostic тестів
+
+| Сценарій | Статус | Знахідка |
+|---|---|---|
+| `MASS-MODEL-INLINE-CURRENT` | KNOWN_LIMITATION | `buildMassModel` не існує як helper |
+| `MASS-MODEL-2-ZONE-EXPECTED-SPLIT` | KNOWN_LIMITATION | Double-round drift: `totalMass=35` → `11+25=36` |
+| `MASS-MODEL-INVALID-LENGTH-NO-NAN` | KNOWN_LIMITATION | 7 невідомих значень → тихий NaN |
+| `MASS-MODEL-BLOCKED-PATH-SHAPE` | KNOWN_LIMITATION | BLOCKED: 3 поля, APPROVED: 5 полів |
+| `MASS-MODEL-POWDER-SURCHARGE-SYNC` | KNOWN_LIMITATION | Surcharge `18→40` для `totalMass=60` |
+| `MASS-MODEL-3-ZONE-FUTURE-SPLIT` | KNOWN_LIMITATION | Remainder-формула математично валідна |
+
+## Залишкові ризики
+
+- Mass model досі inline у `calculateProtocol()`.
+- `buildMassModel()` ще не створений.
+- NaN fallback ще не виправлений.
+- BLOCKED/APPROVED massModel shape ще не уніфікований.
+- 3-зонна mass model ще не реалізована.
+- `endsRec` усе ще заборонений до окремого refactor.
