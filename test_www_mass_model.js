@@ -51,6 +51,26 @@ function buildMassModel(length, density) {
 }
 
 // ---------------------------------------------------------------------------
+// FUTURE CONTRACT HELPER: 3-zone split math candidate.
+// This is intentionally local to tests and does not activate production 3-zone.
+// ---------------------------------------------------------------------------
+
+function buildFutureThreeZoneMassCandidate(totalMass, rootPct, lengthPct, endsPct) {
+    const rootMass = Math.round(totalMass * rootPct);
+    const endsMass = Math.round(totalMass * endsPct);
+    const lengthMass = totalMass - rootMass - endsMass; // remainder absorbs drift
+    return {
+        totalMass,
+        rootPct,
+        lengthPct,
+        endsPct,
+        rootMass,
+        lengthMass,
+        endsMass
+    };
+}
+
+// ---------------------------------------------------------------------------
 // ТЕСТ 1: MASS-MODEL-INLINE-CURRENT
 // buildMassModel() тепер існує. Перевіряємо, що spec-mirror повертає об'єкт.
 // ---------------------------------------------------------------------------
@@ -246,25 +266,18 @@ function buildMassModel(length, density) {
     const id = 'BUILD-MASS-MODEL-3-ZONE-CANDIDATE-MEDIUM';
 
     // Test candidate math (future, not production):
-    const totalMass = 60;
-    const rootPct   = 0.30;
-    const lengthPct = 0.50;
-    const endsPct   = 0.20;
+    const candidate = buildFutureThreeZoneMassCandidate(60, 0.30, 0.50, 0.20);
 
-    const rootMass   = Math.round(totalMass * rootPct);    // = 18
-    const endsMass   = Math.round(totalMass * endsPct);    // = 12
-    const lengthMass = totalMass - rootMass - endsMass;    // = 30 (remainder)
-
-    assert.strictEqual(rootMass,   18, `${id}: rootMass must be 18 for totalMass=60, rootPct=0.30`);
-    assert.strictEqual(lengthMass, 30, `${id}: lengthMass must be 30 for totalMass=60, lengthPct=0.50`);
-    assert.strictEqual(endsMass,   12, `${id}: endsMass must be 12 for totalMass=60, endsPct=0.20`);
+    assert.strictEqual(candidate.rootMass, 18, `${id}: rootMass must be 18 for totalMass=60, rootPct=0.30`);
+    assert.strictEqual(candidate.lengthMass, 30, `${id}: lengthMass must be 30 for totalMass=60, lengthPct=0.50`);
+    assert.strictEqual(candidate.endsMass, 12, `${id}: endsMass must be 12 for totalMass=60, endsPct=0.20`);
     assert.strictEqual(
-        rootMass + lengthMass + endsMass,
-        totalMass,
-        `${id}: rootMass(${rootMass}) + lengthMass(${lengthMass}) + endsMass(${endsMass}) must equal totalMass(${totalMass})`
+        candidate.rootMass + candidate.lengthMass + candidate.endsMass,
+        candidate.totalMass,
+        `${id}: rootMass(${candidate.rootMass}) + lengthMass(${candidate.lengthMass}) + endsMass(${candidate.endsMass}) must equal totalMass(${candidate.totalMass})`
     );
 
-    console.log(`${id} safe: 3-zone candidate math 30/50/20 validated for totalMass=${totalMass}.`);
+    console.log(`${id} safe: 3-zone candidate math 30/50/20 validated for totalMass=${candidate.totalMass}.`);
 })();
 
 // ---------------------------------------------------------------------------
@@ -283,16 +296,14 @@ function buildMassModel(length, density) {
     const testCases = [21, 42, 45, 84];
 
     for (const totalMass of testCases) {
-        const rootMass   = Math.round(totalMass * rootPct);
-        const endsMass   = Math.round(totalMass * endsPct);
-        const lengthMass = totalMass - rootMass - endsMass; // remainder
-        const sum        = rootMass + lengthMass + endsMass;
+        const candidate = buildFutureThreeZoneMassCandidate(totalMass, rootPct, 0.50, endsPct);
+        const sum = candidate.rootMass + candidate.lengthMass + candidate.endsMass;
 
         assert.strictEqual(sum, totalMass,
-            `${id}: rootMass(${rootMass}) + lengthMass(${lengthMass}) + endsMass(${endsMass}) must equal totalMass(${totalMass})`);
-        assert.ok(rootMass   >= 0, `${id}: rootMass must not be negative for totalMass=${totalMass}`);
-        assert.ok(endsMass   >= 0, `${id}: endsMass must not be negative for totalMass=${totalMass}`);
-        assert.ok(lengthMass >= 0, `${id}: lengthMass must not be negative for totalMass=${totalMass}`);
+            `${id}: rootMass(${candidate.rootMass}) + lengthMass(${candidate.lengthMass}) + endsMass(${candidate.endsMass}) must equal totalMass(${totalMass})`);
+        assert.ok(candidate.rootMass >= 0, `${id}: rootMass must not be negative for totalMass=${totalMass}`);
+        assert.ok(candidate.endsMass >= 0, `${id}: endsMass must not be negative for totalMass=${totalMass}`);
+        assert.ok(candidate.lengthMass >= 0, `${id}: lengthMass must not be negative for totalMass=${totalMass}`);
     }
 
     console.log(`${id} safe: remainder rounding policy validated for totalMass = ${testCases.join(', ')}.`);
@@ -363,10 +374,60 @@ function buildMassModel(length, density) {
 
     // Симулюємо ризикові ends-умови (без production code):
     const riskyScenarios = [
-        { label: 'missing ends_history',   endsHistoryProvided: false,  riskyEndsHistory: false  },
-        { label: 'risky ends_history',     endsHistoryProvided: true,   riskyEndsHistory: true   },
-        { label: 'missing ends_condition', endsConditionProvided: false, riskyEndsCondition: false },
-        { label: 'risky ends_condition',   endsConditionProvided: true,  riskyEndsCondition: true  },
+        {
+            label: 'missing ends_history',
+            endsHistoryProvided: false,
+            riskyEndsHistory: false,
+            endsConditionProvided: true,
+            riskyEndsCondition: false,
+            endsBaseTypeProvided: true,
+            riskyEndsBaseType: false
+        },
+        {
+            label: 'risky ends_history',
+            endsHistoryProvided: true,
+            riskyEndsHistory: true,
+            endsConditionProvided: true,
+            riskyEndsCondition: false,
+            endsBaseTypeProvided: true,
+            riskyEndsBaseType: false
+        },
+        {
+            label: 'missing ends_condition',
+            endsHistoryProvided: true,
+            riskyEndsHistory: false,
+            endsConditionProvided: false,
+            riskyEndsCondition: false,
+            endsBaseTypeProvided: true,
+            riskyEndsBaseType: false
+        },
+        {
+            label: 'risky ends_condition',
+            endsHistoryProvided: true,
+            riskyEndsHistory: false,
+            endsConditionProvided: true,
+            riskyEndsCondition: true,
+            endsBaseTypeProvided: true,
+            riskyEndsBaseType: false
+        },
+        {
+            label: 'missing ends_base_type',
+            endsHistoryProvided: true,
+            riskyEndsHistory: false,
+            endsConditionProvided: true,
+            riskyEndsCondition: false,
+            endsBaseTypeProvided: false,
+            riskyEndsBaseType: false
+        },
+        {
+            label: 'risky ends_base_type',
+            endsHistoryProvided: true,
+            riskyEndsHistory: false,
+            endsConditionProvided: true,
+            riskyEndsCondition: false,
+            endsBaseTypeProvided: true,
+            riskyEndsBaseType: true
+        },
     ];
 
     for (const scenario of riskyScenarios) {
@@ -375,7 +436,9 @@ function buildMassModel(length, density) {
             scenario.endsHistoryProvided === true &&
             !scenario.riskyEndsHistory &&
             scenario.endsConditionProvided === true &&
-            !scenario.riskyEndsCondition;
+            !scenario.riskyEndsCondition &&
+            scenario.endsBaseTypeProvided === true &&
+            !scenario.riskyEndsBaseType;
 
         // Для всіх ризикових/відсутніх сценаріїв — 3-zone НЕ активується:
         assert.strictEqual(
