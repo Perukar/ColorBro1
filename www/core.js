@@ -375,6 +375,27 @@ const pigmentMap = {
                 let denMult = {'редкие':0.7, 'средние':1.0, 'густые':1.5}[density];
                 let totalMass = Math.round(baseMass * denMult);
 
+                const historyText = String(history || '').toLowerCase();
+                const baseTypeText = String(bType || '').toLowerCase();
+                const darkestCurrentLevel = Math.min(rLevel, lLevel);
+                const blackOrDarkHistory = historyText.includes('чорн')
+                    || historyText.includes('черн')
+                    || historyText.includes('black')
+                    || historyText.includes('темн');
+                const cosmeticBase = baseTypeText.includes('космет');
+                const blackExitNeedsDiagnostics = cosmeticBase
+                    && blackOrDarkHistory
+                    && darkestCurrentLevel <= 4
+                    && tLevel > darkestCurrentLevel;
+
+                if (blackExitNeedsDiagnostics) {
+                    warnings.push("⚠️ ВИХІД З ЧОРНОГО / ТЕМНОГО КОСМЕТИЧНОГО ПІГМЕНТУ: потрібна додаткова діагностика нашарувань, змивок, фону освітлення, стану полотна та тест-пасмо.");
+                    manualDecisions.push({
+                        title: "Вихід з чорного / темного косметичного пігменту",
+                        message: "Уточнити кількість нашарувань, кислотні або лужні змивки, поточний фон освітлення, стан полотна та результат тест-пасма перед виконанням рецепта."
+                    });
+                }
+
                 if (alerts.length > 0) {
                     const state = buildWwwRenderState({
                         status: 'BLOCKED',
