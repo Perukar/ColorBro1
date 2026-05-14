@@ -186,3 +186,54 @@ Commit:
 - `ends_level` вже є у формі, але повний окремий рецепт кінців ще не реалізований.
 - Потрібна окрема майбутня фаза для `endsRec` / логіки кінців / маси / оксиду.
 - На поточному етапі система тільки зупиняє ризик через `MANUAL_REQUIRED`.
+
+## Business tests: manual ends logic scenarios
+
+Commit:
+
+`d2825e6 Add manual ends logic scenarios`
+
+## Що змінено
+
+- Додано business tests для критичних сценаріїв кінців.
+- `ENDS-LIGHTER-THAN-LENGTH` перевіряє, що світліші кінці не проходять як безумовний approved-рецепт.
+- `ENDS-DARKER-THAN-LENGTH` перевіряє темніші кінці.
+- `ENDS-10-6-PREPIG` перевіряє затемнення кінців зі світлої бази.
+- `ENDS-TARGET-BETWEEN-LENGTH-ENDS` перевіряє ситуацію, коли ціль між довжиною і кінцями.
+- `ENDS-DAMAGED-LIFT` зафіксований як diagnostic / limitation.
+- `ENDS-COSMETIC-UNKNOWN-HISTORY` зафіксований як diagnostic / limitation.
+
+## Що не змінювалось
+
+- Production code.
+- `www/core.js`.
+- `www/index.html`.
+- Формули.
+- Грамовки.
+- Оксид.
+- `calcMixtone`.
+- `endsRec` не створювався.
+- Mass model не змінювався.
+- Окрема формула кінців не додавалась.
+
+## Перевірки
+
+- `node --check test_www_business_scenarios.js`;
+- `node test_www_business_scenarios.js`;
+- `node --check www/core.js`;
+- `node --check test_www_mapping.js`;
+- `node test_www_mapping.js`;
+- `node --check test_www_render_runtime.js`;
+- `node test_www_render_runtime.js`.
+
+## Результат
+
+- Safe: `ENDS-LIGHTER-THAN-LENGTH`, `ENDS-DARKER-THAN-LENGTH`, `ENDS-10-6-PREPIG`, `ENDS-TARGET-BETWEEN-LENGTH-ENDS`.
+- Diagnostic / limitation: `ENDS-DAMAGED-LIFT`, `ENDS-COSMETIC-UNKNOWN-HISTORY`.
+- Нового silent approved known-risk не зафіксовано.
+
+## Залишкові ризики
+
+- Немає окремого поля стану кінців.
+- Немає окремої історії / `base_type` саме для кінців.
+- Повний `endsRec` і mass model ще не реалізовані.
