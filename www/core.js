@@ -318,6 +318,30 @@ const pigmentMap = {
             };
         }
 
+        function buildMassModel(length, density) {
+            const baseLookup = { 'короткие': 30, 'средние': 60, 'длинные': 120 };
+            const densityLookup = { 'редкие': 0.7, 'средние': 1.0, 'густые': 1.5 };
+            const baseMass = baseLookup[length];
+            const densityMultiplier = densityLookup[density] !== undefined ? densityLookup[density] : 1.0;
+            if (baseMass === undefined || baseMass === null) {
+                // Захист від тихого NaN: якщо length невідомий, повернути null.
+                // Виклик-код має обробляти null і додавати diagnostic.
+                return null;
+            }
+            const totalMass = Math.round(baseMass * densityMultiplier);
+            const rootMass = Math.round(totalMass * 0.3);
+            const lengthMass = totalMass - rootMass; // залишок, уникає double-round drift
+            return {
+                baseMass,
+                densityMultiplier,
+                totalMass,
+                rootMass,
+                lengthMass,
+                endsMass: null,
+                mode: '2-zone'
+            };
+        }
+
         function calculateProtocol() {
             try {
                 let history = document.getElementById('history').value;
@@ -388,9 +412,14 @@ const pigmentMap = {
                 if (thickness === 'толстые') { diagnostics.push("Товсте волосся. Час витримки збільшено."); tMod = 10; }
                 if (condition === 'пористі') diagnostics.push("Пористе волосся. Тонування під жорстким візуальним контролем.");
 
-                let baseMass = {'короткие':30, 'средние':60, 'длинные':120}[length];
-                let denMult = {'редкие':0.7, 'средние':1.0, 'густые':1.5}[density];
-                let totalMass = Math.round(baseMass * denMult);
+                let massModel = buildMassModel(length, density);
+                if (!massModel) {
+                    diagnostics.push(`Невідома довжина волосся: "${length}". Масу визначити вручну.`);
+                    massModel = { baseMass: null, densityMultiplier: null, totalMass: 60, rootMass: 18, lengthMass: 42, endsMass: null, mode: '2-zone-fallback' };
+                }
+                let baseMass = massModel.baseMass;
+                let denMult = massModel.densityMultiplier;
+                let totalMass = massModel.totalMass;
 
                 const historyText = String(history || '').toLowerCase();
                 const baseTypeText = String(bType || '').toLowerCase();
@@ -420,7 +449,7 @@ const pigmentMap = {
                         blockers: alerts,
                         warnings,
                         diagnostics,
-                        massModel: { baseMass, densityMultiplier: denMult, totalMass }
+                        massModel: massModel
                     });
                     document.getElementById('output').innerHTML = PerucarWwwRenderV1.renderStateToHtml(state);
                     return;
@@ -428,8 +457,8 @@ const pigmentMap = {
 
                 let rStep = tLevel - rLevel;
                 let lStep = tLevel - lLevel;
-                let rMass = Math.round(totalMass * 0.3);
-                let lMass = Math.round(totalMass * 0.7);
+                let rMass = massModel.rootMass;
+                let lMass = massModel.lengthMass;
                 let tDye = `${tLevel}.${tDir}`;
                 
                 let rootRec = null, lenRec = null, plan = [], timing = 0;
@@ -492,6 +521,9 @@ const pigmentMap = {
                     rMass = Math.round(rMass * 1.6);
                     if (rMass < 40) rMass = 40;
                     rootRec.mass = rMass;
+                    // Синхронізуємо massModel.rootMass після powder surcharge.
+                    // massModel.rootMass відображає фактичну масу рецепта (post-surcharge).
+                    massModel = Object.assign({}, massModel, { rootMass: rMass });
                 }
 
                 // ПАТЧ: Фізична зміна рецептури при сивині >= 50% (Захист від низьких оксидів)
@@ -709,7 +741,7 @@ const pigmentMap = {
                     plan,
                     protocolText,
                     mixtoneInfo: { root: rootRec.mixtone, length: lenRec.mixtone },
-                    massModel: { baseMass, densityMultiplier: denMult, totalMass, rootMass: rMass, lengthMass: lMass },
+                    massModel: Object.assign({}, massModel, { rootMass: rMass, lengthMass: lMass }),
                     timingInfo: { totalMinutes: timing, modifierMinutes: tMod },
                     reasons: { rootStep: rStep, lengthStep: lStep, endsLevel: eLevel, endsCondition, endsHistory, endsBaseType, hotRoot, grey, specialBlondBase6NeedsConfirmation, significantDarkeningNeedsPrepig, zoneLevelDifference, zoneProcessesDiffer, zoneDecisionNeedsConfirmation, endsLevelProvided, endsDiffersFromRoot, endsDiffersFromLength, endsLevelNeedsConfirmation, endsConditionProvided, riskyEndsCondition, endsLighteningNeeded, endsChemicalInterventionLikely, endsConditionNeedsConfirmation, endsConditionMissingWithDifferentLevel, endsHistoryProvided, endsBaseTypeProvided, riskyEndsHistory, riskyEndsBaseType, endsHistoryNeedsConfirmation, endsBaseTypeNeedsConfirmation }
                 });
