@@ -2,6 +2,82 @@
 
 Дата: 2026-05-12
 
+## Ends recipe eligibility classifier
+
+Commit:
+
+7ba19d5 Add ends recipe eligibility classifier
+
+## Що змінено
+
+- додано pure helper `classifyEndsRecEligibility(context)`;
+- helper класифікує придатність кінців для майбутнього `endsRec`;
+- helper повертає тільки статус класифікації, причину та risk/required-field дані;
+- дозволені статуси:
+  - `SAFE_FOR_TONING`;
+  - `MANUAL_REQUIRED`;
+  - `BLOCKED`;
+- додано contract tests у `test_www_mass_model.js` для перевірки:
+  - low-risk toning scenario;
+  - cosmetic lift blocked;
+  - unknown history manual;
+  - damaged lift blocked;
+  - henna/metals blocked;
+  - prepigmentation required manual;
+  - missing fields manual;
+  - no `endsRec` creation;
+  - no production `massModel` change;
+  - no `rootRec` / `lenRec` change.
+
+## Що не змінювалось
+
+- `endsRec` не створювався;
+- `endsRecCandidate` як рецепт не створювався;
+- formula/mix для кінців не створювались;
+- production 3-zone mass не активовано;
+- production `massModel.mode` лишається `2-zone`;
+- production `massModel.endsMass` лишається `null`;
+- `rootRec` не змінювався;
+- `lenRec` не змінювався;
+- `buildMassModel()` не змінювався;
+- `buildThreeZoneMassCandidate()` не змінювався;
+- `classifyThreeZoneActivation()` не змінювався;
+- `calcMixtone()` не змінювався;
+- oxidizer logic не змінювалася;
+- формули не змінювались;
+- renderer/UI не змінювався;
+- mapping не змінювався.
+
+## Перевірки
+
+- `node --check www/core.js`;
+- `node --check test_www_business_scenarios.js`;
+- `node test_www_business_scenarios.js`;
+- `node --check test_www_mass_model.js`;
+- `node test_www_mass_model.js`;
+- `node --check test_www_mapping.js`;
+- `node --check test_www_render_runtime.js`;
+- `node test_www_render_runtime.js`.
+
+## Результат
+
+- audit commit `7ba19d5` пройшов;
+- full suite green;
+- risk: LOW;
+- створено тільки eligibility-classifier для майбутнього `endsRec`;
+- production runtime лишається 2-zone;
+- `endsRec` ще не реалізований;
+- production `endsMass` ще не активований.
+
+## Залишкові ризики
+
+- helper ще не створює рецепт кінців;
+- `SAFE_FOR_TONING` поки означає тільки допуск до майбутнього етапу, а не готовий рецепт;
+- production 3-zone mass activation ще не реалізована;
+- `endsRec` ще не реалізований;
+- powder surcharge nominal/actual contract ще не перенесений у runtime;
+- наступна code-фаза не має одразу створювати full `endsRec`; спочатку потрібен окремий plan або readonly `endsRecCandidate`.
+
 ## Three zone activation gate helper
 
 Commit:
