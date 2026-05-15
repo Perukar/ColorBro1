@@ -848,3 +848,72 @@ d25f288 Add three zone activation gate contract tests
 - powder surcharge nominal/actual contract ще не перенесений у runtime;
 - наступна фаза має бути planning для safe production gate implementation, не пряме створення `endsRec`.
 
+## Three zone activation gate runtime integration
+
+Commit:
+
+d796217 Integrate three zone activation gate as diagnostic manual gate
+
+## Що змінено
+
+- `classifyThreeZoneActivation()` підключено у `calculateProtocol()`;
+- gate працює як diagnostic/manual mechanism;
+- якщо рівень кінців відрізняється від довжини, runtime перевіряє рішення gate;
+- `MANUAL_REQUIRED` додає warning/manual decision;
+- `BLOCKED` конвертується у безпечний `MANUAL_REQUIRED`, без введення нового runtime status;
+- `ALLOW_3_ZONE` не активує 3-zone runtime;
+- додано 7 business tests у `test_www_business_scenarios.js`:
+  - `THREE-ZONE-GATE-RUNTIME-KEEP-2-ZONE-SAME-ENDS`;
+  - `THREE-ZONE-GATE-RUNTIME-MISSING-DIAGNOSTICS-MANUAL`;
+  - `THREE-ZONE-GATE-RUNTIME-RISKY-HISTORY-MANUAL`;
+  - `THREE-ZONE-GATE-RUNTIME-RISKY-BASE-TYPE-MANUAL`;
+  - `THREE-ZONE-GATE-RUNTIME-RISKY-CONDITION-MANUAL`;
+  - `THREE-ZONE-GATE-RUNTIME-ALLOW-DOES-NOT-ACTIVATE-3ZONE`;
+  - `THREE-ZONE-GATE-RUNTIME-NO-BUILDTHREEZONE-CALL`.
+
+## Що не змінювалось
+
+- `calculateProtocol()` НЕ викликає `buildThreeZoneMassCandidate()`;
+- `buildThreeZoneMassCandidate()` не активований у runtime;
+- `buildMassModel()` не змінював production behavior;
+- `endsRec` не створювався;
+- `endsMass` у production не активований;
+- production runtime лишається `2-zone`;
+- `calcMixtone()` не змінювався;
+- формули не змінювались;
+- oxidizer logic не змінювалась;
+- UI не змінювався;
+- mapping не змінювався;
+- render runtime tests не змінювались;
+- mass model tests не змінювались.
+
+## Перевірки
+
+- `node --check www/core.js`;
+- `node --check test_www_business_scenarios.js`;
+- `node test_www_business_scenarios.js`;
+- `node --check test_www_mass_model.js`;
+- `node test_www_mass_model.js`;
+- `node --check test_www_mapping.js`;
+- `node test_www_mapping.js`;
+- `node --check test_www_render_runtime.js`;
+- `node test_www_render_runtime.js`.
+
+## Результат
+
+- audit commit `d796217` пройшов;
+- full suite green;
+- risk: LOW;
+- gate інтегрований у runtime тільки як diagnostic/manual guard;
+- 3-zone mass runtime ще не активований;
+- `endsRec` ще не реалізований;
+- production behavior залишається контрольованим і безпечним.
+
+## Залишкові ризики
+
+- `ALLOW_3_ZONE` поки не запускає 3-zone mass;
+- `buildThreeZoneMassCandidate()` ще не використовується у runtime;
+- `endsMass` ще не використовується в production;
+- `endsRec` ще не реалізований;
+- powder surcharge nominal/actual contract ще не перенесений у runtime;
+- наступна фаза має бути planning для safe `ALLOW_3_ZONE` handling, не пряме створення `endsRec`.
