@@ -983,3 +983,69 @@ Commit:
 - production `endsMass` ще не використовується;
 - powder surcharge nominal/actual contract ще не перенесений у runtime;
 - наступна фаза має бути planning для production-safe 3-zone mass activation, не пряме створення `endsRec`.
+
+
+## Harden flat three zone preview contract
+
+Commit:
+
+6d41d19 Harden flat three zone preview contract
+
+## Що змінено
+
+- посилено контракт readonly preview для 3-zone mass candidate;
+- додано flat preview lock fields у `reasons`:
+  - `threeZonePreviewOnly`;
+  - `threeZoneEndsRecipeReady`;
+- поля залишені у пласкій структурі `reasons`, без вкладеного `diagnostics.threeZone`;
+- render/UI contract збережено;
+- додано/оновлено business tests для перевірки:
+  - наявності flat lock fields;
+  - відсутності nested diagnostics;
+  - збереження production `massModel` у 2-zone режимі;
+  - відсутності `endsRec`.
+
+## Що не змінювалось
+
+- `reasons.diagnostics.threeZone` не створювався;
+- `PerucarWwwRenderV1` не змінювався;
+- `normalizeReasonsToItems` не змінювався;
+- UI не змінювався;
+- mapping не змінювався;
+- production `massModel.mode` лишається `2-zone`;
+- production `massModel.endsMass` лишається `null`;
+- `threeZoneCandidateMassModel` не замінює production `massModel`;
+- `threeZoneCandidateMassModel` не впливає на `rootRec`;
+- `threeZoneCandidateMassModel` не впливає на `lenRec`;
+- `endsRec` не створювався;
+- рецепт для кінців не створювався;
+- `calcMixtone()` не змінювався;
+- формули не змінювались;
+- oxidizer logic не змінювалась.
+
+## Перевірки
+
+- `node --check www/core.js`;
+- `node --check test_www_business_scenarios.js`;
+- `node test_www_business_scenarios.js`;
+- `node test_www_mass_model.js`;
+- `node test_www_mapping.js`;
+- `node test_www_render_runtime.js`.
+
+## Результат
+
+- audit commit `6d41d19` пройшов;
+- full suite green;
+- risk: LOW;
+- preview contract посилено без зміни production behavior;
+- production runtime лишається 2-zone;
+- `endsRec` ще не реалізований;
+- production `endsMass` ще не активований.
+
+## Залишкові ризики
+
+- `threeZoneCandidateMassModel` уже існує як readonly preview, тому наступні фази мають суворо не допустити його автоматичну заміну production `massModel`;
+- production 3-zone mass activation ще не реалізована;
+- `endsRec` ще не реалізований;
+- powder surcharge nominal/actual contract ще не перенесений у runtime;
+- наступна фаза має бути planning для production-safe 3-zone activation, не пряме створення `endsRec`.
