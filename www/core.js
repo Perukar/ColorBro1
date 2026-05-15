@@ -342,6 +342,47 @@ const pigmentMap = {
             };
         }
 
+        /**
+         * buildThreeZoneMassCandidate(length, density, split)
+         *
+         * INACTIVE HELPER — для майбутньої 3-zone guard-фази.
+         * НЕ викликається з calculateProtocol().
+         * НЕ активує endsRec, не змінює production behavior.
+         * НЕ впливає на buildMassModel() або 2-zone runtime.
+         * Використовувати тільки після окремої фази guard-валідації ends.
+         *
+         * @param {string} length   - 'короткие' | 'средние' | 'длинные'
+         * @param {string} density  - 'редкие' | 'средние' | 'густые'
+         * @param {{ rootPct: number, lengthPct: number, endsPct: number }} split
+         * @returns {{ baseMass, densityMultiplier, totalMass, rootMass, lengthMass, endsMass, mode, split } | null}
+         */
+        function buildThreeZoneMassCandidate(length, density, split) {
+            if (!split || typeof split.rootPct !== 'number' || typeof split.endsPct !== 'number') {
+                return null;
+            }
+
+            const base = buildMassModel(length, density);
+            if (!base) return null;
+
+            const { totalMass } = base;
+            const rootMass = Math.round(totalMass * split.rootPct);
+            const endsMass = Math.round(totalMass * split.endsPct);
+            const lengthMass = totalMass - rootMass - endsMass; // remainder — уникає double-round drift
+
+            if (lengthMass < 0) return null; // sanity guard
+
+            return {
+                baseMass: base.baseMass,
+                densityMultiplier: base.densityMultiplier,
+                totalMass,
+                rootMass,
+                lengthMass,
+                endsMass,
+                mode: '3-zone',
+                split
+            };
+        }
+
         function calculateProtocol() {
             try {
                 let history = document.getElementById('history').value;

@@ -492,12 +492,162 @@ function buildFutureThreeZoneMassCandidate(totalMass, rootPct, lengthPct, endsPc
 })();
 
 // ---------------------------------------------------------------------------
+// SPEC MIRROR: buildThreeZoneMassCandidate() — для тестів нижче.
+// Має відповідати реалізації у www/core.js.
+// ---------------------------------------------------------------------------
+
+function buildThreeZoneMassCandidate(length, density, split) {
+    if (!split || typeof split.rootPct !== 'number' || typeof split.endsPct !== 'number') {
+        return null;
+    }
+    const base = buildMassModel(length, density);
+    if (!base) return null;
+    const { totalMass } = base;
+    const rootMass = Math.round(totalMass * split.rootPct);
+    const endsMass = Math.round(totalMass * split.endsPct);
+    const lengthMass = totalMass - rootMass - endsMass;
+    if (lengthMass < 0) return null;
+    return {
+        baseMass: base.baseMass,
+        densityMultiplier: base.densityMultiplier,
+        totalMass,
+        rootMass,
+        lengthMass,
+        endsMass,
+        mode: '3-zone',
+        split
+    };
+}
+
+// ---------------------------------------------------------------------------
+// ТЕСТ 13: BUILD-THREE-ZONE-CANDIDATE-SHAPE
+// buildThreeZoneMassCandidate() повертає правильний shape і значення.
+// ---------------------------------------------------------------------------
+
+(function testBuildThreeZoneCandidateShape() {
+    const id = 'BUILD-THREE-ZONE-CANDIDATE-SHAPE';
+
+    const split = { rootPct: 0.30, lengthPct: 0.50, endsPct: 0.20 };
+    const candidate = buildThreeZoneMassCandidate('средние', 'средние', split);
+
+    assert.ok(candidate !== null, `${id}: must return non-null for valid input`);
+    assert.strictEqual(typeof candidate, 'object', `${id}: must return an object`);
+
+    const requiredFields = ['baseMass', 'densityMultiplier', 'totalMass', 'rootMass', 'lengthMass', 'endsMass', 'mode', 'split'];
+    for (const field of requiredFields) {
+        assert.ok(Object.prototype.hasOwnProperty.call(candidate, field),
+            `${id}: result must have field "${field}"`);
+    }
+
+    assert.strictEqual(candidate.mode, '3-zone', `${id}: mode must be "3-zone"`);
+    assert.strictEqual(candidate.totalMass, 60,   `${id}: totalMass must be 60 for средние/средние`);
+    assert.strictEqual(candidate.rootMass,  18,   `${id}: rootMass must be 18 for totalMass=60, rootPct=0.30`);
+    assert.strictEqual(candidate.endsMass,  12,   `${id}: endsMass must be 12 for totalMass=60, endsPct=0.20`);
+    assert.strictEqual(candidate.lengthMass, 30,  `${id}: lengthMass must be 30 (remainder: 60-18-12)`);
+
+    console.log(`${id} safe: buildThreeZoneMassCandidate() returns correct 8-field shape for средние/средние 30/50/20.`);
+})();
+
+// ---------------------------------------------------------------------------
+// ТЕСТ 14: BUILD-THREE-ZONE-CANDIDATE-NULL-PROPAGATION
+// Невідомий length → null; invalid split → null.
+// ---------------------------------------------------------------------------
+
+(function testBuildThreeZoneCandidateNullPropagation() {
+    const id = 'BUILD-THREE-ZONE-CANDIDATE-NULL-PROPAGATION';
+
+    const validSplit = { rootPct: 0.30, lengthPct: 0.50, endsPct: 0.20 };
+
+    // Невідомий length → buildMassModel повертає null → propagate
+    const unknownLengths = ['medium', 'long', 'середні', '', 'короткі'];
+    for (const length of unknownLengths) {
+        const result = buildThreeZoneMassCandidate(length, 'средние', validSplit);
+        assert.strictEqual(result, null,
+            `${id}: unknown length "${length}" must propagate null`);
+    }
+
+    // Invalid split → null
+    assert.strictEqual(buildThreeZoneMassCandidate('средние', 'средние', null),
+        null, `${id}: null split must return null`);
+    assert.strictEqual(buildThreeZoneMassCandidate('средние', 'средние', {}),
+        null, `${id}: empty split must return null`);
+    assert.strictEqual(buildThreeZoneMassCandidate('средние', 'средние', { rootPct: 0.3 }),
+        null, `${id}: split missing endsPct must return null`);
+    assert.strictEqual(buildThreeZoneMassCandidate('средние', 'средние', { endsPct: 0.2 }),
+        null, `${id}: split missing rootPct must return null`);
+
+    console.log(`${id} safe: null propagated for unknown length and invalid split.`);
+})();
+
+// ---------------------------------------------------------------------------
+// ТЕСТ 15: BUILD-THREE-ZONE-CANDIDATE-SUM-CONTRACT
+// rootMass + lengthMass + endsMass === totalMass для кількох length/density.
+// ---------------------------------------------------------------------------
+
+(function testBuildThreeZoneCandidateSumContract() {
+    const id = 'BUILD-THREE-ZONE-CANDIDATE-SUM-CONTRACT';
+
+    const split = { rootPct: 0.30, lengthPct: 0.50, endsPct: 0.20 };
+    const cases = [
+        { length: 'короткие', density: 'редкие' },
+        { length: 'короткие', density: 'средние' },
+        { length: 'короткие', density: 'густые' },
+        { length: 'средние',  density: 'редкие' },
+        { length: 'средние',  density: 'средние' },
+        { length: 'средние',  density: 'густые' },
+        { length: 'длинные',  density: 'редкие' },
+        { length: 'длинные',  density: 'средние' },
+        { length: 'длинные',  density: 'густые' },
+    ];
+
+    for (const { length, density } of cases) {
+        const candidate = buildThreeZoneMassCandidate(length, density, split);
+        assert.ok(candidate !== null,
+            `${id}: must not be null for length="${length}" density="${density}"`);
+        assert.strictEqual(
+            candidate.rootMass + candidate.lengthMass + candidate.endsMass,
+            candidate.totalMass,
+            `${id}: rootMass(${candidate.rootMass}) + lengthMass(${candidate.lengthMass}) + endsMass(${candidate.endsMass}) must equal totalMass(${candidate.totalMass}) for length="${length}" density="${density}"`
+        );
+        assert.ok(candidate.rootMass   >= 0, `${id}: rootMass must not be negative`);
+        assert.ok(candidate.lengthMass >= 0, `${id}: lengthMass must not be negative`);
+        assert.ok(candidate.endsMass   >= 0, `${id}: endsMass must not be negative`);
+    }
+
+    console.log(`${id} safe: rootMass + lengthMass + endsMass === totalMass for all 9 combinations.`);
+})();
+
+// ---------------------------------------------------------------------------
+// ТЕСТ 16: BUILD-THREE-ZONE-CANDIDATE-MODE-FLAG
+// mode '3-zone' у helper; production buildMassModel лишається '2-zone'.
+// ---------------------------------------------------------------------------
+
+(function testBuildThreeZoneCandidateModeFlag() {
+    const id = 'BUILD-THREE-ZONE-CANDIDATE-MODE-FLAG';
+
+    const split = { rootPct: 0.30, lengthPct: 0.50, endsPct: 0.20 };
+    const candidate = buildThreeZoneMassCandidate('средние', 'средние', split);
+    assert.ok(candidate !== null, `${id}: candidate must not be null`);
+    assert.strictEqual(candidate.mode, '3-zone',
+        `${id}: buildThreeZoneMassCandidate must return mode "3-zone"`);
+
+    // Production buildMassModel() незмінний:
+    const production = buildMassModel('средние', 'средние');
+    assert.strictEqual(production.mode, '2-zone',
+        `${id}: production buildMassModel must still return mode "2-zone"`);
+    assert.strictEqual(production.endsMass, null,
+        `${id}: production buildMassModel endsMass must still be null`);
+
+    console.log(`${id} safe: helper mode="3-zone"; production mode="2-zone", endsMass=null unchanged.`);
+})();
+
+// ---------------------------------------------------------------------------
 // SUMMARY
 // ---------------------------------------------------------------------------
 
 console.log('');
 console.log('=== MASS MODEL UNIT / DIAGNOSTIC TEST CONTRACT ===');
-console.log('All 12 scenarios processed.');
+console.log('All 16 scenarios processed.');
 console.log('');
 console.log('STATUS SUMMARY:');
 console.log('  MASS-MODEL-INLINE-CURRENT                    → SAFE     (buildMassModel exists, correct shape)');
@@ -512,10 +662,15 @@ console.log('  MASS-MODEL-3-ZONE-NOT-ACTIVE-WITHOUT-ENDSREC → SAFE     (produc
 console.log('  MASS-MODEL-2-ZONE-WHEN-ENDS-SAME-AS-LENGTH   → SAFE     (2-zone preserved, contract fixed)');
 console.log('  MASS-MODEL-MANUAL-WHEN-ENDS-RISKY-OR-MISSING → SAFE     (risky ends → MANUAL, not auto 3-zone)');
 console.log('  BUILD-MASS-MODEL-POWDER-SURCHARGE-CONTRACT   → KNOWN_LIMITATION (nominal vs actual, future doc)');
+console.log('  BUILD-THREE-ZONE-CANDIDATE-SHAPE             → SAFE     (8-field shape, mode=3-zone, values validated)');
+console.log('  BUILD-THREE-ZONE-CANDIDATE-NULL-PROPAGATION  → SAFE     (null for unknown length and invalid split)');
+console.log('  BUILD-THREE-ZONE-CANDIDATE-SUM-CONTRACT      → SAFE     (sum === totalMass for all 9 combinations)');
+console.log('  BUILD-THREE-ZONE-CANDIDATE-MODE-FLAG         → SAFE     (helper=3-zone; production=2-zone unchanged)');
 console.log('');
 console.log('Production code: buildMassModel() 2-ZONE ONLY.');
 console.log('3-zone runtime: NOT ACTIVE.');
 console.log('endsMass: null in production.');
 console.log('endsRec: NOT IMPLEMENTED.');
+console.log('buildThreeZoneMassCandidate(): INACTIVE HELPER (not called from calculateProtocol).');
 console.log('');
 console.log('WWW mass model test contract passed.');
