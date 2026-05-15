@@ -710,3 +710,72 @@ Commit:
 - `endsRec` ще не реалізований;
 - powder surcharge nominal/actual contract ще не перенесений у runtime;
 - наступна фаза має бути planning для safe 3-zone activation gate, не прямий `endsRec`.
+
+## Three zone activation gate contract tests
+
+Commit:
+
+d25f288 Add three zone activation gate contract tests
+
+Що змінено:
+
+- додано test-only mock/helper `classifyFutureThreeZoneActivation`;
+- додано контракт майбутнього 3-zone activation gate;
+- helper існує тільки в `test_www_mass_model.js`;
+- production code не імпортується;
+- прихований global state не створюється;
+- додано 8 контрактних тестів:
+  - THREE-ZONE-GATE-ALLOW-HEALTHY-NATURAL-ENDS;
+  - THREE-ZONE-GATE-KEEP-2-ZONE-WHEN-ENDS-SAME;
+  - THREE-ZONE-GATE-MANUAL-POROUS-ENDS;
+  - THREE-ZONE-GATE-MANUAL-BRITTLE-ENDS;
+  - THREE-ZONE-GATE-BLOCK-UNKNOWN-HISTORY;
+  - THREE-ZONE-GATE-BLOCK-COSMETIC-LIFT;
+  - THREE-ZONE-GATE-BLOCK-HENNA-METALS;
+  - THREE-ZONE-GATE-MISSING-FIELDS.
+
+Що не змінювалось:
+
+- `www/core.js` не змінювався;
+- `calculateProtocol()` не змінювався;
+- `buildMassModel()` не змінювався;
+- `buildThreeZoneMassCandidate()` не змінювався;
+- `calcMixtone()` не змінювався;
+- `endsRec` не створювався;
+- `endsMass` у production не активований;
+- runtime 3-zone не активований;
+- UI не змінювався;
+- business scenarios не змінювались;
+- mapping tests не змінювались;
+- render runtime tests не змінювались.
+
+Перевірки:
+
+- `node --check test_www_mass_model.js`;
+- `node test_www_mass_model.js`;
+- `node --check www/core.js`;
+- `node --check test_www_mapping.js`;
+- `node test_www_mapping.js`;
+- `node --check test_www_business_scenarios.js`;
+- `node test_www_business_scenarios.js`;
+- `node --check test_www_render_runtime.js`;
+- `node test_www_render_runtime.js`.
+
+Результат:
+
+- `test_www_mass_model.js` тепер обробляє 24 scenarios;
+- всі тести пройшли;
+- 3-zone activation gate зафіксований як future contract;
+- production runtime лишається 2-zone;
+- `endsRec` не реалізований;
+- `endsMass` у production лишається `null`.
+
+Залишкові ризики:
+
+- 3-zone runtime ще не реалізований;
+- real production helper `classifyThreeZoneActivation()` ще не створений;
+- `endsRec` ще не реалізований;
+- `endsMass` ще підключений до production flow;
+- powder surcharge nominal/actual contract ще не перенесений у runtime;
+- наступна фаза має бути planning для safe production gate implementation, не пряме створення `endsRec`.
+
