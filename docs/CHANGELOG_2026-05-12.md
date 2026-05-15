@@ -653,3 +653,60 @@ Commit:
 - `endsRec` ще не реалізований.
 - Powder surcharge contract ще не перенесений у production.
 - Наступна фаза має бути окремим планом 3-zone helper support.
+
+## Inactive three zone mass model helper
+
+Commit:
+
+`4efc3d4 Add inactive three zone mass model helper`
+
+## Що змінено
+
+- додано inactive helper `buildThreeZoneMassCandidate()`;
+- helper розміщено після `buildMassModel()` і перед `calculateProtocol()`;
+- helper рахує future 3-zone candidate mass за split 30/50/20 або іншим переданим split;
+- `rootMass` рахується через `Math.round(totalMass * rootPct)`;
+- `endsMass` рахується через `Math.round(totalMass * endsPct)`;
+- `lengthMass` рахується як remainder: `totalMass - rootMass - endsMass`;
+- додано 4 тести:
+  - BUILD-THREE-ZONE-CANDIDATE-SHAPE;
+  - BUILD-THREE-ZONE-CANDIDATE-NULL-PROPAGATION;
+  - BUILD-THREE-ZONE-CANDIDATE-SUM-CONTRACT;
+  - BUILD-THREE-ZONE-CANDIDATE-MODE-FLAG.
+
+## Що не змінювалось
+
+- `calculateProtocol()` не викликає новий helper;
+- `buildMassModel()` не змінював production behavior;
+- runtime 3-zone не активований;
+- `endsMass` у production лишається `null`;
+- `endsRec` не створювався;
+- UI не змінювався;
+- business scenarios не змінювались;
+- формули, оксид, `calcMixtone` не змінювались.
+
+## Перевірки
+
+- `node --check www/core.js`;
+- `node --check test_www_mass_model.js`;
+- `node test_www_mass_model.js`;
+- `node --check test_www_mapping.js`;
+- `node test_www_mapping.js`;
+- `node --check test_www_business_scenarios.js`;
+- `node test_www_business_scenarios.js`;
+- `node --check test_www_render_runtime.js`;
+- `node test_www_render_runtime.js`.
+
+## Результат
+
+- `test_www_mass_model.js` обробляє 16 scenarios;
+- всі тести пройшли;
+- `buildThreeZoneMassCandidate()` існує тільки як inactive helper;
+- production runtime лишається 2-zone.
+
+## Залишкові ризики
+
+- 3-zone runtime ще не реалізований;
+- `endsRec` ще не реалізований;
+- powder surcharge nominal/actual contract ще не перенесений у runtime;
+- наступна фаза має бути planning для safe 3-zone activation gate, не прямий `endsRec`.
