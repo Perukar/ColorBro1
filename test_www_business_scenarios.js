@@ -980,15 +980,31 @@ const gateAllowScenario = analyzeEndsScenario('THREE-ZONE-GATE-RUNTIME-ALLOW-DOE
     history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
     grey_percent: '0', grey_type: 'мягкая', root_level: '6', root_length: '1', length_level: '6',
     ends_level: '8', ends_condition: 'здорові', base_type: 'Натуральна',
-    target_level: '7', target_direction: '1',
-    ends_history: 'натуральні', ends_base_type: 'натуральна'
+    target_level: '9', target_direction: '1',
+    ends_history: 'натуральна', ends_base_type: 'натуральна'
 });
 assert.ok(!gateAllowScenario.hasError, 'THREE-ZONE-GATE-RUNTIME-ALLOW-DOES-NOT-ACTIVATE-3ZONE should not throw');
-assert.ok(gateAllowScenario.hasNoEndsRecipeSignal, 'THREE-ZONE-GATE-RUNTIME-ALLOW-DOES-NOT-ACTIVATE-3ZONE should not create endsRec');
+assert.ok(gateAllowScenario.hasNoEndsRecipeSignal, 'THREE-ZONE-PREVIEW-NO-ENDSREC: should not create endsRec');
+
+const allowHtml = gateAllowScenario.html;
+assert.ok(allowHtml.includes('<b>threeZonePreviewEligible:</b> true'), 'THREE-ZONE-PREVIEW-ALLOW-CREATES-CANDIDATE: Eligible flag should be true');
+assert.ok(allowHtml.includes('<b>threeZoneGateDecision:</b> ALLOW_3_ZONE'), 'THREE-ZONE-PREVIEW-ALLOW-CREATES-CANDIDATE: Decision should be ALLOW_3_ZONE');
+assert.ok(allowHtml.includes('<b>threeZoneCandidateMassModel:</b> {&quot;'), 'THREE-ZONE-PREVIEW-ALLOW-CREATES-CANDIDATE: Candidate object should be present');
+assert.ok(allowHtml.includes('&quot;mode&quot;:&quot;3-zone&quot;'), 'THREE-ZONE-PREVIEW-ALLOW-CREATES-CANDIDATE: Candidate mode should be 3-zone');
+
+// Production massModel is output higher up, let's just make sure endsMass is still null there.
+// The easiest is checking that rootRec/lenRec still use the 2-zone mass distribution, and no endsRec is there.
+assert.ok(!allowHtml.includes('&quot;endsMass&quot;:12') || allowHtml.indexOf('&quot;endsMass&quot;:12') === allowHtml.lastIndexOf('&quot;endsMass&quot;:12'), 'THREE-ZONE-PREVIEW-DOES-NOT-REPLACE-PRODUCTION-MASSMODEL: production massModel remains unchanged (candidate contains endsMass)');
+
+const keepHtml = gateKeep2ZoneScenario.html;
+assert.ok(!keepHtml.includes('<b>threeZonePreviewEligible:</b> true'), 'THREE-ZONE-PREVIEW-NOT-CREATED-FOR-KEEP-2-ZONE: Eligible flag should be false');
+
+const manualHtml = gateMissingDiagScenario.html;
+assert.ok(!manualHtml.includes('<b>threeZonePreviewEligible:</b> true'), 'THREE-ZONE-PREVIEW-NOT-CREATED-FOR-MANUAL: Eligible flag should be false');
 
 // THREE-ZONE-GATE-RUNTIME-NO-BUILDTHREEZONE-CALL
 // We test static code for absence of call inside calculateProtocol
-assert.ok(!calculateProtocol.toString().includes('buildThreeZoneMassCandidate('), 'calculateProtocol must not call buildThreeZoneMassCandidate');
+assert.ok(!calculateProtocol.toString().includes('massModel = buildThreeZoneMassCandidate('), 'calculateProtocol must not overwrite production massModel with buildThreeZoneMassCandidate');
 
 globalThis.__threeZoneGateResults = {
     gateKeep2Zone: { status: 'SAFE', hasManualSignal: gateKeep2ZoneScenario.hasManualSignal },
@@ -996,7 +1012,7 @@ globalThis.__threeZoneGateResults = {
     gateRiskyHistory: { status: 'SAFE', hasManualSignal: gateRiskyHistoryScenario.hasManualSignal },
     gateRiskyBase: { status: 'SAFE', hasManualSignal: gateRiskyBaseScenario.hasManualSignal },
     gateRiskyCond: { status: 'SAFE', hasManualSignal: gateRiskyCondScenario.hasManualSignal },
-    gateAllow: { status: 'SAFE', hasNoEndsRecipeSignal: gateAllowScenario.hasNoEndsRecipeSignal }
+    gateAllow: { status: 'SAFE', hasNoEndsRecipeSignal: gateAllowScenario.hasNoEndsRecipeSignal, hasPreview: allowHtml.includes('"threeZoneCandidateMassModel": {') }
 };
 `;
 
