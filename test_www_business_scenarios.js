@@ -994,13 +994,14 @@ assert.ok(allowHtml.includes('&quot;mode&quot;:&quot;3-zone&quot;'), 'THREE-ZONE
 assert.ok(allowHtml.includes('<b>threeZonePreviewOnly:</b> true'), 'THREE-ZONE-PREVIEW-CONTRACT-FLAT-LOCK-FIELDS: PreviewOnly flat flag should be true');
 assert.ok(allowHtml.includes('<b>threeZoneEndsRecipeReady:</b> false'), 'THREE-ZONE-PREVIEW-CONTRACT-FLAT-LOCK-FIELDS: EndsRecipeReady flat flag should be false');
 assert.ok(!allowHtml.includes('<b>diagnostics:</b>'), 'THREE-ZONE-PREVIEW-CONTRACT-NO-NESTED-DIAGNOSTICS: should not contain collapsed nested diagnostics object');
-
+assert.ok(allowHtml.includes('⚠️ ДІАГНОСТИКА: Кінці відповідають умовам для майбутньої 3-зонної логіки'), 'THREE-ZONE-PREVIEW-NOTE-APPEARS-ON-ALLOW: Warning should appear for ALLOW_3_ZONE');
 // Production massModel is output higher up, let's just make sure endsMass is still null there.
 // The easiest is checking that rootRec/lenRec still use the 2-zone mass distribution, and no endsRec is there.
 assert.ok(!allowHtml.includes('&quot;endsMass&quot;:12') || allowHtml.indexOf('&quot;endsMass&quot;:12') === allowHtml.lastIndexOf('&quot;endsMass&quot;:12'), 'THREE-ZONE-PREVIEW-DOES-NOT-REPLACE-PRODUCTION-MASSMODEL: production massModel remains unchanged (candidate contains endsMass)');
 
 const keepHtml = gateKeep2ZoneScenario.html;
 assert.ok(!keepHtml.includes('<b>threeZonePreviewEligible:</b> true'), 'THREE-ZONE-PREVIEW-NOT-CREATED-FOR-KEEP-2-ZONE: Eligible flag should be false');
+assert.ok(!keepHtml.includes('⚠️ ДІАГНОСТИКА: Кінці відповідають умовам для майбутньої 3-зонної логіки'), 'THREE-ZONE-PREVIEW-NOTE-ABSENT-ON-KEEP: Warning should not appear for KEEP_2_ZONE');
 
 const manualHtml = gateMissingDiagScenario.html;
 assert.ok(!manualHtml.includes('<b>threeZonePreviewEligible:</b> true'), 'THREE-ZONE-PREVIEW-NOT-CREATED-FOR-MANUAL: Eligible flag should be false');

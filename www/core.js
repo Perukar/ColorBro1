@@ -875,6 +875,7 @@ const pigmentMap = {
                         threeZonePreviewOnly = true;
                         threeZoneEndsRecipeReady = false;
                         threeZoneCandidateMassModel = buildThreeZoneMassCandidate(length, density, { rootPct: 0.3, lengthPct: 0.5, endsPct: 0.2 });
+                        warnings.push('⚠️ ДІАГНОСТИКА: Кінці відповідають умовам для майбутньої 3-зонної логіки, але автоматичний рецепт для кінців ще не реалізований. Поточний протокол залишається 2-зонним. Окреме рішення по кінцях майстер приймає вручну після візуальної оцінки полотна.');
                         diagnostics.push('(діагностична: ends_condition сумісна з майбутньою 3-zone логікою)');
                     } else if (gateDecision.decision === 'MANUAL_REQUIRED') {
                         // Convert to manual decision; add warning
