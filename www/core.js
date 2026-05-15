@@ -389,6 +389,76 @@ const pigmentMap = {
          * PRODUCTION HELPER — Production 3-zone activation gate.
          * Pure function. НЕ викликається з calculateProtocol().
          */
+        
+        function classifyEndsRecEligibility(context) {
+            const ends_level = context.ends_level;
+            const ends_condition = context.ends_condition;
+            const ends_history = context.ends_history;
+            const ends_base_type = context.ends_base_type;
+            const target_level = context.target_level;
+            const length_level = context.length_level;
+
+            const missing = [];
+            if (typeof ends_level !== 'number') missing.push('ends_level');
+            if (!ends_condition) missing.push('ends_condition');
+            if (!ends_history) missing.push('ends_history');
+            if (!ends_base_type) missing.push('ends_base_type');
+            if (typeof target_level !== 'number') missing.push('target_level');
+
+            const eCond = String(ends_condition || '').toLowerCase();
+            const eHist = String(ends_history || '').toLowerCase();
+            const eBase = String(ends_base_type || '').toLowerCase();
+
+            const isDamaged = ['пористі', 'ламкі', 'сильно пошкоджені', 'критично пошкоджені', 'porous', 'brittle', 'damaged', 'critical'].some(c => eCond.includes(c));
+            const isBrittle = ['ламкі', 'сильно пошкоджені', 'критично пошкоджені', 'brittle', 'critical', 'damaged'].some(c => eCond.includes(c));
+            const isUnknownHistory = eHist.includes('невідома') || eHist === 'unknown';
+            const isCosmeticHistory = ['косметичний', 'косметична', 'cosmetic', 'dark cosmetic', 'темний косметичний', 'remover', 'змивка'].some(c => eHist.includes(c));
+            const isHennaMetals = eHist.includes('хна') || eHist.includes('henna_metals') || eHist.includes('метали');
+            const isCosmeticBase = ['косметична', 'змішана', 'cosmetic', 'mixed'].some(c => eBase.includes(c));
+            const isNaturalBase = ['натуральна', 'natural'].some(c => eBase.includes(c));
+
+            const needsLift = target_level > ends_level;
+            const isCosmeticLift = needsLift && (isCosmeticHistory || isCosmeticBase);
+            const isDamagedLift = needsLift && isDamaged;
+            
+            if (isHennaMetals) {
+                return { status: "BLOCKED", reason: "Henna or metals present", requiredFieldsMissing: missing, riskFlags: ["henna_metals"], allowedProcess: null };
+            }
+            if (isCosmeticLift) {
+                return { status: "BLOCKED", reason: "Cannot lift cosmetic pigment", requiredFieldsMissing: missing, riskFlags: ["cosmetic_lift"], allowedProcess: null };
+            }
+            if (isDamagedLift || (needsLift && isBrittle)) {
+                return { status: "BLOCKED", reason: "Cannot lift damaged ends", requiredFieldsMissing: missing, riskFlags: ["damaged_lift"], allowedProcess: null };
+            }
+            if (eHist.includes('змивка') || eHist.includes('remover')) {
+                return { status: "BLOCKED", reason: "After remover", requiredFieldsMissing: missing, riskFlags: ["after_remover"], allowedProcess: null };
+            }
+            
+            if (missing.length > 0) {
+                return { status: "MANUAL_REQUIRED", reason: "Missing critical fields", requiredFieldsMissing: missing, riskFlags: ["missing_fields"], allowedProcess: null };
+            }
+            if (isUnknownHistory) {
+                return { status: "MANUAL_REQUIRED", reason: "Unknown ends history", requiredFieldsMissing: [], riskFlags: ["unknown_history"], allowedProcess: null };
+            }
+            if (length_level !== undefined && length_level !== null) {
+                if ((target_level > ends_level && target_level < length_level) || (target_level < ends_level && target_level > length_level)) {
+                    return { status: "MANUAL_REQUIRED", reason: "Target between length and ends", requiredFieldsMissing: [], riskFlags: ["ambiguous_target"], allowedProcess: null };
+                }
+            }
+            if (ends_level >= 9 && (ends_level - target_level) >= 3) {
+                return { status: "MANUAL_REQUIRED", reason: "Significant darkening requires prepigmentation", requiredFieldsMissing: [], riskFlags: ["prepig_required"], allowedProcess: null };
+            }
+            if (isDamaged) {
+                return { status: "MANUAL_REQUIRED", reason: "Porous/damaged ends need manual assessment", requiredFieldsMissing: [], riskFlags: ["damaged_ends"], allowedProcess: null };
+            }
+
+            if (!needsLift && !isDamaged && !isCosmeticHistory && isNaturalBase) {
+                return { status: "SAFE_FOR_TONING", reason: "Low risk toning", requiredFieldsMissing: [], riskFlags: [], allowedProcess: "toning" };
+            }
+
+            return { status: "MANUAL_REQUIRED", reason: "Fallback manual assessment", requiredFieldsMissing: [], riskFlags: ["fallback"], allowedProcess: null };
+        }
+
         function classifyThreeZoneActivation(input) {
             const { ends_level, length_level, root_level, ends_condition, ends_history, ends_base_type, target_level } = input;
             
