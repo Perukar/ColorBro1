@@ -991,6 +991,9 @@ assert.ok(allowHtml.includes('<b>threeZonePreviewEligible:</b> true'), 'THREE-ZO
 assert.ok(allowHtml.includes('<b>threeZoneGateDecision:</b> ALLOW_3_ZONE'), 'THREE-ZONE-PREVIEW-ALLOW-CREATES-CANDIDATE: Decision should be ALLOW_3_ZONE');
 assert.ok(allowHtml.includes('<b>threeZoneCandidateMassModel:</b> {&quot;'), 'THREE-ZONE-PREVIEW-ALLOW-CREATES-CANDIDATE: Candidate object should be present');
 assert.ok(allowHtml.includes('&quot;mode&quot;:&quot;3-zone&quot;'), 'THREE-ZONE-PREVIEW-ALLOW-CREATES-CANDIDATE: Candidate mode should be 3-zone');
+assert.ok(allowHtml.includes('<b>threeZonePreviewOnly:</b> true'), 'THREE-ZONE-PREVIEW-CONTRACT-FLAT-LOCK-FIELDS: PreviewOnly flat flag should be true');
+assert.ok(allowHtml.includes('<b>threeZoneEndsRecipeReady:</b> false'), 'THREE-ZONE-PREVIEW-CONTRACT-FLAT-LOCK-FIELDS: EndsRecipeReady flat flag should be false');
+assert.ok(!allowHtml.includes('<b>diagnostics:</b>'), 'THREE-ZONE-PREVIEW-CONTRACT-NO-NESTED-DIAGNOSTICS: should not contain collapsed nested diagnostics object');
 
 // Production massModel is output higher up, let's just make sure endsMass is still null there.
 // The easiest is checking that rootRec/lenRec still use the 2-zone mass distribution, and no endsRec is there.

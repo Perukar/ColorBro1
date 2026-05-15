@@ -849,6 +849,8 @@ const pigmentMap = {
                 let threeZonePreviewEligible = false;
                 let threeZoneGateDecision = null;
                 let threeZoneCandidateMassModel = null;
+                let threeZonePreviewOnly = undefined;
+                let threeZoneEndsRecipeReady = undefined;
 
                 // Three Zone Activation Gate: diagnostic/manual gate for ends evaluation
                 if (Number.isFinite(eLevel) && eLevel !== lLevel) {
@@ -870,6 +872,8 @@ const pigmentMap = {
                         // Diagnostic signal: ALLOW_3_ZONE indicates safe conditions for ends
                         // But do NOT activate 3-zone runtime; this is for future planning
                         threeZonePreviewEligible = true;
+                        threeZonePreviewOnly = true;
+                        threeZoneEndsRecipeReady = false;
                         threeZoneCandidateMassModel = buildThreeZoneMassCandidate(length, density, { rootPct: 0.3, lengthPct: 0.5, endsPct: 0.2 });
                         diagnostics.push('(діагностична: ends_condition сумісна з майбутньою 3-zone логікою)');
                     } else if (gateDecision.decision === 'MANUAL_REQUIRED') {
@@ -905,7 +909,7 @@ const pigmentMap = {
                     mixtoneInfo: { root: rootRec.mixtone, length: lenRec.mixtone },
                     massModel: Object.assign({}, massModel, { rootMass: rMass, lengthMass: lMass }),
                     timingInfo: { totalMinutes: timing, modifierMinutes: tMod },
-                    reasons: { rootStep: rStep, lengthStep: lStep, endsLevel: eLevel, endsCondition, endsHistory, endsBaseType, hotRoot, grey, specialBlondBase6NeedsConfirmation, significantDarkeningNeedsPrepig, zoneLevelDifference, zoneProcessesDiffer, zoneDecisionNeedsConfirmation, endsLevelProvided, endsDiffersFromRoot, endsDiffersFromLength, endsLevelNeedsConfirmation, endsConditionProvided, riskyEndsCondition, endsLighteningNeeded, endsChemicalInterventionLikely, endsConditionNeedsConfirmation, endsConditionMissingWithDifferentLevel, endsHistoryProvided, endsBaseTypeProvided, riskyEndsHistory, riskyEndsBaseType, endsHistoryNeedsConfirmation, endsBaseTypeNeedsConfirmation, threeZonePreviewEligible, threeZoneGateDecision, threeZoneCandidateMassModel }
+                    reasons: { rootStep: rStep, lengthStep: lStep, endsLevel: eLevel, endsCondition, endsHistory, endsBaseType, hotRoot, grey, specialBlondBase6NeedsConfirmation, significantDarkeningNeedsPrepig, zoneLevelDifference, zoneProcessesDiffer, zoneDecisionNeedsConfirmation, endsLevelProvided, endsDiffersFromRoot, endsDiffersFromLength, endsLevelNeedsConfirmation, endsConditionProvided, riskyEndsCondition, endsLighteningNeeded, endsChemicalInterventionLikely, endsConditionNeedsConfirmation, endsConditionMissingWithDifferentLevel, endsHistoryProvided, endsBaseTypeProvided, riskyEndsHistory, riskyEndsBaseType, endsHistoryNeedsConfirmation, endsBaseTypeNeedsConfirmation, threeZonePreviewEligible, threeZoneGateDecision, threeZoneCandidateMassModel, threeZonePreviewOnly, threeZoneEndsRecipeReady }
                 });
                 document.getElementById('output').innerHTML = PerucarWwwRenderV1.renderStateToHtml(state);
             } catch (e) {
