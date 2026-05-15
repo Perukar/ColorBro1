@@ -1049,3 +1049,68 @@ Commit:
 - `endsRec` ще не реалізований;
 - powder surcharge nominal/actual contract ще не перенесений у runtime;
 - наступна фаза має бути planning для production-safe 3-zone activation, не пряме створення `endsRec`.
+
+
+## Three zone eligibility warning note
+
+Commit:
+
+90d5b62 Add three zone eligibility warning note
+
+## Що змінено
+
+- додано видимий warning/protocol note для майстра при `ALLOW_3_ZONE`;
+- warning додається у масив `warnings`;
+- warning пояснює, що кінці відповідають умовам для майбутньої 3-зонної логіки, але автоматичний рецепт для кінців ще не реалізований;
+- поточний протокол залишається 2-зонним;
+- додано/оновлено business tests для перевірки:
+  - warning з’являється для `ALLOW_3_ZONE`;
+  - warning не з’являється для `KEEP_2_ZONE`;
+  - warning не переводить `APPROVED` у `MANUAL_REQUIRED`;
+  - production `massModel` залишається 2-zone;
+  - `endsRec` не створюється.
+
+## Що не змінювалось
+
+- production 3-zone mass не активовано;
+- production `massModel.mode` лишається `2-zone`;
+- production `massModel.endsMass` лишається `null`;
+- `threeZoneCandidateMassModel` не замінює production `massModel`;
+- `threeZoneCandidateMassModel` не впливає на `rootRec`;
+- `threeZoneCandidateMassModel` не впливає на `lenRec`;
+- `endsRec` не створювався;
+- рецепт для кінців не створювався;
+- `manualDecisions` не використовуються для цього warning;
+- `calcMixtone()` не змінювався;
+- формули не змінювались;
+- oxidizer logic не змінювалась;
+- renderer/UI не змінювався;
+- mapping не змінювався.
+
+## Перевірки
+
+- `node --check www/core.js`;
+- `node --check test_www_business_scenarios.js`;
+- `node test_www_business_scenarios.js`;
+- `node test_www_mass_model.js`;
+- `node test_www_mapping.js`;
+- `node test_www_render_runtime.js`.
+
+## Результат
+
+- audit commit `90d5b62` пройшов;
+- full suite green;
+- risk: LOW;
+- warning працює як інформаційний професійний сигнал;
+- production runtime лишається 2-zone;
+- `endsRec` ще не реалізований;
+- production `endsMass` ще не активаваний.
+
+## Залишкові ризики
+
+- warning не замінює реальний окремий рецепт кінців;
+- майстер все ще має вручну оцінювати кінці;
+- production 3-zone mass activation ще не реалізована;
+- `endsRec` ще не реалізований;
+- powder surcharge nominal/actual contract ще не перенесений у runtime;
+- наступна фаза має бути planning для production-safe 3-zone activation або для endsRec design, але не пряме автоматичне створення рецепта кінців.
