@@ -846,6 +846,43 @@
                     });
                 }
 
+                // Three Zone Activation Gate: diagnostic/manual gate for ends evaluation
+                if (Number.isFinite(eLevel) && eLevel !== lLevel) {
+                    const gateDecision = classifyThreeZoneActivation({
+                        ends_level: eLevel,
+                        length_level: lLevel,
+                        root_level: rLevel,
+                        ends_condition: endsCondition,
+                        ends_history: endsHistory,
+                        ends_base_type: endsBaseType,
+                        target_level: tLevel
+                    });
+
+                    if (gateDecision.decision === 'KEEP_2_ZONE') {
+                        // No additional action; production remains 2-zone
+                    } else if (gateDecision.decision === 'ALLOW_3_ZONE') {
+                        // Diagnostic signal: ALLOW_3_ZONE indicates safe conditions for ends
+                        // But do NOT activate 3-zone runtime; this is for future planning
+                        diagnostics.push('(діагностична: ends_condition сумісна з майбутньою 3-zone логікою)');
+                    } else if (gateDecision.decision === 'MANUAL_REQUIRED') {
+                        // Convert to manual decision; add warning
+                        if (!manualDecisions.some(md => md.title.includes('Кінці') || md.title.includes('ends'))) {
+                            warnings.push(`⚠️ GATE: Кінці потребують ручного рішення. Причина: ${gateDecision.reason}`);
+                            manualDecisions.push({
+                                title: "Three Zone Activation Gate",
+                                message: `Activation gate для кінців повернув MANUAL_REQUIRED (${gateDecision.reason}). Перевірте стан кінців перед рецептом.`
+                            });
+                        }
+                    } else if (gateDecision.decision === 'BLOCKED') {
+                        // Convert BLOCKED to MANUAL_REQUIRED; add strict warning
+                        warnings.push(`⚠️ GATE: Кінці ЗАБЛОКОВАНІ. Причина: ${gateDecision.reason}`);
+                        manualDecisions.push({
+                            title: "Three Zone Activation Gate — BLOCKED",
+                            message: `Activation gate для кінців повернув BLOCKED (${gateDecision.reason}). Блокування: автоматичне рішення по кінцях заборонено. Потрібне ручне рішення майстра.`
+                        });
+                    }
+                }
+
                 const state = buildWwwRenderState({
                     status: manualDecisions.length > 0 ? 'MANUAL_REQUIRED' : 'APPROVED',
                     target: `${tLevel}.${tDir}`,

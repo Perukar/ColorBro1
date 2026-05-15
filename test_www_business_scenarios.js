@@ -922,6 +922,82 @@ globalThis.__massModelDiagnosticResults = {
     blockUnknownHistory: { status: 'SAFE', hasManualSignal: blockUnknownHistoryScenario.hasManualSignal },
     powderSurcharge: { status: 'KNOWN_LIMITATION', limitation: 'endsRec not implemented, per-zone surcharge not verifiable' }
 };
+// ============================================================================
+// THREE ZONE ACTIVATION GATE RUNTIME INTEGRATION TESTS
+// ============================================================================
+
+const gateKeep2ZoneScenario = analyzeEndsScenario('THREE-ZONE-GATE-RUNTIME-KEEP-2-ZONE-SAME-ENDS', {
+    history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
+    grey_percent: '0', grey_type: 'мягкая', root_level: '6', root_length: '1', length_level: '6',
+    ends_level: '6', ends_condition: 'здорові', base_type: 'Натуральна',
+    target_level: '6', target_direction: '1',
+    ends_history: 'натуральні', ends_base_type: 'натуральна'
+});
+assert.ok(!gateKeep2ZoneScenario.hasError, 'THREE-ZONE-GATE-RUNTIME-KEEP-2-ZONE-SAME-ENDS should not throw');
+assert.ok(!gateKeep2ZoneScenario.hasManualSignal, 'THREE-ZONE-GATE-RUNTIME-KEEP-2-ZONE-SAME-ENDS should not require manual signal for safe same-level ends');
+
+const gateMissingDiagScenario = analyzeEndsScenario('THREE-ZONE-GATE-RUNTIME-MISSING-DIAGNOSTICS-MANUAL', {
+    history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
+    grey_percent: '0', grey_type: 'мягкая', root_level: '6', root_length: '1', length_level: '6',
+    ends_level: '8', ends_condition: '', base_type: 'Натуральна',
+    target_level: '7', target_direction: '1',
+    ends_history: '', ends_base_type: ''
+});
+assert.ok(!gateMissingDiagScenario.hasError, 'THREE-ZONE-GATE-RUNTIME-MISSING-DIAGNOSTICS-MANUAL should not throw');
+assert.ok(gateMissingDiagScenario.hasManualSignal, 'THREE-ZONE-GATE-RUNTIME-MISSING-DIAGNOSTICS-MANUAL should require manual signal');
+
+const gateRiskyHistoryScenario = analyzeEndsScenario('THREE-ZONE-GATE-RUNTIME-RISKY-HISTORY-MANUAL', {
+    history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
+    grey_percent: '0', grey_type: 'мягкая', root_level: '6', root_length: '1', length_level: '6',
+    ends_level: '8', ends_condition: 'здорові', base_type: 'Натуральна',
+    target_level: '7', target_direction: '1',
+    ends_history: 'хна / метали', ends_base_type: 'натуральна'
+});
+assert.ok(!gateRiskyHistoryScenario.hasError, 'THREE-ZONE-GATE-RUNTIME-RISKY-HISTORY-MANUAL should not throw');
+assert.ok(gateRiskyHistoryScenario.hasManualSignal, 'THREE-ZONE-GATE-RUNTIME-RISKY-HISTORY-MANUAL should require manual signal');
+
+const gateRiskyBaseScenario = analyzeEndsScenario('THREE-ZONE-GATE-RUNTIME-RISKY-BASE-TYPE-MANUAL', {
+    history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
+    grey_percent: '0', grey_type: 'мягкая', root_level: '6', root_length: '1', length_level: '6',
+    ends_level: '8', ends_condition: 'здорові', base_type: 'Натуральна',
+    target_level: '7', target_direction: '1',
+    ends_history: 'натуральні', ends_base_type: 'змішана / нерівномірна'
+});
+assert.ok(!gateRiskyBaseScenario.hasError, 'THREE-ZONE-GATE-RUNTIME-RISKY-BASE-TYPE-MANUAL should not throw');
+assert.ok(gateRiskyBaseScenario.hasManualSignal, 'THREE-ZONE-GATE-RUNTIME-RISKY-BASE-TYPE-MANUAL should require manual signal');
+
+const gateRiskyCondScenario = analyzeEndsScenario('THREE-ZONE-GATE-RUNTIME-RISKY-CONDITION-MANUAL', {
+    history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
+    grey_percent: '0', grey_type: 'мягкая', root_level: '6', root_length: '1', length_level: '6',
+    ends_level: '8', ends_condition: 'критично пошкоджені', base_type: 'Натуральна',
+    target_level: '7', target_direction: '1',
+    ends_history: 'натуральні', ends_base_type: 'натуральна'
+});
+assert.ok(!gateRiskyCondScenario.hasError, 'THREE-ZONE-GATE-RUNTIME-RISKY-CONDITION-MANUAL should not throw');
+assert.ok(gateRiskyCondScenario.hasManualSignal, 'THREE-ZONE-GATE-RUNTIME-RISKY-CONDITION-MANUAL should require manual signal');
+
+const gateAllowScenario = analyzeEndsScenario('THREE-ZONE-GATE-RUNTIME-ALLOW-DOES-NOT-ACTIVATE-3ZONE', {
+    history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
+    grey_percent: '0', grey_type: 'мягкая', root_level: '6', root_length: '1', length_level: '6',
+    ends_level: '8', ends_condition: 'здорові', base_type: 'Натуральна',
+    target_level: '7', target_direction: '1',
+    ends_history: 'натуральні', ends_base_type: 'натуральна'
+});
+assert.ok(!gateAllowScenario.hasError, 'THREE-ZONE-GATE-RUNTIME-ALLOW-DOES-NOT-ACTIVATE-3ZONE should not throw');
+assert.ok(gateAllowScenario.hasNoEndsRecipeSignal, 'THREE-ZONE-GATE-RUNTIME-ALLOW-DOES-NOT-ACTIVATE-3ZONE should not create endsRec');
+
+// THREE-ZONE-GATE-RUNTIME-NO-BUILDTHREEZONE-CALL
+// We test static code for absence of call inside calculateProtocol
+assert.ok(!calculateProtocol.toString().includes('buildThreeZoneMassCandidate('), 'calculateProtocol must not call buildThreeZoneMassCandidate');
+
+globalThis.__threeZoneGateResults = {
+    gateKeep2Zone: { status: 'SAFE', hasManualSignal: gateKeep2ZoneScenario.hasManualSignal },
+    gateMissingDiag: { status: 'SAFE', hasManualSignal: gateMissingDiagScenario.hasManualSignal },
+    gateRiskyHistory: { status: 'SAFE', hasManualSignal: gateRiskyHistoryScenario.hasManualSignal },
+    gateRiskyBase: { status: 'SAFE', hasManualSignal: gateRiskyBaseScenario.hasManualSignal },
+    gateRiskyCond: { status: 'SAFE', hasManualSignal: gateRiskyCondScenario.hasManualSignal },
+    gateAllow: { status: 'SAFE', hasNoEndsRecipeSignal: gateAllowScenario.hasNoEndsRecipeSignal }
+};
 `;
 
 const sandbox = {
@@ -977,5 +1053,12 @@ assert.strictEqual(sandbox.__massModelDiagnosticResults.blockCosmeticLift.hasMan
 assert.strictEqual(sandbox.__massModelDiagnosticResults.blockDamagedEnds.hasManualSignal, true, 'SAFE: Damaged ends should be blocked with manual signal');
 assert.strictEqual(sandbox.__massModelDiagnosticResults.blockUnknownHistory.hasManualSignal, true, 'SAFE: Unknown history should be blocked with manual signal');
 assert.ok(['KNOWN_LIMITATION'].includes(sandbox.__massModelDiagnosticResults.powderSurcharge.status), 'DIAGNOSTIC: Powder surcharge per zone is a known limitation');
+
+assert.strictEqual(sandbox.__threeZoneGateResults.gateKeep2Zone.hasManualSignal, false);
+assert.strictEqual(sandbox.__threeZoneGateResults.gateMissingDiag.hasManualSignal, true);
+assert.strictEqual(sandbox.__threeZoneGateResults.gateRiskyHistory.hasManualSignal, true);
+assert.strictEqual(sandbox.__threeZoneGateResults.gateRiskyBase.hasManualSignal, true);
+assert.strictEqual(sandbox.__threeZoneGateResults.gateRiskyCond.hasManualSignal, true);
+assert.strictEqual(sandbox.__threeZoneGateResults.gateAllow.hasNoEndsRecipeSignal, true);
 
 console.log('WWW business scenario test passed');
