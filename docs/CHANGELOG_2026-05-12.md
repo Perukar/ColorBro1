@@ -917,3 +917,69 @@ d796217 Integrate three zone activation gate as diagnostic manual gate
 - `endsRec` ще не реалізований;
 - powder surcharge nominal/actual contract ще не перенесений у runtime;
 - наступна фаза має бути planning для safe `ALLOW_3_ZONE` handling, не пряме створення `endsRec`.
+
+## Readonly three zone mass preview
+
+Commit:
+
+5be27f0 Add readonly three zone mass preview
+
+## Що змінено
+
+- додано readonly preview для 3-zone mass candidate;
+- `calculateProtocol()` тепер викликає `buildThreeZoneMassCandidate()` тільки якщо gate decision дорівнює `ALLOW_3_ZONE`;
+- результат preview зберігається окремо як diagnostic/readonly data;
+- production `massModel` не перезаписується;
+- production `massModel.mode` лишається `2-zone`;
+- production `massModel.endsMass` лишається `null`;
+- `threeZoneCandidateMassModel` не використовується для `rootRec`;
+- `threeZoneCandidateMassModel` не використовується для `lenRec`;
+- `threeZoneCandidateMassModel` не замінює production `massModel`;
+- додано/оновлено business tests для readonly preview behavior.
+
+## Що не змінювалось
+
+- `endsRec` не створювався;
+- рецепт для кінців не створювався;
+- production 3-zone runtime не активований;
+- `rootRec` не змінений candidate-масою;
+- `lenRec` не змінений candidate-масою;
+- `buildMassModel()` не змінювався;
+- `buildThreeZoneMassCandidate()` не змінювався;
+- `classifyThreeZoneActivation()` не змінювався;
+- `calcMixtone()` не змінювався;
+- формули не змінювались;
+- oxidizer logic не змінювалась;
+- UI не змінювався;
+- mapping не змінювався;
+- render runtime tests не змінювались.
+
+## Перевірки
+
+- `node --check www/core.js`;
+- `node --check test_www_business_scenarios.js`;
+- `node test_www_business_scenarios.js`;
+- `node --check test_www_mass_model.js`;
+- `node test_www_mass_model.js`;
+- `node --check test_www_mapping.js`;
+- `node test_www_mapping.js`;
+- `node --check test_www_render_runtime.js`;
+- `node test_www_render_runtime.js`.
+
+## Результат
+
+- audit commit `5be27f0` пройшов;
+- full suite green;
+- risk: LOW;
+- readonly preview працює тільки для `ALLOW_3_ZONE`;
+- production behavior лишається 2-zone;
+- `endsRec` ще не реалізований;
+- `endsMass` ще не активований як production mass.
+
+## Залишкові ризики
+
+- `threeZoneCandidateMassModel` вже існує у runtime як preview, тому наступні фази мають суворо контролювати, щоб він не став production mass без окремого плану;
+- `endsRec` ще не реалізований;
+- production `endsMass` ще не використовується;
+- powder surcharge nominal/actual contract ще не перенесений у runtime;
+- наступна фаза має бути planning для production-safe 3-zone mass activation, не пряме створення `endsRec`.
