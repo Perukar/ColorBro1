@@ -2,6 +2,75 @@
 
 Дата: 2026-05-12
 
+## Three zone activation gate helper
+
+Commit:
+
+65f1688 Add three zone activation gate helper
+
+## Що змінено
+
+- додано production helper `classifyThreeZoneActivation()`;
+- helper розміщено у `www/core.js`;
+- helper працює як gate-рішення для майбутньої 3-zone логіки;
+- helper класифікує сценарії за рішеннями:
+  - `KEEP_2_ZONE`;
+  - `ALLOW_3_ZONE`;
+  - `MANUAL_REQUIRED`;
+  - `BLOCKED`;
+- helper не активує 3-zone runtime;
+- helper не створює recipe для кінців;
+- додано 10 tests у `test_www_mass_model.js`;
+- `test_www_mass_model.js` тепер обробляє 26 scenarios.
+
+## Що не змінювалось
+
+- `calculateProtocol()` не викликає `classifyThreeZoneActivation()`;
+- `calculateProtocol()` не викликає `buildThreeZoneMassCandidate()`;
+- `buildMassModel()` не змінював production behavior;
+- `buildThreeZoneMassCandidate()` не активований у runtime;
+- `endsRec` не створювався;
+- `endsMass` у production не активований;
+- production runtime лишається `2-zone`;
+- `calcMixtone()` не змінювався;
+- формули не змінювались;
+- oxidizer logic не змінювалась;
+- UI не змінювався;
+- mapping не змінювався;
+- business scenarios не змінювались;
+- render runtime tests не змінювались.
+
+## Перевірки
+
+- `node --check www/core.js`;
+- `node --check test_www_mass_model.js`;
+- `node test_www_mass_model.js`;
+- `node --check test_www_mapping.js`;
+- `node test_www_mapping.js`;
+- `node --check test_www_business_scenarios.js`;
+- `node test_www_business_scenarios.js`;
+- `node --check test_www_render_runtime.js`;
+- `node test_www_render_runtime.js`.
+
+## Результат
+
+- audit commit `65f1688` пройшов;
+- full suite passed;
+- risk: LOW;
+- `classifyThreeZoneActivation()` існує як production helper, але не підключений до runtime flow;
+- production behavior не змінено;
+- 3-zone runtime ще не активований;
+- `endsRec` ще не реалізований.
+
+## Залишкові ризики
+
+- helper ще не інтегрований у `calculateProtocol()`;
+- `ALLOW_3_ZONE` ще не запускає `buildThreeZoneMassCandidate()`;
+- `endsMass` ще не використовується в production;
+- `endsRec` ще не реалізований;
+- powder surcharge nominal/actual contract ще не перенесений у runtime;
+- наступна фаза має бути planning для safe runtime integration, не пряме створення `endsRec`.
+
 ## Ремонт бізнес-логіки SB-6-83
 
 Commit:
