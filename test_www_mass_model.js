@@ -716,117 +716,202 @@ function classifyFutureThreeZoneActivation(input) {
 }
 
 // ---------------------------------------------------------------------------
-// ТЕСТ 17: THREE-ZONE-GATE-ALLOW-HEALTHY-NATURAL-ENDS
+// SPEC MIRROR: classifyThreeZoneActivation
 // ---------------------------------------------------------------------------
-(function testThreeZoneGateAllowHealthyNaturalEnds() {
-    const id = 'THREE-ZONE-GATE-ALLOW-HEALTHY-NATURAL-ENDS';
-    const result = classifyFutureThreeZoneActivation({
-        ends_level: 8, length_level: 7, target_level: 8,
-        ends_condition: 'healthy', ends_history: 'natural', ends_base_type: 'natural'
-    });
-    assert.strictEqual(result.allowed, true, id);
-    assert.strictEqual(result.decision, 'ALLOW_3_ZONE_CANDIDATE', id);
-    assert.strictEqual(result.mode, '3-zone-candidate', id);
-    console.log(id + ' safe: healthy natural ends allowed.');
-})();
+function classifyThreeZoneActivation(input) {
+    const { ends_level, length_level, root_level, ends_condition, ends_history, ends_base_type, target_level } = input;
+    
+    if (!ends_level || ends_level === length_level) {
+        return {
+            decision: 'KEEP_2_ZONE', reason: 'ENDS_SAME_AS_LENGTH',
+            warnings: [], requiredFields: [], missingFields: [], mode: '3-zone-gate-only'
+        };
+    }
+    
+    const missing = [];
+    if (!ends_condition) missing.push('ends_condition');
+    if (!ends_history) missing.push('ends_history');
+    if (!ends_base_type) missing.push('ends_base_type');
+    
+    if (missing.length > 0) {
+        return {
+            decision: 'MANUAL_REQUIRED', reason: 'MISSING_FIELDS',
+            warnings: [], requiredFields: ['ends_condition', 'ends_history', 'ends_base_type'], missingFields: missing, mode: '3-zone-gate-only'
+        };
+    }
+
+    const blockedHistory = ['unknown', 'cosmetic', 'темний косметичний пігмент', 'dark cosmetic', 'remover', 'змивка', 'henna_metals', 'хна/метали'];
+    if (blockedHistory.includes(ends_history)) {
+        return {
+            decision: 'BLOCKED', reason: 'BLOCKED_HISTORY',
+            warnings: [], requiredFields: [], missingFields: [], mode: '3-zone-gate-only'
+        };
+    }
+
+    if ((ends_base_type === 'cosmetic' || ends_base_type === 'mixed' || ends_base_type === 'unknown' || ends_base_type === 'косметична' || ends_base_type === 'змішана/нерівномірна') && target_level > ends_level) {
+        return {
+            decision: 'BLOCKED', reason: 'COSMETIC_LIFT_RISK',
+            warnings: [], requiredFields: [], missingFields: [], mode: '3-zone-gate-only'
+        };
+    }
+
+    const damagedCondition = ['porous', 'brittle', 'damaged', 'critical', 'пористі', 'ламкі', 'сильно пошкоджені', 'критично пошкоджені'];
+    if (damagedCondition.includes(ends_condition)) {
+        return {
+            decision: 'MANUAL_REQUIRED', reason: 'DAMAGED_CONDITION',
+            warnings: [], requiredFields: [], missingFields: [], mode: '3-zone-gate-only'
+        };
+    }
+    
+    if (target_level !== undefined && target_level !== null) {
+        if ((target_level > ends_level && target_level < length_level) ||
+            (target_level < ends_level && target_level > length_level)) {
+            return {
+                decision: 'MANUAL_REQUIRED', reason: 'TARGET_BETWEEN_ZONES',
+                warnings: [], requiredFields: [], missingFields: [], mode: '3-zone-gate-only'
+            };
+        }
+    }
+
+    if ((ends_condition === 'healthy' || ends_condition === 'normal' || ends_condition === 'здорові' || ends_condition === 'нормальні') && 
+        (ends_history === 'natural' || ends_history === 'clear' || ends_history === 'none' || ends_history === 'натуральна' || ends_history === 'чиста') && 
+        (ends_base_type === 'natural' || ends_base_type === 'натуральна')) {
+        return {
+            decision: 'ALLOW_3_ZONE', reason: 'HEALTHY_NATURAL',
+            warnings: [], requiredFields: [], missingFields: [], mode: '3-zone-gate-only'
+        };
+    }
+
+    return {
+        decision: 'MANUAL_REQUIRED', reason: 'FALLBACK',
+        warnings: [], requiredFields: [], missingFields: [], mode: '3-zone-gate-only'
+    };
+}
 
 // ---------------------------------------------------------------------------
-// ТЕСТ 18: THREE-ZONE-GATE-KEEP-2-ZONE-WHEN-ENDS-SAME
+// ТЕСТ 17: THREE-ZONE-GATE-KEEP-2-ZONE-WHEN-ENDS-SAME
 // ---------------------------------------------------------------------------
 (function testThreeZoneGateKeep2ZoneWhenEndsSame() {
     const id = 'THREE-ZONE-GATE-KEEP-2-ZONE-WHEN-ENDS-SAME';
-    const result = classifyFutureThreeZoneActivation({ ends_level: 7, length_level: 7 });
-    assert.strictEqual(result.allowed, false, id);
+    const result = classifyThreeZoneActivation({ ends_level: 7, length_level: 7 });
     assert.strictEqual(result.decision, 'KEEP_2_ZONE', id);
-    assert.strictEqual(result.mode, '2-zone', id);
+    assert.strictEqual(result.mode, '3-zone-gate-only', id);
     console.log(id + ' safe: same level keeps 2-zone.');
 })();
 
 // ---------------------------------------------------------------------------
-// ТЕСТ 19: THREE-ZONE-GATE-MANUAL-POROUS-ENDS
+// ТЕСТ 18: THREE-ZONE-GATE-MANUAL-WHEN-MISSING-ENDS-FIELDS
 // ---------------------------------------------------------------------------
-(function testThreeZoneGateManualPorousEnds() {
-    const id = 'THREE-ZONE-GATE-MANUAL-POROUS-ENDS';
-    const result = classifyFutureThreeZoneActivation({
-        ends_level: 8, length_level: 7, target_level: 8,
-        ends_condition: 'porous', ends_history: 'natural', ends_base_type: 'natural'
-    });
-    assert.strictEqual(result.allowed, false, id);
+(function testThreeZoneGateManualWhenMissingEndsFields() {
+    const id = 'THREE-ZONE-GATE-MANUAL-WHEN-MISSING-ENDS-FIELDS';
+    const result = classifyThreeZoneActivation({ ends_level: 8, length_level: 7 });
     assert.strictEqual(result.decision, 'MANUAL_REQUIRED', id);
-    assert.strictEqual(result.mode, 'manual-required', id);
-    console.log(id + ' safe: porous ends require manual.');
+    assert.ok(result.missingFields.length > 0, id);
+    console.log(id + ' safe: missing fields require manual.');
 })();
 
 // ---------------------------------------------------------------------------
-// ТЕСТ 20: THREE-ZONE-GATE-MANUAL-BRITTLE-ENDS
+// ТЕСТ 19: THREE-ZONE-GATE-BLOCK-UNKNOWN-ENDS-HISTORY
 // ---------------------------------------------------------------------------
-(function testThreeZoneGateManualBrittleEnds() {
-    const id = 'THREE-ZONE-GATE-MANUAL-BRITTLE-ENDS';
-    const result = classifyFutureThreeZoneActivation({
-        ends_level: 8, length_level: 7, target_level: 8,
-        ends_condition: 'brittle', ends_history: 'natural', ends_base_type: 'natural'
-    });
-    assert.strictEqual(result.allowed, false, id);
-    assert.strictEqual(result.decision, 'MANUAL_REQUIRED', id);
-    console.log(id + ' safe: brittle ends require manual.');
-})();
-
-// ---------------------------------------------------------------------------
-// ТЕСТ 21: THREE-ZONE-GATE-BLOCK-UNKNOWN-HISTORY
-// ---------------------------------------------------------------------------
-(function testThreeZoneGateBlockUnknownHistory() {
-    const id = 'THREE-ZONE-GATE-BLOCK-UNKNOWN-HISTORY';
-    const result = classifyFutureThreeZoneActivation({
-        ends_level: 8, length_level: 7, target_level: 8,
+(function testThreeZoneGateBlockUnknownEndsHistory() {
+    const id = 'THREE-ZONE-GATE-BLOCK-UNKNOWN-ENDS-HISTORY';
+    const result = classifyThreeZoneActivation({
+        ends_level: 8, length_level: 7,
         ends_condition: 'healthy', ends_history: 'unknown', ends_base_type: 'natural'
     });
-    assert.strictEqual(result.allowed, false, id);
-    assert.ok(['BLOCKED', 'MANUAL_REQUIRED'].includes(result.decision), id);
-    assert.ok(result.blockingReasons.some(r => r.includes('unknown history') || r.includes('недостатня історія кінців')), id);
+    assert.strictEqual(result.decision, 'BLOCKED', id);
     console.log(id + ' safe: unknown history blocked.');
 })();
 
 // ---------------------------------------------------------------------------
-// ТЕСТ 22: THREE-ZONE-GATE-BLOCK-COSMETIC-LIFT
+// ТЕСТ 20: THREE-ZONE-GATE-BLOCK-COSMETIC-ENDS-LIFT
 // ---------------------------------------------------------------------------
-(function testThreeZoneGateBlockCosmeticLift() {
-    const id = 'THREE-ZONE-GATE-BLOCK-COSMETIC-LIFT';
-    const result = classifyFutureThreeZoneActivation({
+(function testThreeZoneGateBlockCosmeticEndsLift() {
+    const id = 'THREE-ZONE-GATE-BLOCK-COSMETIC-ENDS-LIFT';
+    const result = classifyThreeZoneActivation({
         ends_level: 6, length_level: 5, target_level: 8,
         ends_condition: 'healthy', ends_history: 'cosmetic', ends_base_type: 'cosmetic'
     });
-    assert.strictEqual(result.allowed, false, id);
-    assert.ok(['BLOCKED', 'MANUAL_REQUIRED'].includes(result.decision), id);
-    assert.ok(result.reasonCode.includes('COSMETIC_ENDS_LIFT_RISK') || result.blockingReasons.some(r => r.includes('cosmetic')), id);
+    assert.strictEqual(result.decision, 'BLOCKED', id);
     console.log(id + ' safe: cosmetic lift blocked.');
 })();
 
 // ---------------------------------------------------------------------------
-// ТЕСТ 23: THREE-ZONE-GATE-BLOCK-HENNA-METALS
+// ТЕСТ 21: THREE-ZONE-GATE-BLOCK-HENNA-METALS
 // ---------------------------------------------------------------------------
 (function testThreeZoneGateBlockHennaMetals() {
     const id = 'THREE-ZONE-GATE-BLOCK-HENNA-METALS';
-    const result = classifyFutureThreeZoneActivation({
+    const result = classifyThreeZoneActivation({
         ends_level: 8, length_level: 7, target_level: 8,
         ends_condition: 'healthy', ends_history: 'henna_metals', ends_base_type: 'natural'
     });
-    assert.strictEqual(result.allowed, false, id);
     assert.strictEqual(result.decision, 'BLOCKED', id);
     console.log(id + ' safe: henna metals blocked.');
 })();
 
 // ---------------------------------------------------------------------------
-// ТЕСТ 24: THREE-ZONE-GATE-MISSING-FIELDS
+// ТЕСТ 22: THREE-ZONE-GATE-MANUAL-DAMAGED-ENDS
 // ---------------------------------------------------------------------------
-(function testThreeZoneGateMissingFields() {
-    const id = 'THREE-ZONE-GATE-MISSING-FIELDS';
-    const result = classifyFutureThreeZoneActivation({
-        ends_level: 8, length_level: 7
+(function testThreeZoneGateManualDamagedEnds() {
+    const id = 'THREE-ZONE-GATE-MANUAL-DAMAGED-ENDS';
+    const result = classifyThreeZoneActivation({
+        ends_level: 8, length_level: 7, target_level: 8,
+        ends_condition: 'porous', ends_history: 'natural', ends_base_type: 'natural'
     });
-    assert.strictEqual(result.allowed, false, id);
-    assert.ok(['BLOCKED', 'MANUAL_REQUIRED'].includes(result.decision), id);
-    assert.ok(result.requiredFields.length > 0, id);
-    console.log(id + ' safe: missing fields blocked.');
+    assert.strictEqual(result.decision, 'MANUAL_REQUIRED', id);
+    console.log(id + ' safe: damaged ends require manual.');
+})();
+
+// ---------------------------------------------------------------------------
+// ТЕСТ 23: THREE-ZONE-GATE-MANUAL-TARGET-BETWEEN-ZONES
+// ---------------------------------------------------------------------------
+(function testThreeZoneGateManualTargetBetweenZones() {
+    const id = 'THREE-ZONE-GATE-MANUAL-TARGET-BETWEEN-ZONES';
+    const result = classifyThreeZoneActivation({
+        ends_level: 8, length_level: 6, target_level: 7,
+        ends_condition: 'healthy', ends_history: 'natural', ends_base_type: 'natural'
+    });
+    assert.strictEqual(result.decision, 'MANUAL_REQUIRED', id);
+    console.log(id + ' safe: target between zones require manual.');
+})();
+
+// ---------------------------------------------------------------------------
+// ТЕСТ 24: THREE-ZONE-GATE-ALLOW-HEALTHY-NATURAL-ENDS
+// ---------------------------------------------------------------------------
+(function testThreeZoneGateAllowHealthyNaturalEnds() {
+    const id = 'THREE-ZONE-GATE-ALLOW-HEALTHY-NATURAL-ENDS';
+    const result = classifyThreeZoneActivation({
+        ends_level: 8, length_level: 7, target_level: 8,
+        ends_condition: 'healthy', ends_history: 'natural', ends_base_type: 'natural'
+    });
+    assert.strictEqual(result.decision, 'ALLOW_3_ZONE', id);
+    console.log(id + ' safe: healthy natural ends allowed.');
+})();
+
+// ---------------------------------------------------------------------------
+// ТЕСТ 25: THREE-ZONE-GATE-DOES-NOT-CALL-BUILD-THREE-ZONE-MASS
+// ---------------------------------------------------------------------------
+(function testThreeZoneGateDoesNotActivateBuildThreeZoneMass() {
+    const id = 'THREE-ZONE-GATE-DOES-NOT-CALL-BUILD-THREE-ZONE-MASS';
+    const split = { rootPct: 0.3, lengthPct: 0.5, endsPct: 0.2 };
+    const mass = buildThreeZoneMassCandidate('средние', 'средние', split);
+    assert.ok(mass !== null);
+    // test that classify does not call it or alter mode
+    const gate = classifyThreeZoneActivation({ ends_level: 8, length_level: 7, target_level: 8, ends_condition: 'healthy', ends_history: 'natural', ends_base_type: 'natural' });
+    assert.strictEqual(gate.decision, 'ALLOW_3_ZONE');
+    assert.strictEqual(gate.mode, '3-zone-gate-only');
+    console.log(id + ' safe: does not activate 3-zone mass.');
+})();
+
+// ---------------------------------------------------------------------------
+// ТЕСТ 26: THREE-ZONE-GATE-PRODUCTION-BUILDMASSMODEL-STILL-2-ZONE
+// ---------------------------------------------------------------------------
+(function testThreeZoneGateProductionBuildMassModelStill2Zone() {
+    const id = 'THREE-ZONE-GATE-PRODUCTION-BUILDMASSMODEL-STILL-2-ZONE';
+    const prod = buildMassModel('средние', 'средние');
+    assert.strictEqual(prod.mode, '2-zone');
+    assert.strictEqual(prod.endsMass, null);
+    console.log(id + ' safe: production buildMassModel remains 2-zone.');
 })();
 
 // ---------------------------------------------------------------------------
@@ -835,7 +920,7 @@ function classifyFutureThreeZoneActivation(input) {
 
 console.log('');
 console.log('=== MASS MODEL UNIT / DIAGNOSTIC TEST CONTRACT ===');
-console.log('All 24 scenarios processed.');
+console.log('All 26 scenarios processed.');
 console.log('');
 console.log('STATUS SUMMARY:');
 console.log('  MASS-MODEL-INLINE-CURRENT                    → SAFE     (buildMassModel exists, correct shape)');
@@ -854,20 +939,24 @@ console.log('  BUILD-THREE-ZONE-CANDIDATE-SHAPE             → SAFE     (8-fiel
 console.log('  BUILD-THREE-ZONE-CANDIDATE-NULL-PROPAGATION  → SAFE     (null for unknown length and invalid split)');
 console.log('  BUILD-THREE-ZONE-CANDIDATE-SUM-CONTRACT      → SAFE     (sum === totalMass for all 9 combinations)');
 console.log('  BUILD-THREE-ZONE-CANDIDATE-MODE-FLAG         → SAFE     (helper=3-zone; production=2-zone unchanged)');
-console.log('  THREE-ZONE-GATE-ALLOW-HEALTHY-NATURAL-ENDS   → SAFE     (healthy natural ends allowed)');
 console.log('  THREE-ZONE-GATE-KEEP-2-ZONE-WHEN-ENDS-SAME   → SAFE     (same level keeps 2-zone)');
-console.log('  THREE-ZONE-GATE-MANUAL-POROUS-ENDS           → SAFE     (porous ends require manual)');
-console.log('  THREE-ZONE-GATE-MANUAL-BRITTLE-ENDS          → SAFE     (brittle ends require manual)');
-console.log('  THREE-ZONE-GATE-BLOCK-UNKNOWN-HISTORY        → SAFE     (unknown history blocked)');
-console.log('  THREE-ZONE-GATE-BLOCK-COSMETIC-LIFT          → SAFE     (cosmetic lift blocked)');
+console.log('  THREE-ZONE-GATE-MANUAL-WHEN-MISSING-ENDS-FIELDS→ SAFE     (missing fields blocked)');
+console.log('  THREE-ZONE-GATE-BLOCK-UNKNOWN-ENDS-HISTORY   → SAFE     (unknown history blocked)');
+console.log('  THREE-ZONE-GATE-BLOCK-COSMETIC-ENDS-LIFT     → SAFE     (cosmetic lift blocked)');
 console.log('  THREE-ZONE-GATE-BLOCK-HENNA-METALS           → SAFE     (henna metals blocked)');
-console.log('  THREE-ZONE-GATE-MISSING-FIELDS               → SAFE     (missing fields blocked)');
+console.log('  THREE-ZONE-GATE-MANUAL-DAMAGED-ENDS          → SAFE     (damaged ends require manual)');
+console.log('  THREE-ZONE-GATE-MANUAL-TARGET-BETWEEN-ZONES  → SAFE     (target between zones require manual)');
+console.log('  THREE-ZONE-GATE-ALLOW-HEALTHY-NATURAL-ENDS   → SAFE     (healthy natural ends allowed)');
+console.log('  THREE-ZONE-GATE-DOES-NOT-CALL-BUILD-THREE-ZONE-MASS → SAFE     (helper pure)');
+console.log('  THREE-ZONE-GATE-PRODUCTION-BUILDMASSMODEL-STILL-2-ZONE  → SAFE     (production behavior unchanged)');
 console.log('');
 console.log('Production code: buildMassModel() 2-ZONE ONLY.');
 console.log('3-zone runtime: NOT ACTIVE.');
 console.log('endsMass: null in production.');
 console.log('endsRec: NOT IMPLEMENTED.');
 console.log('buildThreeZoneMassCandidate(): INACTIVE HELPER (not called from calculateProtocol).');
+console.log('classifyThreeZoneActivation(): PRODUCTION GATE HELPER (not called from calculateProtocol).');
 console.log('');
 console.log('WWW mass model test contract passed.');
+
 

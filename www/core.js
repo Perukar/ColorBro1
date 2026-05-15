@@ -1,4 +1,4 @@
-const pigmentMap = {
+﻿const pigmentMap = {
             '0': 'Натуральний', '1': 'Голубий', '11': 'Інтенсивно-голубий', 
             '2': 'Блідо-фіолетовий', '3': 'Жовтий (золотистий)', '4': 'Оранжевий', 
             '5': 'Червоно-фіолетовий', '6': 'Червоний', '7': 'Фіолетовий', 
@@ -380,6 +380,82 @@ const pigmentMap = {
                 endsMass,
                 mode: '3-zone',
                 split
+            };
+        }
+
+        /**
+         * classifyThreeZoneActivation(input)
+         *
+         * PRODUCTION HELPER — Production 3-zone activation gate.
+         * Pure function. НЕ викликається з calculateProtocol().
+         */
+        function classifyThreeZoneActivation(input) {
+            const { ends_level, length_level, root_level, ends_condition, ends_history, ends_base_type, target_level } = input;
+            
+            if (!ends_level || ends_level === length_level) {
+                return {
+                    decision: 'KEEP_2_ZONE', reason: 'ENDS_SAME_AS_LENGTH',
+                    warnings: [], requiredFields: [], missingFields: [], mode: '3-zone-gate-only'
+                };
+            }
+            
+            const missing = [];
+            if (!ends_condition) missing.push('ends_condition');
+            if (!ends_history) missing.push('ends_history');
+            if (!ends_base_type) missing.push('ends_base_type');
+            
+            if (missing.length > 0) {
+                return {
+                    decision: 'MANUAL_REQUIRED', reason: 'MISSING_FIELDS',
+                    warnings: [], requiredFields: ['ends_condition', 'ends_history', 'ends_base_type'], missingFields: missing, mode: '3-zone-gate-only'
+                };
+            }
+
+            const blockedHistory = ['unknown', 'cosmetic', 'темний косметичний пігмент', 'dark cosmetic', 'remover', 'змивка', 'henna_metals', 'хна/метали'];
+            if (blockedHistory.includes(ends_history)) {
+                return {
+                    decision: 'BLOCKED', reason: 'BLOCKED_HISTORY',
+                    warnings: [], requiredFields: [], missingFields: [], mode: '3-zone-gate-only'
+                };
+            }
+
+            if ((ends_base_type === 'cosmetic' || ends_base_type === 'mixed' || ends_base_type === 'unknown' || ends_base_type === 'косметична' || ends_base_type === 'змішана/нерівномірна') && target_level > ends_level) {
+                return {
+                    decision: 'BLOCKED', reason: 'COSMETIC_LIFT_RISK',
+                    warnings: [], requiredFields: [], missingFields: [], mode: '3-zone-gate-only'
+                };
+            }
+
+            const damagedCondition = ['porous', 'brittle', 'damaged', 'critical', 'пористі', 'ламкі', 'сильно пошкоджені', 'критично пошкоджені'];
+            if (damagedCondition.includes(ends_condition)) {
+                return {
+                    decision: 'MANUAL_REQUIRED', reason: 'DAMAGED_CONDITION',
+                    warnings: [], requiredFields: [], missingFields: [], mode: '3-zone-gate-only'
+                };
+            }
+            
+            if (target_level !== undefined && target_level !== null) {
+                if ((target_level > ends_level && target_level < length_level) ||
+                    (target_level < ends_level && target_level > length_level)) {
+                    return {
+                        decision: 'MANUAL_REQUIRED', reason: 'TARGET_BETWEEN_ZONES',
+                        warnings: [], requiredFields: [], missingFields: [], mode: '3-zone-gate-only'
+                    };
+                }
+            }
+
+            if ((ends_condition === 'healthy' || ends_condition === 'normal' || ends_condition === 'здорові' || ends_condition === 'нормальні') && 
+                (ends_history === 'natural' || ends_history === 'clear' || ends_history === 'none' || ends_history === 'натуральна' || ends_history === 'чиста') && 
+                (ends_base_type === 'natural' || ends_base_type === 'натуральна')) {
+                return {
+                    decision: 'ALLOW_3_ZONE', reason: 'HEALTHY_NATURAL',
+                    warnings: [], requiredFields: [], missingFields: [], mode: '3-zone-gate-only'
+                };
+            }
+
+            return {
+                decision: 'MANUAL_REQUIRED', reason: 'FALLBACK',
+                warnings: [], requiredFields: [], missingFields: [], mode: '3-zone-gate-only'
             };
         }
 
@@ -794,3 +870,4 @@ const pigmentMap = {
                 });
             }
         }
+
