@@ -2,6 +2,58 @@
 
 Дата: 2026-05-12
 
+## Readonly endsRecCandidate preview final chain
+
+Commits:
+- b084e85 Add readonly endsRecCandidate preview
+- 105d11e Fix endsRecCandidate preview HTML assertions
+- aa9144a Fix endsRecCandidate massModel isolation assertion
+
+## Що змінено
+
+- додано readonly endsRecCandidatePreview для діагностики кінців;
+- preview створюється тільки для ALLOW_3_ZONE + SAFE_FOR_TONING;
+- додано test fix для HTML escaping:
+  - candidateOnly;
+  - productionReady;
+  - previewOnly;
+- виправлено massModel isolation assertion у business scenarios;
+- тест більше не трактує candidate endsMass як production endsMass;
+- перевірка відокремлює production massModel від readonly candidate preview.
+
+## Production safety
+
+- production endsRec не створено;
+- production massModel.mode лишається "2-zone";
+- production massModel.endsMass лишається null;
+- endsRecCandidatePreview не впливає на rootRec;
+- endsRecCandidatePreview не впливає на lenRec;
+- endsRecCandidatePreview не замінює production massModel;
+- готової ends formula/mix немає;
+- dyeMass для кінців не створено;
+- oxidizerMass для кінців не створено;
+- preview має захисні прапори:
+  - candidateOnly: true;
+  - notForMixing: true;
+  - previewOnly: true;
+  - productionReady: false.
+
+## Перевірки
+
+- business scenarios: PASS;
+- mass model: PASS;
+- mapping: PASS;
+- render runtime: PASS;
+- final chain audit: PASS;
+- risk: LOW.
+
+## Залишкові ризики
+
+- endsRecCandidatePreview уже існує як readonly preview, тому його не можна використовувати як production recipe без окремої фази;
+- production endsRec ще не реалізований;
+- production 3-zone massModel ще не активований;
+- наступна code-фаза має бути окремо спланована і протестована перед будь-якою активацією production ends recipe.
+
 ## Ends recipe eligibility classifier
 
 Commit:
