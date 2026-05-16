@@ -459,6 +459,61 @@ const pigmentMap = {
             return { status: "MANUAL_REQUIRED", reason: "Fallback manual assessment", requiredFieldsMissing: [], riskFlags: ["fallback"], allowedProcess: null };
         }
 
+        function buildEndsRecCandidatePreview(context) {
+            const normalizedContext = Object.assign({}, context, {
+                ends_level: typeof context.ends_level === 'string' && context.ends_level.trim() !== '' ? Number(context.ends_level) : context.ends_level,
+                target_level: typeof context.target_level === 'string' && context.target_level.trim() !== '' ? Number(context.target_level) : context.target_level,
+                length_level: typeof context.length_level === 'string' && context.length_level.trim() !== '' ? Number(context.length_level) : context.length_level,
+                root_level: typeof context.root_level === 'string' && context.root_level.trim() !== '' ? Number(context.root_level) : context.root_level
+            });
+            const eligibility = classifyEndsRecEligibility(normalizedContext);
+            
+            let decisionStr = 'UNKNOWN';
+            if (typeof context.threeZoneGateDecision === 'string') {
+                decisionStr = context.threeZoneGateDecision;
+            } else if (context.threeZoneGateDecision && context.threeZoneGateDecision.decision) {
+                decisionStr = context.threeZoneGateDecision.decision;
+            } else {
+                const computed = classifyThreeZoneActivation(normalizedContext);
+                decisionStr = computed ? computed.decision : 'UNKNOWN';
+            }
+
+            if (eligibility.status !== 'SAFE_FOR_TONING') return null;
+            if (decisionStr !== 'ALLOW_3_ZONE') return null;
+            if (!context.threeZoneCandidateMassModel) return null;
+            if (context.threeZonePreviewOnly !== true) return null;
+            if (context.threeZoneEndsRecipeReady !== false) return null;
+
+            return {
+                zone: 'ends',
+                candidateOnly: true,
+                productionReady: false,
+                previewOnly: true,
+                source: 'endsRecEligibility',
+                eligibilityStatus: eligibility.status,
+                allowedProcess: eligibility.allowedProcess || null,
+                massPreview: {
+                    endsMass: typeof context.threeZoneCandidateMassModel.endsMass === 'number' ? context.threeZoneCandidateMassModel.endsMass : null,
+                    source: 'threeZoneCandidateMassModel',
+                    notForMixing: true
+                },
+                formulaPreview: {
+                    type: 'process_description',
+                    description: 'Diagnostic preview only. No ready-to-mix formula is provided.',
+                    notForMixing: true
+                },
+                recommendedOxidizerPercentPreview: 'low-oxidizer-preview-only',
+                timingPreview: {
+                    description: 'Diagnostic preview only for ends evaluation. Not production-ready.'
+                },
+                warnings: [
+                    '⚠️ ДІАГНОСТИКА: Створено попередній endsRecCandidate для оцінки кінців. Це не production рецепт і не інструкція для змішування. Поточний протокол залишається 2-зонним.'
+                ],
+                reason: eligibility.reason,
+                safetyStatus: 'diagnostic-preview'
+            };
+        }
+
         function classifyThreeZoneActivation(input) {
             const { ends_level, length_level, root_level, ends_condition, ends_history, ends_base_type, target_level } = input;
             
@@ -921,6 +976,7 @@ const pigmentMap = {
                 let threeZoneCandidateMassModel = null;
                 let threeZonePreviewOnly = undefined;
                 let threeZoneEndsRecipeReady = undefined;
+                let endsRecCandidatePreview = null;
 
                 // Three Zone Activation Gate: diagnostic/manual gate for ends evaluation
                 if (Number.isFinite(eLevel) && eLevel !== lLevel) {
@@ -945,8 +1001,21 @@ const pigmentMap = {
                         threeZonePreviewOnly = true;
                         threeZoneEndsRecipeReady = false;
                         threeZoneCandidateMassModel = buildThreeZoneMassCandidate(length, density, { rootPct: 0.3, lengthPct: 0.5, endsPct: 0.2 });
-                        warnings.push('⚠️ ДІАГНОСТИКА: Кінці відповідають умовам для майбутньої 3-зонної логіки, але автоматичний рецепт для кінців ще не реалізований. Поточний протокол залишається 2-зонним. Окреме рішення по кінцях майстер приймає вручну після візуальної оцінки полотна.');
+                        warnings.push('⚠️ ДІАГНОСТИКА: Створено попередній endsRecCandidate для оцінки кінців. Це не production рецепт і не інструкція для змішування. Поточний протокол залишається 2-зонним.');
                         diagnostics.push('(діагностична: ends_condition сумісна з майбутньою 3-zone логікою)');
+                        endsRecCandidatePreview = buildEndsRecCandidatePreview({
+                            ends_level: eLevel,
+                            length_level: lLevel,
+                            root_level: rLevel,
+                            ends_condition: endsCondition,
+                            ends_history: endsHistory,
+                            ends_base_type: endsBaseType,
+                            target_level: tLevel,
+                            threeZoneGateDecision: gateDecision.decision,
+                            threeZoneCandidateMassModel,
+                            threeZonePreviewOnly,
+                            threeZoneEndsRecipeReady
+                        });
                     } else if (gateDecision.decision === 'MANUAL_REQUIRED') {
                         // Convert to manual decision; add warning
                         if (!manualDecisions.some(md => md.title.includes('Кінці') || md.title.includes('ends'))) {
@@ -966,6 +1035,10 @@ const pigmentMap = {
                     }
                 }
 
+                const reasons = { rootStep: rStep, lengthStep: lStep, endsLevel: eLevel, endsCondition, endsHistory, endsBaseType, hotRoot, grey, specialBlondBase6NeedsConfirmation, significantDarkeningNeedsPrepig, zoneLevelDifference, zoneProcessesDiffer, zoneDecisionNeedsConfirmation, endsLevelProvided, endsDiffersFromRoot, endsDiffersFromLength, endsLevelNeedsConfirmation, endsConditionProvided, riskyEndsCondition, endsLighteningNeeded, endsChemicalInterventionLikely, endsConditionNeedsConfirmation, endsConditionMissingWithDifferentLevel, endsHistoryProvided, endsBaseTypeProvided, riskyEndsHistory, riskyEndsBaseType, endsHistoryNeedsConfirmation, endsBaseTypeNeedsConfirmation, threeZonePreviewEligible, threeZoneGateDecision, threeZoneCandidateMassModel, threeZonePreviewOnly, threeZoneEndsRecipeReady };
+                if (endsRecCandidatePreview) {
+                    reasons.endsRecCandidatePreview = endsRecCandidatePreview;
+                }
                 const state = buildWwwRenderState({
                     status: manualDecisions.length > 0 ? 'MANUAL_REQUIRED' : 'APPROVED',
                     target: `${tLevel}.${tDir}`,
@@ -980,7 +1053,7 @@ const pigmentMap = {
                     mixtoneInfo: { root: rootRec.mixtone, length: lenRec.mixtone },
                     massModel: Object.assign({}, massModel, { rootMass: rMass, lengthMass: lMass }),
                     timingInfo: { totalMinutes: timing, modifierMinutes: tMod },
-                    reasons: { rootStep: rStep, lengthStep: lStep, endsLevel: eLevel, endsCondition, endsHistory, endsBaseType, hotRoot, grey, specialBlondBase6NeedsConfirmation, significantDarkeningNeedsPrepig, zoneLevelDifference, zoneProcessesDiffer, zoneDecisionNeedsConfirmation, endsLevelProvided, endsDiffersFromRoot, endsDiffersFromLength, endsLevelNeedsConfirmation, endsConditionProvided, riskyEndsCondition, endsLighteningNeeded, endsChemicalInterventionLikely, endsConditionNeedsConfirmation, endsConditionMissingWithDifferentLevel, endsHistoryProvided, endsBaseTypeProvided, riskyEndsHistory, riskyEndsBaseType, endsHistoryNeedsConfirmation, endsBaseTypeNeedsConfirmation, threeZonePreviewEligible, threeZoneGateDecision, threeZoneCandidateMassModel, threeZonePreviewOnly, threeZoneEndsRecipeReady }
+                    reasons
                 });
                 document.getElementById('output').innerHTML = PerucarWwwRenderV1.renderStateToHtml(state);
             } catch (e) {
@@ -990,4 +1063,3 @@ const pigmentMap = {
                 });
             }
         }
-

@@ -980,7 +980,7 @@ const gateAllowScenario = analyzeEndsScenario('THREE-ZONE-GATE-RUNTIME-ALLOW-DOE
     history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
     grey_percent: '0', grey_type: 'мягкая', root_level: '6', root_length: '1', length_level: '6',
     ends_level: '8', ends_condition: 'здорові', base_type: 'Натуральна',
-    target_level: '9', target_direction: '1',
+    target_level: '6', target_direction: '1',
     ends_history: 'натуральна', ends_base_type: 'натуральна'
 });
 assert.ok(!gateAllowScenario.hasError, 'THREE-ZONE-GATE-RUNTIME-ALLOW-DOES-NOT-ACTIVATE-3ZONE should not throw');
@@ -994,9 +994,11 @@ assert.ok(allowHtml.includes('&quot;mode&quot;:&quot;3-zone&quot;'), 'THREE-ZONE
 assert.ok(allowHtml.includes('<b>threeZonePreviewOnly:</b> true'), 'THREE-ZONE-PREVIEW-CONTRACT-FLAT-LOCK-FIELDS: PreviewOnly flat flag should be true');
 assert.ok(allowHtml.includes('<b>threeZoneEndsRecipeReady:</b> false'), 'THREE-ZONE-PREVIEW-CONTRACT-FLAT-LOCK-FIELDS: EndsRecipeReady flat flag should be false');
 assert.ok(!allowHtml.includes('<b>diagnostics:</b>'), 'THREE-ZONE-PREVIEW-CONTRACT-NO-NESTED-DIAGNOSTICS: should not contain collapsed nested diagnostics object');
-assert.ok(allowHtml.includes('⚠️ ДІАГНОСТИКА: Кінці відповідають умовам для майбутньої 3-зонної логіки'), 'THREE-ZONE-PREVIEW-NOTE-APPEARS-ON-ALLOW: Warning should appear for ALLOW_3_ZONE');
-// Production massModel is output higher up, let's just make sure endsMass is still null there.
-// The easiest is checking that rootRec/lenRec still use the 2-zone mass distribution, and no endsRec is there.
+assert.ok(allowHtml.includes('⚠️ ДІАГНОСТИКА: Створено попередній endsRecCandidate для оцінки кінців.'), 'THREE-ZONE-PREVIEW-NOTE-APPEARS-ON-ALLOW: Warning should appear for ALLOW_3_ZONE');
+assert.ok(allowHtml.includes('endsRecCandidatePreview'), 'ENDSREC-CANDIDATE-SAFE-TONING-CREATED: candidate preview should be present in HTML output');
+assert.ok(allowHtml.includes('"candidateOnly":true'), 'ENDSREC-CANDIDATE-SAFE-TONING-CREATED: candidateOnly must be true');
+assert.ok(allowHtml.includes('"productionReady":false'), 'ENDSREC-CANDIDATE-SAFE-TONING-CREATED: productionReady must be false');
+assert.ok(allowHtml.includes('"previewOnly":true'), 'ENDSREC-CANDIDATE-SAFE-TONING-CREATED: previewOnly must be true');
 assert.ok(!allowHtml.includes('&quot;endsMass&quot;:12') || allowHtml.indexOf('&quot;endsMass&quot;:12') === allowHtml.lastIndexOf('&quot;endsMass&quot;:12'), 'THREE-ZONE-PREVIEW-DOES-NOT-REPLACE-PRODUCTION-MASSMODEL: production massModel remains unchanged (candidate contains endsMass)');
 
 const keepHtml = gateKeep2ZoneScenario.html;
