@@ -999,7 +999,9 @@ assert.ok(allowHtml.includes('endsRecCandidatePreview'), 'ENDSREC-CANDIDATE-SAFE
 assert.ok(allowHtml.includes('&quot;candidateOnly&quot;:true'), 'ENDSREC-CANDIDATE-SAFE-TONING-CREATED: candidateOnly must be true');
 assert.ok(allowHtml.includes('&quot;productionReady&quot;:false'), 'ENDSREC-CANDIDATE-SAFE-TONING-CREATED: productionReady must be false');
 assert.ok(allowHtml.includes('&quot;previewOnly&quot;:true'), 'ENDSREC-CANDIDATE-SAFE-TONING-CREATED: previewOnly must be true');
-assert.ok(!allowHtml.includes('&quot;endsMass&quot;:12') || allowHtml.indexOf('&quot;endsMass&quot;:12') === allowHtml.lastIndexOf('&quot;endsMass&quot;:12'), 'THREE-ZONE-PREVIEW-DOES-NOT-REPLACE-PRODUCTION-MASSMODEL: production massModel remains unchanged (candidate contains endsMass)');
+assert.ok(allowHtml.includes('mass-model') && allowHtml.includes('2-zone'), 'THREE-ZONE-PREVIEW-DOES-NOT-REPLACE-PRODUCTION-MASSMODEL: production massModel remains 2-zone');
+assert.ok(allowHtml.includes('endsRecCandidatePreview') && allowHtml.includes('&quot;notForMixing&quot;:true') && allowHtml.includes('&quot;productionReady&quot;:false') && allowHtml.includes('&quot;previewOnly&quot;:true'), 'THREE-ZONE-PREVIEW-DOES-NOT-REPLACE-PRODUCTION-MASSMODEL: candidate is readonly');
+assert.ok(!allowHtml.includes('<b>endsRec:</b>') && !allowHtml.includes('&quot;productionReady&quot;:true'), 'THREE-ZONE-PREVIEW-DOES-NOT-REPLACE-PRODUCTION-MASSMODEL: production endsRec not activated');
 
 const keepHtml = gateKeep2ZoneScenario.html;
 assert.ok(!keepHtml.includes('<b>threeZonePreviewEligible:</b> true'), 'THREE-ZONE-PREVIEW-NOT-CREATED-FOR-KEEP-2-ZONE: Eligible flag should be false');
