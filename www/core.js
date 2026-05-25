@@ -700,6 +700,68 @@ const pigmentMap = {
             };
         }
 
+        /**
+         * classifyProductionEndsRecFormulaContract(context, readiness, builderResult)
+         *
+         * INACTIVE HELPER. Classifies the future production endsRec formula
+         * contract. It does not create formula fields, grams, mass allocation,
+         * or runtime output, and it is not called from calculateProtocol().
+         */
+        function classifyProductionEndsRecFormulaContract(context, readiness, builderResult) {
+            const state = readiness || {};
+            const build = builderResult || {};
+            const endsRec = build.endsRec || null;
+
+            function cloneList(values) {
+                return Array.isArray(values) ? values.slice().filter(Boolean) : [];
+            }
+
+            function result(formulaStatus, reasonCode, overrides) {
+                const options = overrides || {};
+                return {
+                    formulaStatus,
+                    formulaType: options.formulaType || 'NONE',
+                    targetAction: options.targetAction || (formulaStatus === 'BLOCKED' ? 'block' : 'manual_review'),
+                    allowedProductClass: Array.isArray(options.allowedProductClass) ? options.allowedProductClass.slice() : [],
+                    forbiddenProductClass: Array.isArray(options.forbiddenProductClass) ? options.forbiddenProductClass.slice() : [],
+                    safetyReasonCodes: cloneList(options.safetyReasonCodes),
+                    manualRequiredReasonCodes: cloneList(options.manualRequiredReasonCodes),
+                    reasonCode,
+                    formulaReady: formulaStatus === 'FORMULA_CONTRACT_READY'
+                };
+            }
+
+            if (state.status === 'MANUAL_REQUIRED') {
+                const reasonCode = state.reasonCode || 'READINESS_MANUAL_REQUIRED';
+                return result('MANUAL_REQUIRED', reasonCode, {
+                    manualRequiredReasonCodes: [reasonCode]
+                });
+            }
+            if (state.status === 'BLOCKED' || state.productionBlocked === true) {
+                return result('BLOCKED', state.reasonCode || 'READINESS_BLOCKED');
+            }
+            if (state.ready !== true || state.status !== 'READY') {
+                return result('NOT_READY', state.reasonCode || 'READINESS_NOT_READY');
+            }
+            if (build.created !== true || build.status !== 'CREATED') {
+                return result('NOT_READY', build.reasonCode || 'BUILDER_NOT_CREATED');
+            }
+            if (!endsRec || endsRec.productionReady !== true) {
+                return result('NOT_READY', 'ENDSREC_NOT_PRODUCTION_READY');
+            }
+            if (endsRec.endsRecipeReady === true) {
+                return result('BLOCKED', 'ENDSRECIPE_READY_TRUE_SUSPICIOUS');
+            }
+
+            return result('FORMULA_CONTRACT_READY', 'FORMULA_TONING_ONLY_ALLOWED', {
+                formulaType: 'TONING_ONLY',
+                targetAction: 'tone_ends',
+                allowedProductClass: ['low_oxidizer_toning'],
+                forbiddenProductClass: ['lightening_powder', 'high_lift', 'permanent_lift'],
+                safetyReasonCodes: cloneList(state.reasons).concat(cloneList(endsRec.safetyReasonCodes))
+            });
+        }
+
         function classifyThreeZoneActivation(input) {
             const { ends_level, length_level, root_level, ends_condition, ends_history, ends_base_type, target_level } = input;
             

@@ -1623,7 +1623,7 @@ globalThis.__builderNoCandidateResult = buildProductionEndsRec({}, Object.assign
 
 // ---------------------------------------------------------------------------
 // SPEC CONTRACT: future production endsRec formula contract
-// Test-only data mirror. It does not call or define a production formula helper.
+// Test-only data mirror plus VM assertions for the inactive production helper.
 // ---------------------------------------------------------------------------
 
 function makeFormulaBuilderResult(overrides = {}) {
@@ -1810,10 +1810,88 @@ function classifyFormulaContractSpecData(readiness, builderResult) {
     const sandbox = {};
     vm.createContext(sandbox);
     vm.runInContext(
-        source + '\nglobalThis.__calculateProtocolSource = calculateProtocol.toString();',
+        source + `
+globalThis.__calculateProtocolSource = calculateProtocol.toString();
+globalThis.__formulaHelperType = typeof classifyProductionEndsRecFormulaContract;
+const __formulaReadiness = {
+    ready: true,
+    status: 'READY',
+    reasonCode: 'READY_LOW_RISK_TONING_CANDIDATE',
+    reasons: ['ALLOW_3_ZONE', 'SAFE_FOR_TONING'],
+    candidateSummary: {
+        zone: 'ends',
+        eligibilityStatus: 'SAFE_FOR_TONING',
+        hasDyeMass: false,
+        hasOxidizerMass: false,
+        hasEndsFormula: false
+    },
+    productionAllowed: true,
+    productionBlocked: false
+};
+const __formulaBuilder = buildProductionEndsRec({}, __formulaReadiness);
+const __formulaContext = {
+    massModel: { mode: '2-zone', endsMass: null },
+    rootRec: { process: 'Перманент', mass: 18 },
+    lenRec: { process: 'Перманент', mass: 42 }
+};
+globalThis.__formulaContextBefore = JSON.stringify(__formulaContext);
+globalThis.__formulaReadinessBefore = JSON.stringify(__formulaReadiness);
+globalThis.__formulaBuilderBefore = JSON.stringify(__formulaBuilder);
+globalThis.__formulaReadyResult = classifyProductionEndsRecFormulaContract(__formulaContext, __formulaReadiness, __formulaBuilder);
+globalThis.__formulaContextAfter = JSON.stringify(__formulaContext);
+globalThis.__formulaReadinessAfter = JSON.stringify(__formulaReadiness);
+globalThis.__formulaBuilderAfter = JSON.stringify(__formulaBuilder);
+globalThis.__formulaManualResult = classifyProductionEndsRecFormulaContract({}, Object.assign({}, __formulaReadiness, {
+    ready: false,
+    status: 'MANUAL_REQUIRED',
+    productionAllowed: false,
+    productionBlocked: true,
+    reasonCode: 'READINESS_MANUAL_REQUIRED'
+}), __formulaBuilder);
+globalThis.__formulaBlockedResult = classifyProductionEndsRecFormulaContract({}, Object.assign({}, __formulaReadiness, {
+    ready: false,
+    status: 'BLOCKED',
+    productionAllowed: false,
+    productionBlocked: true,
+    reasonCode: 'READINESS_BLOCKED'
+}), __formulaBuilder);
+globalThis.__formulaNotReadyResult = classifyProductionEndsRecFormulaContract({}, __formulaReadiness, Object.assign({}, __formulaBuilder, {
+    created: false,
+    status: 'NOT_CREATED',
+    endsRec: null
+}));
+globalThis.__formulaSuspiciousResult = classifyProductionEndsRecFormulaContract({}, __formulaReadiness, Object.assign({}, __formulaBuilder, {
+    endsRec: Object.assign({}, __formulaBuilder.endsRec, { endsRecipeReady: true })
+}));
+`,
         sandbox,
         { filename: 'www/core.js' }
     );
+    assert.strictEqual(sandbox.__formulaHelperType, 'function', id);
+    assert.strictEqual(sandbox.__formulaReadyResult.formulaReady, true, id);
+    assert.strictEqual(sandbox.__formulaReadyResult.formulaStatus, 'FORMULA_CONTRACT_READY', id);
+    assert.strictEqual(sandbox.__formulaReadyResult.formulaType, 'TONING_ONLY', id);
+    assert.strictEqual(sandbox.__formulaReadyResult.targetAction, 'tone_ends', id);
+    assert.strictEqual(JSON.stringify(sandbox.__formulaReadyResult.allowedProductClass), JSON.stringify(['low_oxidizer_toning']), id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(sandbox.__formulaReadyResult, 'dyeMass'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(sandbox.__formulaReadyResult, 'oxidizerMass'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(sandbox.__formulaReadyResult, 'endsMass'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(sandbox.__formulaReadyResult, 'massModel'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(sandbox.__formulaReadyResult, 'endsFormula'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(sandbox.__formulaReadyResult, 'grams'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(sandbox.__formulaReadyResult, 'exactGrams'), false, id);
+    assert.notStrictEqual(sandbox.__formulaReadyResult.mode, '3-zone', id);
+    assert.strictEqual(sandbox.__formulaContextAfter, sandbox.__formulaContextBefore, id);
+    assert.strictEqual(sandbox.__formulaReadinessAfter, sandbox.__formulaReadinessBefore, id);
+    assert.strictEqual(sandbox.__formulaBuilderAfter, sandbox.__formulaBuilderBefore, id);
+    assert.strictEqual(sandbox.__formulaManualResult.formulaReady, false, id);
+    assert.strictEqual(sandbox.__formulaManualResult.formulaStatus, 'MANUAL_REQUIRED', id);
+    assert.strictEqual(sandbox.__formulaBlockedResult.formulaReady, false, id);
+    assert.strictEqual(sandbox.__formulaBlockedResult.formulaStatus, 'BLOCKED', id);
+    assert.strictEqual(sandbox.__formulaNotReadyResult.formulaReady, false, id);
+    assert.strictEqual(sandbox.__formulaNotReadyResult.formulaStatus, 'NOT_READY', id);
+    assert.strictEqual(sandbox.__formulaSuspiciousResult.formulaReady, false, id);
+    assert.strictEqual(sandbox.__formulaSuspiciousResult.formulaStatus, 'BLOCKED', id);
     assert.strictEqual(sandbox.__calculateProtocolSource.includes('FormulaContract'), false, id);
     assert.strictEqual(sandbox.__calculateProtocolSource.includes('formulaReady'), false, id);
 })();
