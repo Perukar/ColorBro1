@@ -1085,6 +1085,51 @@ globalThis.__endsRecProductionCurrentSafetyResults = {
     rootRecLenRec: !rootRecipeHtml.includes('endsRecCandidate')
         && !lengthRecipeHtml.includes('endsRecCandidate')
 };
+
+assert.strictEqual(typeof validateProductionEndsRecReadiness, 'function', 'validateProductionEndsRecReadiness should exist');
+
+const readinessCandidateMassModel = buildThreeZoneMassCandidate('средние', 'средние', { rootPct: 0.3, lengthPct: 0.5, endsPct: 0.2 });
+const readinessContext = {
+    ends_level: 8,
+    length_level: 7,
+    root_level: 6,
+    ends_condition: 'здорові',
+    ends_history: 'натуральна',
+    ends_base_type: 'натуральна',
+    target_level: 8,
+    threeZoneGateDecision: 'ALLOW_3_ZONE',
+    threeZoneCandidateMassModel: readinessCandidateMassModel,
+    threeZonePreviewOnly: true,
+    threeZoneEndsRecipeReady: false,
+    massModel: { mode: '2-zone', endsMass: null },
+    rootRec: { process: 'Перманент', mass: 18 },
+    lenRec: { process: 'Перманент', mass: 42 }
+};
+readinessContext.endsRecCandidatePreview = buildEndsRecCandidatePreview(readinessContext);
+
+const readinessBefore = JSON.stringify(readinessContext);
+const readinessResult = validateProductionEndsRecReadiness(readinessContext);
+assert.strictEqual(readinessResult.ready, true, 'READINESS-ALLOW-3ZONE-SAFE-TRUE runtime helper should be ready');
+assert.strictEqual(readinessResult.status, 'READY', 'READINESS-ALLOW-3ZONE-SAFE-TRUE runtime helper status');
+assert.strictEqual(readinessResult.productionAllowed, true, 'READINESS-ALLOW-3ZONE-SAFE-TRUE runtime helper productionAllowed');
+assert.strictEqual(readinessResult.candidateSummary.productionReady, false, 'READINESS-CANDIDATE-NOT-PRODUCTION runtime helper');
+assert.strictEqual(readinessResult.candidateSummary.notForMixing, true, 'READINESS-CANDIDATE-NOT-PRODUCTION notForMixing');
+assert.strictEqual(JSON.stringify(readinessContext), readinessBefore, 'READINESS-NO-MASSMODEL-CHANGE runtime helper must not mutate context');
+
+const readinessNoCandidate = validateProductionEndsRecReadiness(Object.assign({}, readinessContext, { endsRecCandidatePreview: null }));
+assert.strictEqual(readinessNoCandidate.ready, false, 'READINESS-NO-CANDIDATE-FALSE runtime helper');
+assert.strictEqual(readinessNoCandidate.reasonCode, 'NO_ENDSREC_CANDIDATE_PREVIEW', 'READINESS-NO-CANDIDATE-FALSE runtime helper reason');
+
+const suspiciousCandidate = Object.assign({}, readinessContext.endsRecCandidatePreview, { productionReady: true });
+const readinessSuspicious = validateProductionEndsRecReadiness(Object.assign({}, readinessContext, { endsRecCandidatePreview: suspiciousCandidate }));
+assert.strictEqual(readinessSuspicious.ready, false, 'READINESS-CANDIDATE-PRODUCTIONREADY-TRUE-BLOCKED runtime helper');
+assert.strictEqual(readinessSuspicious.status, 'BLOCKED', 'READINESS-CANDIDATE-PRODUCTIONREADY-TRUE-BLOCKED runtime helper status');
+
+globalThis.__productionEndsRecReadinessResults = {
+    allow: readinessResult.status,
+    noCandidate: readinessNoCandidate.reasonCode,
+    suspicious: readinessSuspicious.status
+};
 `;
 
 const sandbox = {

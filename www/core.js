@@ -514,6 +514,110 @@ const pigmentMap = {
             };
         }
 
+        function validateProductionEndsRecReadiness(context) {
+            const input = context || {};
+            const normalizedContext = Object.assign({}, input, {
+                ends_level: typeof input.ends_level === 'string' && input.ends_level.trim() !== '' ? Number(input.ends_level) : input.ends_level,
+                target_level: typeof input.target_level === 'string' && input.target_level.trim() !== '' ? Number(input.target_level) : input.target_level,
+                length_level: typeof input.length_level === 'string' && input.length_level.trim() !== '' ? Number(input.length_level) : input.length_level,
+                root_level: typeof input.root_level === 'string' && input.root_level.trim() !== '' ? Number(input.root_level) : input.root_level
+            });
+            const gate = classifyThreeZoneActivation(normalizedContext);
+            const eligibility = classifyEndsRecEligibility(normalizedContext);
+            const candidate = input.endsRecCandidatePreview || null;
+
+            function hasOwn(target, key) {
+                return Boolean(target) && Object.prototype.hasOwnProperty.call(target, key);
+            }
+
+            function candidateHasNotForMixingFlag(candidatePreview) {
+                return Boolean(candidatePreview && (
+                    candidatePreview.notForMixing === true ||
+                    (candidatePreview.massPreview && candidatePreview.massPreview.notForMixing === true) ||
+                    (candidatePreview.formulaPreview && candidatePreview.formulaPreview.notForMixing === true)
+                ));
+            }
+
+            function candidateSummary(candidatePreview) {
+                if (!candidatePreview) return null;
+                return {
+                    zone: candidatePreview.zone || null,
+                    candidateOnly: candidatePreview.candidateOnly === true,
+                    previewOnly: candidatePreview.previewOnly === true,
+                    notForMixing: candidateHasNotForMixingFlag(candidatePreview),
+                    productionReady: candidatePreview.productionReady === true,
+                    eligibilityStatus: candidatePreview.eligibilityStatus || null,
+                    hasDyeMass: hasOwn(candidatePreview, 'dyeMass'),
+                    hasOxidizerMass: hasOwn(candidatePreview, 'oxidizerMass'),
+                    hasEndsFormula: hasOwn(candidatePreview, 'endsFormula')
+                };
+            }
+
+            function result(status, reasonCode, reasons, candidatePreview) {
+                const ready = status === 'READY';
+                return {
+                    ready,
+                    status,
+                    reasonCode,
+                    reasons: reasons.filter(Boolean),
+                    candidateSummary: candidateSummary(candidatePreview),
+                    productionAllowed: ready,
+                    productionBlocked: !ready
+                };
+            }
+
+            const gateDecision = gate && gate.decision ? gate.decision : 'UNKNOWN';
+            if (gateDecision === 'KEEP_2_ZONE') {
+                return result('NOT_READY', 'THREE_ZONE_KEEP_2_ZONE', [gate.reason], candidate);
+            }
+            if (gateDecision === 'MANUAL_REQUIRED') {
+                return result('MANUAL_REQUIRED', 'THREE_ZONE_MANUAL_REQUIRED', [gate.reason], candidate);
+            }
+            if (gateDecision === 'BLOCKED') {
+                return result('BLOCKED', 'THREE_ZONE_BLOCKED', [gate.reason], candidate);
+            }
+            if (gateDecision !== 'ALLOW_3_ZONE') {
+                return result('NOT_READY', 'THREE_ZONE_NOT_ALLOWED', [gate.reason || gateDecision], candidate);
+            }
+
+            const eligibilityStatus = eligibility && eligibility.status ? eligibility.status : 'UNKNOWN';
+            if (eligibilityStatus === 'BLOCKED') {
+                return result('BLOCKED', 'ENDSREC_ELIGIBILITY_BLOCKED', [eligibility.reason], candidate);
+            }
+            if (eligibilityStatus === 'MANUAL_REQUIRED') {
+                return result('MANUAL_REQUIRED', 'ENDSREC_ELIGIBILITY_MANUAL_REQUIRED', [eligibility.reason], candidate);
+            }
+            if (eligibilityStatus !== 'SAFE_FOR_TONING') {
+                return result('NOT_READY', 'ENDSREC_ELIGIBILITY_NOT_SAFE', [eligibility.reason || eligibilityStatus], candidate);
+            }
+
+            if (!candidate) {
+                return result('NOT_READY', 'NO_ENDSREC_CANDIDATE_PREVIEW', ['endsRecCandidatePreview missing'], candidate);
+            }
+            if (candidate.productionReady === true) {
+                return result('BLOCKED', 'CANDIDATE_PRODUCTION_READY_TRUE', ['candidate productionReady must remain false in readiness phase'], candidate);
+            }
+
+            const missingFlags = [];
+            if (candidate.candidateOnly !== true) missingFlags.push('candidateOnly');
+            if (candidate.previewOnly !== true) missingFlags.push('previewOnly');
+            if (!candidateHasNotForMixingFlag(candidate)) missingFlags.push('notForMixing');
+            if (candidate.productionReady !== false) missingFlags.push('productionReady_false');
+            if (missingFlags.length > 0) {
+                return result('NOT_READY', 'CANDIDATE_MISSING_SAFETY_FLAGS', missingFlags, candidate);
+            }
+
+            const hasProductionFields = hasOwn(candidate, 'dyeMass') || hasOwn(candidate, 'oxidizerMass') || hasOwn(candidate, 'endsFormula');
+            if (hasProductionFields) {
+                return result('BLOCKED', 'CANDIDATE_HAS_PRODUCTION_FIELDS', ['candidate must not contain production dyeMass, oxidizerMass, or endsFormula'], candidate);
+            }
+            if (input.massModel && typeof input.massModel.endsMass === 'number') {
+                return result('BLOCKED', 'MASSMODEL_ENDSMASS_ALREADY_SET', ['production massModel.endsMass must not be allocated'], candidate);
+            }
+
+            return result('READY', 'READY_LOW_RISK_TONING_CANDIDATE', [gate.reason, eligibility.reason], candidate);
+        }
+
         function classifyThreeZoneActivation(input) {
             const { ends_level, length_level, root_level, ends_condition, ends_history, ends_base_type, target_level } = input;
             
