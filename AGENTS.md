@@ -300,3 +300,86 @@ For ПЕРУКАР specifically:
 - результати перевірок;
 - git status --short;
 - чи потрібен наступний commit або чи commit уже виконано.
+
+## Autonomous bounded execution
+
+Якщо prompt містить режим `AUTONOMOUS BOUNDED TASK EXECUTION`, агент має право самостійно виконати повний цикл:
+
+preflight → implementation → validation → commit → audit → documentation → final report.
+
+Це дозволено тільки в явно вказаному scope задачі.
+
+Агент не має права:
+
+- змінювати файли поза allowed scope;
+- робити `git add .`;
+- робити `push`;
+- переходити до наступної фічі;
+- створювати debug/temp files;
+- додавати `console.log` або debug output;
+- залишати skipped/failing tests;
+- ігнорувати test failure;
+- продовжувати після mode violation;
+- запускати Update Topic Context;
+- питати користувача між підкроками, якщо дія входить у allowed scope.
+
+При будь-якому FAIL, dirty unexpected state, forbidden changes, test failure або mode violation агент зупиняється і дає structured report:
+
+- STATUS;
+- changed files;
+- failed command;
+- risk;
+- recommendation.
+
+Preflight для автономного режиму:
+
+1. `git status --short`
+2. `git log --oneline -3`
+3. Якщо repo не clean — STOP, нічого не змінювати, дати DIRTY report.
+
+Validation для JS/runtime задач:
+
+1. `node --check www/core.js`
+2. `node --check test_www_business_scenarios.js`
+3. `node test_www_business_scenarios.js`
+4. `node --check test_www_mass_model.js`
+5. `node test_www_mass_model.js`
+6. `node --check test_www_mapping.js`
+7. `node test_www_mapping.js`
+8. `node --check test_www_render_runtime.js`
+9. `node test_www_render_runtime.js`
+10. `git diff --check`
+
+Commit policy:
+
+- stage тільки явно allowed files;
+- `git add .` заборонено;
+- перед commit обов’язково виконати `git diff --cached --name-only`;
+- commit дозволений тільки якщо staged files входять у allowed scope.
+
+Audit після commit:
+
+1. `git status --short`
+2. `git show --stat --oneline HEAD`
+3. `git show --name-only --oneline HEAD`
+
+Після audit:
+
+- якщо audit PASS і docs потрібні — агент може зробити окремий docs commit, якщо docs входять у allowed autonomous scope;
+- якщо docs не потрібні — явно написати `docs not required`.
+
+Final report format:
+
+```text
+STATUS: PASS / FAIL
+changed files:
+staged files:
+commit hash:
+git status:
+runtime changed:
+tests changed:
+docs changed:
+tests:
+risk:
+recommendation:
+```
