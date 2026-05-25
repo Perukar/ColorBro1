@@ -1133,4 +1133,45 @@ console.log('classifyThreeZoneActivation(): PRODUCTION GATE HELPER (not called f
 console.log('');
 console.log('WWW mass model test contract passed.');
 
+// ============================================================================
+// PRODUCTION ENDSREC CURRENT-STATE SAFETY CONTRACT TESTS (MASS MODEL LEVEL)
+// ============================================================================
+// These tests verify that production massModel does NOT include ends mass.
+// They are PASSING tests that document the current safe state.
+// ============================================================================
+
+// TEST 19: ENDSREC-PRODUCTION-CURRENT-ENDSMASS-NULL-SPEC-LEVEL
+// Verify production buildMassModel() spec returns endsMass: null (not allocated).
+(function testEndsRecProductionEndsMassNullSpecLevel() {
+    const id = 'ENDSREC-PRODUCTION-CURRENT-ENDSMASS-NULL-SPEC-LEVEL';
+    const massModel = buildMassModel('средние', 'средние');
+    assert.strictEqual(massModel.endsMass === null, true, id + ': endsMass must be null');
+    assert.ok(!massModel.hasOwnProperty('endsMass') || massModel.endsMass === null, id + ': endsMass must not be allocated');
+    console.log(id + ' safe: production buildMassModel() endsMass is null.');
+})();
+
+// TEST 20: ENDSREC-PRODUCTION-CURRENT-MASSMODEL-STAYS-2ZONE-SPEC-LEVEL
+// Verify production buildMassModel() spec returns mode: "2-zone" (not "3-zone").
+(function testEndsRecProductionMassModelStays2ZoneSpecLevel() {
+    const id = 'ENDSREC-PRODUCTION-CURRENT-MASSMODEL-STAYS-2ZONE-SPEC-LEVEL';
+    const massModel = buildMassModel('средние', 'средние');
+    assert.strictEqual(massModel.mode, '2-zone', id + ': mode must be "2-zone"');
+    assert.notStrictEqual(massModel.mode, '3-zone', id + ': mode must NOT be "3-zone"');
+    console.log(id + ' safe: production buildMassModel() mode is "2-zone".');
+})();
+
+// TEST 21: ENDSREC-PRODUCTION-CURRENT-2ZONE-SUM-CONTRACT-PRESERVED
+// Verify production 2-zone sum contract is preserved: rootMass + lengthMass === totalMass.
+(function testEndsRecProductionCurrentTwoZoneSumContractPreserved() {
+    const id = 'ENDSREC-PRODUCTION-CURRENT-2ZONE-SUM-CONTRACT-PRESERVED';
+    const massModel = buildMassModel('средние', 'средние');
+    const sum = massModel.rootMass + massModel.lengthMass;
+    assert.strictEqual(sum, massModel.totalMass, id + ': rootMass + lengthMass === totalMass');
+    // With endsMass null, total must equal root + length (no third term)
+    assert.ok(massModel.endsMass === null || massModel.endsMass === undefined, id + ': endsMass must be null/undefined');
+    console.log(id + ' safe: production 2-zone sum contract preserved.');
+})();
+
+console.log('Production endsRec current-state safety contract tests (mass model) PASSED');
+
 

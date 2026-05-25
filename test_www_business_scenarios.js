@@ -1022,6 +1022,69 @@ globalThis.__threeZoneGateResults = {
     gateRiskyCond: { status: 'SAFE', hasManualSignal: gateRiskyCondScenario.hasManualSignal },
     gateAllow: { status: 'SAFE', hasNoEndsRecipeSignal: gateAllowScenario.hasNoEndsRecipeSignal, hasPreview: allowHtml.includes('"threeZoneCandidateMassModel": {') }
 };
+
+const productionEndsRecCurrentScenario = gateAllowScenario;
+assert.ok(!productionEndsRecCurrentScenario.hasError, 'ENDSREC-PRODUCTION-CURRENT-SAFETY-CONTRACT must not throw');
+
+const productionEndsRecCurrentHtml = productionEndsRecCurrentScenario.html;
+const productionMassModelStart = productionEndsRecCurrentHtml.indexOf('<div class="mass-model">');
+const productionMassModelEnd = productionEndsRecCurrentHtml.indexOf('</div>', productionMassModelStart);
+const productionMassModelHtml = productionMassModelStart >= 0 && productionMassModelEnd > productionMassModelStart
+    ? productionEndsRecCurrentHtml.slice(productionMassModelStart, productionMassModelEnd)
+    : '';
+
+const hasProductionEndsRec = productionEndsRecCurrentHtml.includes('<b>endsRec:</b>')
+    && productionEndsRecCurrentHtml.includes('&quot;productionReady&quot;:true');
+const productionEndsMassNull = productionMassModelHtml.includes('&quot;endsMass&quot;: null')
+    || productionMassModelHtml.includes('&quot;endsMass&quot;:null');
+const productionModeIs2Zone = productionMassModelHtml.includes('&quot;mode&quot;: &quot;2-zone&quot;')
+    || productionMassModelHtml.includes('&quot;mode&quot;:&quot;2-zone&quot;');
+const productionModeIs3Zone = productionMassModelHtml.includes('&quot;mode&quot;: &quot;3-zone&quot;')
+    || productionMassModelHtml.includes('&quot;mode&quot;:&quot;3-zone&quot;');
+const hasCandidatePreview = productionEndsRecCurrentHtml.includes('endsRecCandidatePreview');
+const candidateIsReadonly = productionEndsRecCurrentHtml.includes('&quot;candidateOnly&quot;:true')
+    && productionEndsRecCurrentHtml.includes('&quot;productionReady&quot;:false')
+    && productionEndsRecCurrentHtml.includes('&quot;previewOnly&quot;:true')
+    && productionEndsRecCurrentHtml.includes('&quot;notForMixing&quot;:true');
+const hasProductionDyeMass = hasProductionEndsRec
+    && productionEndsRecCurrentHtml.includes('&quot;dyeMass&quot;:');
+const hasProductionOxidizerMass = hasProductionEndsRec
+    && productionEndsRecCurrentHtml.includes('&quot;oxidizerMass&quot;:');
+const hasProductionEndsFormula = hasProductionEndsRec
+    && productionEndsRecCurrentHtml.includes('&quot;endsFormula&quot;:');
+const rootRecipeStart = productionEndsRecCurrentHtml.indexOf('<h3>Корінь</h3>');
+const rootRecipeEnd = productionEndsRecCurrentHtml.indexOf('</div>', rootRecipeStart);
+const rootRecipeHtml = rootRecipeStart >= 0 && rootRecipeEnd > rootRecipeStart
+    ? productionEndsRecCurrentHtml.slice(rootRecipeStart, rootRecipeEnd)
+    : '';
+const lengthRecipeStart = productionEndsRecCurrentHtml.indexOf('<h3>Довжина</h3>');
+const lengthRecipeEnd = productionEndsRecCurrentHtml.indexOf('</div>', lengthRecipeStart);
+const lengthRecipeHtml = lengthRecipeStart >= 0 && lengthRecipeEnd > lengthRecipeStart
+    ? productionEndsRecCurrentHtml.slice(lengthRecipeStart, lengthRecipeEnd)
+    : '';
+
+assert.strictEqual(hasProductionEndsRec, false, 'ENDSREC-PRODUCTION-CURRENT-NOT-CREATED: production endsRec must NOT be created yet');
+assert.ok(productionMassModelHtml, 'ENDSREC-PRODUCTION-CURRENT-ENDSMASS-NULL: production massModel should be rendered');
+assert.strictEqual(productionEndsMassNull, true, 'ENDSREC-PRODUCTION-CURRENT-ENDSMASS-NULL: production endsMass must remain null');
+assert.strictEqual(productionModeIs2Zone, true, 'ENDSREC-PRODUCTION-CURRENT-MASSMODEL-STAYS-2ZONE: production massModel.mode must stay "2-zone"');
+assert.strictEqual(productionModeIs3Zone, false, 'ENDSREC-PRODUCTION-CURRENT-MASSMODEL-STAYS-2ZONE: production massModel.mode must NOT be "3-zone"');
+assert.strictEqual(hasCandidatePreview && candidateIsReadonly, true, 'ENDSREC-PRODUCTION-CURRENT-CANDIDATE-NOT-PRODUCTION: candidate must exist with protection flags');
+assert.strictEqual(hasProductionDyeMass, false, 'ENDSREC-PRODUCTION-CURRENT-NO-DYEMASS: production dyeMass must NOT exist');
+assert.strictEqual(hasProductionOxidizerMass, false, 'ENDSREC-PRODUCTION-CURRENT-NO-OXIDIZERMASS: production oxidizerMass must NOT exist');
+assert.strictEqual(hasProductionEndsFormula, false, 'ENDSREC-PRODUCTION-CURRENT-NO-READY-FORMULA: production endsFormula must NOT exist yet');
+assert.strictEqual(rootRecipeHtml.includes('endsRecCandidate') || lengthRecipeHtml.includes('endsRecCandidate'), false, 'ENDSREC-PRODUCTION-CURRENT-NO-ROOT-LEN-CHANGE: root/len recipes must NOT reference candidate ends mass');
+
+globalThis.__endsRecProductionCurrentSafetyResults = {
+    productionEndsRec: !hasProductionEndsRec,
+    productionEndsMass: productionEndsMassNull,
+    productionMassModelMode: productionModeIs2Zone && !productionModeIs3Zone,
+    candidateAsProduction: hasCandidatePreview && candidateIsReadonly && !hasProductionEndsRec,
+    dyeMass: !hasProductionDyeMass,
+    oxidizerMass: !hasProductionOxidizerMass,
+    readyFormula: !hasProductionEndsFormula,
+    rootRecLenRec: !rootRecipeHtml.includes('endsRecCandidate')
+        && !lengthRecipeHtml.includes('endsRecCandidate')
+};
 `;
 
 const sandbox = {
