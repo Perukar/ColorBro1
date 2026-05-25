@@ -762,6 +762,65 @@ const pigmentMap = {
             });
         }
 
+        /**
+         * classifyProductionEndsRecMassAllocationContract(context, readiness, builderResult, formulaContract)
+         *
+         * INACTIVE HELPER. Classifies the future production endsRec mass allocation
+         * contract. It does not allocate mass, dyeMass, oxidizerMass, or exact grams,
+         * and it is not called from calculateProtocol().
+         */
+        function classifyProductionEndsRecMassAllocationContract(context, readiness, builderResult, formulaContract) {
+            const state = readiness || {};
+            const build = builderResult || {};
+            const formula = formulaContract || {};
+            const endsRec = build.endsRec || null;
+
+            function cloneList(values) {
+                return Array.isArray(values) ? values.slice().filter(Boolean) : [];
+            }
+
+            function result(massStatus, reasonCode, overrides = {}) {
+                return Object.assign({
+                    massReady: massStatus === 'READY',
+                    massStatus,
+                    allowedMassCalculation: massStatus === 'READY',
+                    estimatedEndsShare: null,
+                    sourceMassModelRef: "threeZoneCandidateMassModel",
+                    safetyReasonCodes: [],
+                    manualRequiredReasonCodes: [],
+                    reasonCode
+                }, overrides);
+            }
+
+            if (state.status === 'BLOCKED' || state.productionBlocked === true) {
+                return result('BLOCKED', state.reasonCode || 'READINESS_BLOCKED');
+            }
+            if (state.status === 'MANUAL_REQUIRED') {
+                return result('MANUAL_REQUIRED', state.reasonCode || 'READINESS_MANUAL_REQUIRED', {
+                    manualRequiredReasonCodes: [state.reasonCode || 'READINESS_MANUAL_REQUIRED']
+                });
+            }
+            if (state.ready !== true || state.status !== 'READY') {
+                return result('NOT_READY', state.reasonCode || 'READINESS_NOT_READY');
+            }
+            if (build.created !== true || build.status !== 'CREATED') {
+                return result('NO_BUILDER', build.reasonCode || 'BUILDER_NOT_CREATED');
+            }
+            if (!endsRec || endsRec.productionReady !== true) {
+                return result('NO_ENDSREC', 'ENDSREC_NOT_PRODUCTION_READY');
+            }
+            if (formula.formulaReady !== true) {
+                return result('NO_FORMULA', formula.reasonCode || 'FORMULA_NOT_READY');
+            }
+            if (endsRec.endsRecipeReady === true) {
+                return result('BLOCKED', 'ENDSRECIPE_READY_TRUE_SUSPICIOUS');
+            }
+
+            return result('READY', 'MASS_CANDIDATE_ALLOWED_PRODUCTION_GRAMS_PENDING', {
+                safetyReasonCodes: cloneList(state.reasons).concat(cloneList(endsRec.safetyReasonCodes)).concat(cloneList(formula.safetyReasonCodes))
+            });
+        }
+
         function classifyThreeZoneActivation(input) {
             const { ends_level, length_level, root_level, ends_condition, ends_history, ends_base_type, target_level } = input;
             

@@ -2010,52 +2010,23 @@ console.log('Production endsRec current-state safety contract tests (mass model)
 // PRODUCTION ENDSREC MASS ALLOCATION CONTRACT TESTS
 // ============================================================================
 
+const coreSourceForMassAllocation = fs.readFileSync('./www/core.js', 'utf8');
+const coreSandboxForMassAllocation = {};
+vm.createContext(coreSandboxForMassAllocation);
+vm.runInContext(coreSourceForMassAllocation, coreSandboxForMassAllocation, { filename: 'www/core.js' });
+
 function classifyEndsRecMassAllocationContract(readiness, builderResult, formulaContract) {
-    const state = readiness || {};
-    const build = builderResult || {};
-    const formula = formulaContract || {};
-    const endsRec = build.endsRec || null;
-
-    function result(massStatus, reasonCode, overrides = {}) {
-        return Object.assign({
-            massReady: massStatus === 'MASS_CONTRACT_READY',
-            massStatus,
-            candidateAllowed: false,
-            endsMass: null,
-            mode: '2-zone',
-            reasonCode
-        }, overrides);
-    }
-
-    if (state.status === 'BLOCKED') {
-        return result('BLOCKED', state.reasonCode || 'READINESS_BLOCKED');
-    }
-    if (state.status === 'MANUAL_REQUIRED') {
-        return result('MANUAL_REQUIRED', state.reasonCode || 'READINESS_MANUAL_REQUIRED');
-    }
-    if (state.ready !== true || state.status !== 'READY') {
-        return result('NOT_READY', state.reasonCode || 'READINESS_NOT_READY');
-    }
-    if (build.created !== true || (build.status !== 'SKELETON_ALLOWED' && build.status !== 'CREATED')) {
-        return result('NOT_READY', build.reasonCode || 'BUILDER_NOT_CREATED');
-    }
-    if (!endsRec || endsRec.productionReady !== true) {
-        return result('NOT_READY', 'ENDSREC_NOT_PRODUCTION_READY');
-    }
-    if (formula.formulaReady !== true) {
-        return result('NOT_READY', formula.reasonCode || 'FORMULA_NOT_READY');
-    }
-    if (endsRec.endsRecipeReady === true) {
-        return result('BLOCKED', 'ENDSRECIPE_READY_TRUE_SUSPICIOUS');
-    }
-
-    // 1. MASS-CONTRACT-READY-ALLOWS-MASS-CANDIDATE
-    return result('MASS_CONTRACT_READY', 'MASS_CANDIDATE_ALLOWED_PRODUCTION_GRAMS_PENDING', {
-        candidateAllowed: true,
-        endsMass: null, // contract does not allow production endsMass yet
-        mode: '2-zone'  // contract does not allow 3-zone massModel mode yet
-    });
+    const resultObj = coreSandboxForMassAllocation.classifyProductionEndsRecMassAllocationContract({}, readiness, builderResult, formulaContract);
+    return Object.assign({
+        massReady: resultObj.massReady,
+        massStatus: resultObj.massStatus,
+        candidateAllowed: resultObj.massStatus === 'READY',
+        endsMass: null,
+        mode: '2-zone',
+        reasonCode: resultObj.reasonCode
+    }, resultObj);
 }
+
 
 // TEST 1: MASS-CONTRACT-READY-ALLOWS-MASS-CANDIDATE
 (function testMassContractReadyAllowsMassCandidate() {
@@ -2302,6 +2273,46 @@ function classifyEndsRecMassAllocationContract(readiness, builderResult, formula
     assert.strictEqual(html.includes('endsRec:'), false, id + ': html must not contain production endsRec');
     assert.strictEqual(html.includes('&quot;mode&quot;:&quot;3-zone&quot;') && !html.includes('endsRecCandidatePreview'), false, id + ': html must not contain production 3-zone mode');
     assert.strictEqual(html.includes('&quot;endsMass&quot;:') && !html.includes('null') && !html.includes('endsRecCandidatePreview'), false, id + ': production endsMass must remain null');
+    console.log(id + ' safe.');
+})();
+
+// TEST 17: MASS-ALLOCATION-HELPER-IS-PURE-AND-STRUCTURED
+(function testMassAllocationHelperIsPureAndStructured() {
+    const id = 'MASS-ALLOCATION-HELPER-IS-PURE-AND-STRUCTURED';
+    const source = fs.readFileSync('./www/core.js', 'utf8');
+    const sandbox = {};
+    vm.createContext(sandbox);
+    vm.runInContext(source, sandbox, { filename: 'www/core.js' });
+
+    assert.strictEqual(typeof sandbox.classifyProductionEndsRecMassAllocationContract, 'function', id + ': helper must be exported');
+
+    const context = { dummy: true };
+    const readiness = { ready: true, status: 'READY', reasons: ['ok'] };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false, safetyReasonCodes: ['ok'] } };
+    const formula = { formulaReady: true, safetyReasonCodes: ['ok'] };
+
+    const beforeContext = JSON.stringify(context);
+    const beforeReadiness = JSON.stringify(readiness);
+    const beforeBuilder = JSON.stringify(builder);
+    const beforeFormula = JSON.stringify(formula);
+
+    const result = sandbox.classifyProductionEndsRecMassAllocationContract(context, readiness, builder, formula);
+
+    // Assert purity: no inputs mutated
+    assert.strictEqual(JSON.stringify(context), beforeContext, id + ': context must not be mutated');
+    assert.strictEqual(JSON.stringify(readiness), beforeReadiness, id + ': readiness must not be mutated');
+    assert.strictEqual(JSON.stringify(builder), beforeBuilder, id + ': builder must not be mutated');
+    assert.strictEqual(JSON.stringify(formula), beforeFormula, id + ': formula must not be mutated');
+
+    // Assert exact structure
+    assert.strictEqual(result.massReady, true, id + ': massReady must be true');
+    assert.strictEqual(result.massStatus, 'READY', id + ': massStatus must be READY');
+    assert.strictEqual(result.allowedMassCalculation, true, id + ': allowedMassCalculation must be true');
+    assert.strictEqual(result.estimatedEndsShare, null, id + ': estimatedEndsShare must be null');
+    assert.strictEqual(result.sourceMassModelRef, 'threeZoneCandidateMassModel', id + ': sourceMassModelRef must be threeZoneCandidateMassModel');
+    assert.strictEqual(JSON.stringify(result.safetyReasonCodes), JSON.stringify(['ok', 'ok', 'ok']), id + ': safetyReasonCodes must be aggregated');
+    assert.strictEqual(JSON.stringify(result.manualRequiredReasonCodes), JSON.stringify([]), id + ': manualRequiredReasonCodes must be empty');
+
     console.log(id + ' safe.');
 })();
 
