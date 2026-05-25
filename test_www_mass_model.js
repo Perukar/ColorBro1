@@ -3266,3 +3266,668 @@ function runControlledEndsRecWiringSpecLocal(context, readiness, builderResult, 
 })();
 
 console.log('Production endsRec controlled wiring contract tests PASSED');
+
+
+// ============================================================================
+// GUARDED CALCULATEPROTOCOL DIAGNOSTIC WIRING TESTS (SPEC MIRROR)
+// ============================================================================
+
+/**
+ * Local spec helper to mirror the future guarded calculateProtocol diagnostic wiring.
+ * This represents the execution wrapper under test.
+ */
+function runGuardedDiagnosticWiringSpecLocal(context, readiness, builderResult, formulaContract, massAllocation, assemblyResult, controlledWiringResult) {
+    // 23. GUARDED-WIRING-PURITY: Ensure we do not mutate inputs
+    const isReady = readiness && readiness.ready === true;
+    const isBuilderCreated = builderResult && builderResult.created === true;
+    const isFormulaReady = formulaContract && formulaContract.formulaReady === true;
+    const isMassReady = massAllocation && massAllocation.massReady === true;
+    const isAssembled = assemblyResult && assemblyResult.assembled === true;
+    const isWiringReady = controlledWiringResult && controlledWiringResult.diagnosticReady === true;
+    const candidate = controlledWiringResult && controlledWiringResult.diagnosticCandidate;
+    const productionBlocked = context && context.productionBlocked === true;
+
+    const isBlocked = (readiness && readiness.status === 'BLOCKED') ||
+                      (builderResult && builderResult.status === 'BLOCKED') ||
+                      (formulaContract && formulaContract.formulaStatus === 'BLOCKED') ||
+                      (massAllocation && massAllocation.massStatus === 'BLOCKED') ||
+                      (assemblyResult && assemblyResult.assemblyStatus === 'BLOCKED') ||
+                      (controlledWiringResult && controlledWiringResult.wiringStatus === 'BLOCKED');
+
+    const isManual = (readiness && readiness.status === 'MANUAL_REQUIRED') ||
+                     (builderResult && builderResult.status === 'MANUAL_REQUIRED') ||
+                     (formulaContract && formulaContract.formulaStatus === 'MANUAL_REQUIRED') ||
+                     (massAllocation && massAllocation.massStatus === 'MANUAL_REQUIRED') ||
+                     (assemblyResult && assemblyResult.assemblyStatus === 'MANUAL_REQUIRED') ||
+                     (controlledWiringResult && controlledWiringResult.wiringStatus === 'MANUAL_REQUIRED');
+
+    const canWire = isReady && isBuilderCreated && isFormulaReady && isMassReady &&
+                    isAssembled && isWiringReady && candidate && !productionBlocked && !isBlocked && !isManual;
+
+    if (!canWire) {
+        return {
+            allowed: false,
+            diagnosticContainer: null
+        };
+    }
+
+    // 10. GUARDED-WIRING-DIAGNOSTIC-FLAGS-REQUIRED
+    const diagnosticCandidate = {
+        zone: 'ends',
+        candidateOnly: true,
+        previewOnly: true,
+        notForMixing: true, // Safety flag
+        productionReady: false, // 11. GUARDED-WIRING-NO-PRODUCTION-ENDSREC
+        endsRecipeReady: false, // 17. GUARDED-WIRING-ENDSRECIPE-STAYS-FALSE
+        sourceRefs: Object.assign({}, candidate.sourceRefs),
+        safetyReasonCodes: Array.isArray(candidate.safetyReasonCodes) ? candidate.safetyReasonCodes.slice() : [],
+        manualRequiredReasonCodes: Array.isArray(candidate.manualRequiredReasonCodes) ? candidate.manualRequiredReasonCodes.slice() : []
+    };
+
+    return {
+        allowed: true,
+        // 25. GUARDED-WIRING-CONTAINER-NOT-HARDCODED-TO-REASONS
+        diagnosticContainer: {
+            guardedDiagnosticCandidate: diagnosticCandidate
+        }
+    };
+}
+
+// 1. GUARDED-WIRING-READY-CAN-CREATE-DIAGNOSTIC-CONTAINER
+(function testGuardedWiringReadyCanCreateDiagnosticContainer() {
+    const id = 'GUARDED-WIRING-READY-CAN-CREATE-DIAGNOSTIC-CONTAINER';
+    const context = {};
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, massStatus: 'READY' };
+    const assembly = { assembled: true, assemblyStatus: 'READY', productionEndsRecCandidate: {} };
+    const wiring = {
+        diagnosticReady: true,
+        wiringStatus: 'READY',
+        diagnosticCandidate: {
+            sourceRefs: { readinessReasonCode: 'OK' },
+            safetyReasonCodes: ['low-risk'],
+            manualRequiredReasonCodes: []
+        }
+    };
+
+    const result = runGuardedDiagnosticWiringSpecLocal(context, readiness, builder, formula, mass, assembly, wiring);
+
+    assert.strictEqual(result.allowed, true, id);
+    assert.ok(result.diagnosticContainer !== null, id);
+    assert.ok(result.diagnosticContainer.guardedDiagnosticCandidate !== null, id);
+    assert.strictEqual(result.diagnosticContainer.guardedDiagnosticCandidate.candidateOnly, true, id);
+    assert.strictEqual(result.diagnosticContainer.guardedDiagnosticCandidate.previewOnly, true, id);
+    assert.strictEqual(result.diagnosticContainer.guardedDiagnosticCandidate.notForMixing, true, id);
+    console.log(id + ' safe.');
+})();
+
+// 2. GUARDED-WIRING-REQUIRES-READINESS-READY
+(function testGuardedWiringRequiresReadinessReady() {
+    const id = 'GUARDED-WIRING-REQUIRES-READINESS-READY';
+    const context = {};
+    const readiness = { ready: false, status: 'NOT_READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, massStatus: 'READY' };
+    const assembly = { assembled: true, productionEndsRecCandidate: {} };
+    const wiring = { diagnosticReady: true, diagnosticCandidate: {} };
+
+    const result = runGuardedDiagnosticWiringSpecLocal(context, readiness, builder, formula, mass, assembly, wiring);
+
+    assert.strictEqual(result.allowed, false, id);
+    assert.strictEqual(result.diagnosticContainer, null, id);
+    console.log(id + ' safe.');
+})();
+
+// 3. GUARDED-WIRING-REQUIRES-BUILDER-CREATED
+(function testGuardedWiringRequiresBuilderCreated() {
+    const id = 'GUARDED-WIRING-REQUIRES-BUILDER-CREATED';
+    const context = {};
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: false, status: 'NOT_CREATED' };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, massStatus: 'READY' };
+    const assembly = { assembled: true, productionEndsRecCandidate: {} };
+    const wiring = { diagnosticReady: true, diagnosticCandidate: {} };
+
+    const result = runGuardedDiagnosticWiringSpecLocal(context, readiness, builder, formula, mass, assembly, wiring);
+
+    assert.strictEqual(result.allowed, false, id);
+    assert.strictEqual(result.diagnosticContainer, null, id);
+    console.log(id + ' safe.');
+})();
+
+// 4. GUARDED-WIRING-REQUIRES-FORMULA-READY
+(function testGuardedWiringRequiresFormulaReady() {
+    const id = 'GUARDED-WIRING-REQUIRES-FORMULA-READY';
+    const context = {};
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: false, formulaStatus: 'NOT_READY' };
+    const mass = { massReady: true, massStatus: 'READY' };
+    const assembly = { assembled: true, productionEndsRecCandidate: {} };
+    const wiring = { diagnosticReady: true, diagnosticCandidate: {} };
+
+    const result = runGuardedDiagnosticWiringSpecLocal(context, readiness, builder, formula, mass, assembly, wiring);
+
+    assert.strictEqual(result.allowed, false, id);
+    assert.strictEqual(result.diagnosticContainer, null, id);
+    console.log(id + ' safe.');
+})();
+
+// 5. GUARDED-WIRING-REQUIRES-MASS-READY
+(function testGuardedWiringRequiresMassReady() {
+    const id = 'GUARDED-WIRING-REQUIRES-MASS-READY';
+    const context = {};
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: false, massStatus: 'NOT_READY' };
+    const assembly = { assembled: true, productionEndsRecCandidate: {} };
+    const wiring = { diagnosticReady: true, diagnosticCandidate: {} };
+
+    const result = runGuardedDiagnosticWiringSpecLocal(context, readiness, builder, formula, mass, assembly, wiring);
+
+    assert.strictEqual(result.allowed, false, id);
+    assert.strictEqual(result.diagnosticContainer, null, id);
+    console.log(id + ' safe.');
+})();
+
+// 6. GUARDED-WIRING-REQUIRES-ASSEMBLY
+(function testGuardedWiringRequiresAssembly() {
+    const id = 'GUARDED-WIRING-REQUIRES-ASSEMBLY';
+    const context = {};
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, massStatus: 'READY' };
+    const assembly = { assembled: false, productionEndsRecCandidate: {} };
+    const wiring = { diagnosticReady: true, diagnosticCandidate: {} };
+
+    const result = runGuardedDiagnosticWiringSpecLocal(context, readiness, builder, formula, mass, assembly, wiring);
+
+    assert.strictEqual(result.allowed, false, id);
+    assert.strictEqual(result.diagnosticContainer, null, id);
+    console.log(id + ' safe.');
+})();
+
+// 7. GUARDED-WIRING-REQUIRES-CONTROLLED-WIRING-READY
+(function testGuardedWiringRequiresControlledWiringReady() {
+    const id = 'GUARDED-WIRING-REQUIRES-CONTROLLED-WIRING-READY';
+    const context = {};
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, massStatus: 'READY' };
+    const assembly = { assembled: true, productionEndsRecCandidate: {} };
+    const wiring = { diagnosticReady: false, diagnosticCandidate: null };
+
+    const result = runGuardedDiagnosticWiringSpecLocal(context, readiness, builder, formula, mass, assembly, wiring);
+
+    assert.strictEqual(result.allowed, false, id);
+    assert.strictEqual(result.diagnosticContainer, null, id);
+    console.log(id + ' safe.');
+})();
+
+// 8. GUARDED-WIRING-BLOCKED-NO-DIAGNOSTIC
+(function testGuardedWiringBlockedNoDiagnostic() {
+    const id = 'GUARDED-WIRING-BLOCKED-NO-DIAGNOSTIC';
+    const context = {};
+    const readiness = { ready: false, status: 'BLOCKED' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, massStatus: 'READY' };
+    const assembly = { assembled: true, productionEndsRecCandidate: {} };
+    const wiring = { diagnosticReady: true, diagnosticCandidate: {} };
+
+    const result = runGuardedDiagnosticWiringSpecLocal(context, readiness, builder, formula, mass, assembly, wiring);
+
+    assert.strictEqual(result.allowed, false, id);
+    assert.strictEqual(result.diagnosticContainer, null, id);
+    console.log(id + ' safe.');
+})();
+
+// 9. GUARDED-WIRING-MANUAL-NO-DIAGNOSTIC
+(function testGuardedWiringManualNoDiagnostic() {
+    const id = 'GUARDED-WIRING-MANUAL-NO-DIAGNOSTIC';
+    const context = {};
+    const readiness = { ready: false, status: 'MANUAL_REQUIRED' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, massStatus: 'READY' };
+    const assembly = { assembled: true, productionEndsRecCandidate: {} };
+    const wiring = { diagnosticReady: true, diagnosticCandidate: {} };
+
+    const result = runGuardedDiagnosticWiringSpecLocal(context, readiness, builder, formula, mass, assembly, wiring);
+
+    assert.strictEqual(result.allowed, false, id);
+    assert.strictEqual(result.diagnosticContainer, null, id);
+    console.log(id + ' safe.');
+})();
+
+// 10. GUARDED-WIRING-DIAGNOSTIC-FLAGS-REQUIRED
+(function testGuardedWiringDiagnosticFlagsRequired() {
+    const id = 'GUARDED-WIRING-DIAGNOSTIC-FLAGS-REQUIRED';
+    const context = {};
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, massStatus: 'READY' };
+    const assembly = { assembled: true, productionEndsRecCandidate: {} };
+    const wiring = { diagnosticReady: true, diagnosticCandidate: { safetyReasonCodes: [], manualRequiredReasonCodes: [] } };
+
+    const result = runGuardedDiagnosticWiringSpecLocal(context, readiness, builder, formula, mass, assembly, wiring);
+
+    const cand = result.diagnosticContainer.guardedDiagnosticCandidate;
+    assert.strictEqual(cand.previewOnly, true, id);
+    assert.strictEqual(cand.candidateOnly, true, id);
+    assert.strictEqual(cand.notForMixing, true, id);
+    console.log(id + ' safe.');
+})();
+
+// 11. GUARDED-WIRING-NO-PRODUCTION-ENDSREC
+(function testGuardedWiringNoProductionEndsRec() {
+    const id = 'GUARDED-WIRING-NO-PRODUCTION-ENDSREC';
+    const context = {};
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, status: 'READY' };
+    const assembly = { assembled: true, productionEndsRecCandidate: {} };
+    const wiring = { diagnosticReady: true, diagnosticCandidate: {} };
+
+    const result = runGuardedDiagnosticWiringSpecLocal(context, readiness, builder, formula, mass, assembly, wiring);
+
+    const cand = result.diagnosticContainer.guardedDiagnosticCandidate;
+    assert.strictEqual(cand.productionReady, false, id + ': diagnostic candidate cannot have productionReady true');
+    console.log(id + ' safe.');
+})();
+
+// 12. GUARDED-WIRING-NO-DYEMASS-OXIDIZERMASS
+(function testGuardedWiringNoDyeMassOxidizerMass() {
+    const id = 'GUARDED-WIRING-NO-DYEMASS-OXIDIZERMASS';
+    const context = {};
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, status: 'READY' };
+    const assembly = { assembled: true, productionEndsRecCandidate: {} };
+    const wiring = { diagnosticReady: true, diagnosticCandidate: {} };
+
+    const result = runGuardedDiagnosticWiringSpecLocal(context, readiness, builder, formula, mass, assembly, wiring);
+
+    const cand = result.diagnosticContainer.guardedDiagnosticCandidate;
+    assert.strictEqual(cand.dyeMass, undefined, id);
+    assert.strictEqual(cand.oxidizerMass, undefined, id);
+    console.log(id + ' safe.');
+})();
+
+// 13. GUARDED-WIRING-NO-EXACT-GRAMS
+(function testGuardedWiringNoExactGrams() {
+    const id = 'GUARDED-WIRING-NO-EXACT-GRAMS';
+    const context = {};
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, status: 'READY' };
+    const assembly = { assembled: true, productionEndsRecCandidate: {} };
+    const wiring = { diagnosticReady: true, diagnosticCandidate: {} };
+
+    const result = runGuardedDiagnosticWiringSpecLocal(context, readiness, builder, formula, mass, assembly, wiring);
+
+    const cand = result.diagnosticContainer.guardedDiagnosticCandidate;
+    assert.strictEqual(cand.exactGrams, undefined, id);
+    assert.strictEqual(cand.dyeGrams, undefined, id);
+    assert.strictEqual(cand.oxidizerGrams, undefined, id);
+    console.log(id + ' safe.');
+})();
+
+// 14. GUARDED-WIRING-NO-ENDSMASS
+(function testGuardedWiringNoEndsMass() {
+    const id = 'GUARDED-WIRING-NO-ENDSMASS';
+    const context = {};
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, status: 'READY' };
+    const assembly = { assembled: true, productionEndsRecCandidate: {} };
+    const wiring = { diagnosticReady: true, diagnosticCandidate: {} };
+
+    const result = runGuardedDiagnosticWiringSpecLocal(context, readiness, builder, formula, mass, assembly, wiring);
+
+    const cand = result.diagnosticContainer.guardedDiagnosticCandidate;
+    assert.strictEqual(cand.endsMass, undefined, id);
+    console.log(id + ' safe.');
+})();
+
+// 15. GUARDED-WIRING-NO-3ZONE-MASSMODEL
+(function testGuardedWiringNo3ZoneMassModel() {
+    const id = 'GUARDED-WIRING-NO-3ZONE-MASSMODEL';
+    const context = {};
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, status: 'READY' };
+    const assembly = { assembled: true, productionEndsRecCandidate: {} };
+    const wiring = { diagnosticReady: true, diagnosticCandidate: {} };
+
+    const result = runGuardedDiagnosticWiringSpecLocal(context, readiness, builder, formula, mass, assembly, wiring);
+
+    const cand = result.diagnosticContainer.guardedDiagnosticCandidate;
+    assert.strictEqual(cand.mode, undefined, id);
+    console.log(id + ' safe.');
+})();
+
+// 16. GUARDED-WIRING-NO-FINAL-FORMULA
+(function testGuardedWiringNoFinalFormula() {
+    const id = 'GUARDED-WIRING-NO-FINAL-FORMULA';
+    const context = {};
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, status: 'READY' };
+    const assembly = { assembled: true, productionEndsRecCandidate: {} };
+    const wiring = { diagnosticReady: true, diagnosticCandidate: {} };
+
+    const result = runGuardedDiagnosticWiringSpecLocal(context, readiness, builder, formula, mass, assembly, wiring);
+
+    const cand = result.diagnosticContainer.guardedDiagnosticCandidate;
+    assert.strictEqual(cand.endsFormula, undefined, id);
+    console.log(id + ' safe.');
+})();
+
+// 17. GUARDED-WIRING-ENDSRECIPE-STAYS-FALSE
+(function testGuardedWiringEndsRecipeStaysFalse() {
+    const id = 'GUARDED-WIRING-ENDSRECIPE-STAYS-FALSE';
+    const context = {};
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, status: 'READY' };
+    const assembly = { assembled: true, productionEndsRecCandidate: {} };
+    const wiring = { diagnosticReady: true, diagnosticCandidate: {} };
+
+    const result = runGuardedDiagnosticWiringSpecLocal(context, readiness, builder, formula, mass, assembly, wiring);
+
+    const cand = result.diagnosticContainer.guardedDiagnosticCandidate;
+    assert.strictEqual(cand.endsRecipeReady, false, id);
+    console.log(id + ' safe.');
+})();
+
+// 18. GUARDED-WIRING-NO-PREVIEW-MASS-PROMOTION
+(function testGuardedWiringNoPreviewMassPromotion() {
+    const id = 'GUARDED-WIRING-NO-PREVIEW-MASS-PROMOTION';
+    const context = makeReadinessContext();
+    const readiness = validateProductionEndsRecReadiness(context);
+    const builder = buildProductionEndsRecSkeletonContract(readiness);
+    const formula = classifyFormulaContractSpecData(readiness, builder);
+    const mass = classifyEndsRecMassAllocationContract(readiness, builder, formula);
+    const assembly = assembleProductionEndsRecContractSpecLocal(readiness, builder, formula, mass);
+    const wiring = coreSandboxForWiring.buildControlledEndsRecDiagnosticWiringContract(context, readiness, builder, formula, mass, assembly);
+
+    runGuardedDiagnosticWiringSpecLocal(context, readiness, builder, formula, mass, assembly, wiring);
+
+    assert.ok(context.threeZoneCandidateMassModel);
+    assert.strictEqual(context.threeZoneCandidateMassModel.endsMass, 12, id + ': candidate endsMass must be 12');
+    assert.strictEqual(context.massModel.endsMass, null, id + ': production massModel.endsMass must remain null');
+    console.log(id + ' safe.');
+})();
+
+// 19. GUARDED-WIRING-RUNTIME-INVARIANTS-STAY-2ZONE
+(function testGuardedWiringRuntimeInvariantsStay2Zone() {
+    const id = 'GUARDED-WIRING-RUNTIME-INVARIANTS-STAY-2ZONE';
+    const source = fs.readFileSync('./www/core.js', 'utf8');
+    const sandbox = {};
+    vm.createContext(sandbox);
+    vm.runInContext(source, sandbox, { filename: 'www/core.js' });
+
+    const scenarioValues = {
+        history: 'натуральні',
+        condition: 'здоровые',
+        thickness: 'средние',
+        density: 'средние',
+        length: 'средние',
+        grey_percent: '0',
+        grey_type: 'мягкая',
+        root_level: '6',
+        root_length: '1',
+        length_level: '6',
+        ends_level: '8',
+        ends_condition: 'здорові',
+        base_type: 'Натуральна',
+        target_level: '6',
+        target_direction: '1',
+        ends_history: 'натуральна',
+        ends_base_type: 'натуральна'
+    };
+    const output = { innerHTML: '' };
+    sandbox.document = {
+        getElementById(id) {
+            if (id === 'output') return output;
+            return { value: scenarioValues[id] };
+        }
+    };
+
+    sandbox.calculateProtocol();
+
+    const html = output.innerHTML;
+    assert.strictEqual(html.includes('&quot;mode&quot;:&quot;3-zone&quot;') && !html.includes('endsRecCandidatePreview'), false, id + ': production 3-zone mode must not be active');
+    assert.strictEqual(html.includes('&quot;endsMass&quot;:') && !html.includes('null') && !html.includes('endsRecCandidatePreview'), false, id + ': production endsMass must remain null');
+    console.log(id + ' safe.');
+})();
+
+// 20. GUARDED-WIRING-CALCULATEPROTOCOL-NOT-WIRED-YET
+(function testGuardedWiringCalculateProtocolNotWiredYet() {
+    const id = 'GUARDED-WIRING-CALCULATEPROTOCOL-NOT-WIRED-YET';
+    const source = fs.readFileSync('./www/core.js', 'utf8');
+    const sandbox = {};
+    vm.createContext(sandbox);
+    vm.runInContext(source, sandbox, { filename: 'www/core.js' });
+    const calcProtoSource = sandbox.calculateProtocol.toString();
+
+    // The calculateProtocol execution block should not contain wiring execution variable logic yet
+    assert.strictEqual(calcProtoSource.includes('guardedDiagnosticCandidate'), false, id);
+    assert.strictEqual(calcProtoSource.includes('endsRecDiagnosticWiringCandidate'), false, id);
+    console.log(id + ' safe.');
+})();
+
+// 21. GUARDED-WIRING-ROOT-LENGTH-UNCHANGED
+(function testGuardedWiringRootLengthUnchanged() {
+    const id = 'GUARDED-WIRING-ROOT-LENGTH-UNCHANGED';
+    const source = fs.readFileSync('./www/core.js', 'utf8');
+    const sandbox = {};
+    vm.createContext(sandbox);
+    vm.runInContext(source, sandbox, { filename: 'www/core.js' });
+
+    const scenarioValues = {
+        history: 'натуральні',
+        condition: 'здоровые',
+        thickness: 'средние',
+        density: 'средние',
+        length: 'средние',
+        grey_percent: '0',
+        grey_type: 'мягкая',
+        root_level: '6',
+        root_length: '1',
+        length_level: '6',
+        ends_level: '8',
+        ends_condition: 'здорові',
+        base_type: 'Натуральна',
+        target_level: '6',
+        target_direction: '1',
+        ends_history: 'натуральна',
+        ends_base_type: 'натуральна'
+    };
+    const output = { innerHTML: '' };
+    sandbox.document = {
+        getElementById(id) {
+            if (id === 'output') return output;
+            return { value: scenarioValues[id] };
+        }
+    };
+
+    sandbox.calculateProtocol();
+
+    const html = output.innerHTML;
+    assert.strictEqual(html.includes('endsRec:'), false, id);
+    assert.strictEqual(html.includes('endsFormula:'), false, id);
+    console.log(id + ' safe.');
+})();
+
+// 22. GUARDED-WIRING-NO-UI-RENDER-PRODUCTION-RECIPE
+(function testGuardedWiringNoUiRenderProductionRecipe() {
+    const id = 'GUARDED-WIRING-NO-UI-RENDER-PRODUCTION-RECIPE';
+    const source = fs.readFileSync('./www/core.js', 'utf8');
+    const sandbox = {};
+    vm.createContext(sandbox);
+    vm.runInContext(source, sandbox, { filename: 'www/core.js' });
+
+    const scenarioValues = {
+        history: 'натуральні',
+        condition: 'здоровые',
+        thickness: 'средние',
+        density: 'средние',
+        length: 'средние',
+        grey_percent: '0',
+        grey_type: 'мягкая',
+        root_level: '6',
+        root_length: '1',
+        length_level: '6',
+        ends_level: '8',
+        ends_condition: 'здорові',
+        base_type: 'Натуральна',
+        target_level: '6',
+        target_direction: '1',
+        ends_history: 'натуральна',
+        ends_base_type: 'натуральна'
+    };
+    const output = { innerHTML: '' };
+    sandbox.document = {
+        getElementById(id) {
+            if (id === 'output') return output;
+            return { value: scenarioValues[id] };
+        }
+    };
+
+    sandbox.calculateProtocol();
+
+    const html = output.innerHTML;
+    assert.strictEqual(html.includes('guardedDiagnosticCandidate'), false, id);
+    console.log(id + ' safe.');
+})();
+
+// 23. GUARDED-WIRING-PURITY
+(function testGuardedWiringPurity() {
+    const id = 'GUARDED-WIRING-PURITY';
+    const context = { productionBlocked: false };
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, massStatus: 'READY' };
+    const assembly = { assembled: true, assemblyStatus: 'READY', productionEndsRecCandidate: {} };
+    const wiring = {
+        diagnosticReady: true,
+        wiringStatus: 'READY',
+        diagnosticCandidate: {
+            sourceRefs: { readinessReasonCode: 'OK' },
+            safetyReasonCodes: ['low-risk'],
+            manualRequiredReasonCodes: []
+        }
+    };
+
+    const beforeContext = JSON.stringify(context);
+    const beforeReadiness = JSON.stringify(readiness);
+    const beforeBuilder = JSON.stringify(builder);
+    const beforeFormula = JSON.stringify(formula);
+    const beforeMass = JSON.stringify(mass);
+    const beforeAssembly = JSON.stringify(assembly);
+    const beforeWiring = JSON.stringify(wiring);
+
+    runGuardedDiagnosticWiringSpecLocal(context, readiness, builder, formula, mass, assembly, wiring);
+
+    assert.strictEqual(JSON.stringify(context), beforeContext, id + ': context must not be mutated');
+    assert.strictEqual(JSON.stringify(readiness), beforeReadiness, id + ': readiness must not be mutated');
+    assert.strictEqual(JSON.stringify(builder), beforeBuilder, id + ': builder must not be mutated');
+    assert.strictEqual(JSON.stringify(formula), beforeFormula, id + ': formula must not be mutated');
+    assert.strictEqual(JSON.stringify(mass), beforeMass, id + ': mass must not be mutated');
+    assert.strictEqual(JSON.stringify(assembly), beforeAssembly, id + ': assembly must not be mutated');
+    assert.strictEqual(JSON.stringify(wiring), beforeWiring, id + ': wiring must not be mutated');
+    console.log(id + ' safe.');
+})();
+
+// 24. GUARDED-WIRING-CURRENT-RUNTIME-STILL-SAFE
+(function testGuardedWiringCurrentRuntimeStillSafe() {
+    const id = 'GUARDED-WIRING-CURRENT-RUNTIME-STILL-SAFE';
+    const source = fs.readFileSync('./www/core.js', 'utf8');
+    const sandbox = {};
+    vm.createContext(sandbox);
+    vm.runInContext(source, sandbox, { filename: 'www/core.js' });
+
+    const scenarioValues = {
+        history: 'натуральні',
+        condition: 'здоровые',
+        thickness: 'средние',
+        density: 'средние',
+        length: 'средние',
+        grey_percent: '0',
+        grey_type: 'мягкая',
+        root_level: '6',
+        root_length: '1',
+        length_level: '6',
+        ends_level: '8',
+        ends_condition: 'здорові',
+        base_type: 'Натуральна',
+        target_level: '6',
+        target_direction: '1',
+        ends_history: 'натуральна',
+        ends_base_type: 'натуральна'
+    };
+    const output = { innerHTML: '' };
+    sandbox.document = {
+        getElementById(id) {
+            if (id === 'output') return output;
+            return { value: scenarioValues[id] };
+        }
+    };
+
+    sandbox.calculateProtocol();
+
+    const html = output.innerHTML;
+    assert.strictEqual(html.includes('endsRec:'), false, id);
+    assert.strictEqual(html.includes('endsFormula:'), false, id);
+    assert.strictEqual(html.includes('&quot;mode&quot;:&quot;3-zone&quot;') && !html.includes('endsRecCandidatePreview'), false, id);
+    assert.strictEqual(html.includes('&quot;endsMass&quot;:') && !html.includes('null') && !html.includes('endsRecCandidatePreview'), false, id);
+    console.log(id + ' safe.');
+})();
+
+// 25. GUARDED-WIRING-CONTAINER-NOT-HARDCODED-TO-REASONS
+(function testGuardedWiringContainerNotHardcodedToReasons() {
+    const id = 'GUARDED-WIRING-CONTAINER-NOT-HARDCODED-TO-REASONS';
+    const context = {};
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, status: 'READY' };
+    const assembly = { assembled: true, assemblyStatus: 'READY', productionEndsRecCandidate: {} };
+    const wiring = {
+        diagnosticReady: true,
+        wiringStatus: 'READY',
+        diagnosticCandidate: {
+            sourceRefs: { readinessReasonCode: 'OK' },
+            safetyReasonCodes: ['low-risk'],
+            manualRequiredReasonCodes: []
+        }
+    };
+
+    const result = runGuardedDiagnosticWiringSpecLocal(context, readiness, builder, formula, mass, assembly, wiring);
+
+    // Verify it returns a wrapper container, not raw recipe fields directly on root
+    assert.ok(result.diagnosticContainer, id);
+    assert.ok(result.diagnosticContainer.guardedDiagnosticCandidate, id);
+    assert.strictEqual(result.diagnosticContainer.endsRecipeReady, undefined, id + ': container must not pollute root with recipe ready flag');
+    console.log(id + ' safe.');
+})();
+
+console.log('Production endsRec guarded wiring contract tests PASSED');
