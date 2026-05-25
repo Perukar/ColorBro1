@@ -917,6 +917,128 @@ const pigmentMap = {
             };
         }
 
+        /**
+         * buildControlledEndsRecDiagnosticWiringContract(context, readiness, builderResult, formulaContract, massAllocation, assemblyResult)
+         *
+         * INACTIVE HELPER. Assembles the diagnostic/preview candidate representation
+         * to be safe for inclusion in calculateProtocol logs/reasons.
+         * It does not mutate any inputs, does not change the production recipe status,
+         * and does not wired itself into calculateProtocol logic directly.
+         */
+        function buildControlledEndsRecDiagnosticWiringContract(context, readiness, builderResult, formulaContract, massAllocation, assemblyResult) {
+            const ctx = context || {};
+            const state = readiness || {};
+            const build = builderResult || {};
+            const formula = formulaContract || {};
+            const mass = massAllocation || {};
+            const assembly = assemblyResult || {};
+            const candidate = assembly.productionEndsRecCandidate || null;
+
+            const isReady = state.ready === true;
+            const isBuilderCreated = build.created === true;
+            const isFormulaReady = formula.formulaReady === true;
+            const isMassReady = mass.massReady === true;
+            const isAssembled = assembly.assembled === true;
+            const productionBlocked = ctx.productionBlocked === true;
+
+            const isBlocked = state.status === 'BLOCKED' ||
+                              build.status === 'BLOCKED' ||
+                              formula.formulaStatus === 'BLOCKED' ||
+                              mass.massStatus === 'BLOCKED' ||
+                              assembly.assemblyStatus === 'BLOCKED';
+
+            const isManual = state.status === 'MANUAL_REQUIRED' ||
+                             build.status === 'MANUAL_REQUIRED' ||
+                             formula.formulaStatus === 'MANUAL_REQUIRED' ||
+                             mass.massStatus === 'MANUAL_REQUIRED' ||
+                             assembly.assemblyStatus === 'MANUAL_REQUIRED';
+
+            const canWire = isReady && isBuilderCreated && isFormulaReady && isMassReady &&
+                            isAssembled && candidate && !productionBlocked && !isBlocked && !isManual;
+
+            if (!canWire) {
+                let wiringStatus = 'NOT_READY';
+                if (isBlocked) {
+                    wiringStatus = 'BLOCKED';
+                } else if (isManual) {
+                    wiringStatus = 'MANUAL_REQUIRED';
+                } else if (!isBuilderCreated) {
+                    wiringStatus = 'NO_BUILDER';
+                } else if (!isFormulaReady) {
+                    wiringStatus = 'NO_FORMULA';
+                } else if (!isMassReady) {
+                    wiringStatus = 'NO_MASS';
+                } else if (!isAssembled) {
+                    wiringStatus = 'NO_ASSEMBLY';
+                } else if (!candidate) {
+                    wiringStatus = 'NO_CANDIDATE';
+                }
+
+                return {
+                    diagnosticReady: false,
+                    wiringStatus,
+                    diagnosticCandidate: null,
+                    sourceRefs: {},
+                    safetyReasonCodes: [],
+                    manualRequiredReasonCodes: []
+                };
+            }
+
+            if (candidate.endsRecipeReady === true) {
+                return {
+                    diagnosticReady: false,
+                    wiringStatus: 'SUSPICIOUS_RECIPE_READY',
+                    diagnosticCandidate: null,
+                    sourceRefs: {},
+                    safetyReasonCodes: [],
+                    manualRequiredReasonCodes: []
+                };
+            }
+
+            const safetyReasonCodes = [];
+            if (state.reasons) safetyReasonCodes.push(...state.reasons);
+            if (build.endsRec && build.endsRec.safetyReasonCodes) safetyReasonCodes.push(...build.endsRec.safetyReasonCodes);
+            if (formula.safetyReasonCodes) safetyReasonCodes.push(...formula.safetyReasonCodes);
+            if (mass.safetyReasonCodes) safetyReasonCodes.push(...mass.safetyReasonCodes);
+
+            const manualRequiredReasonCodes = [];
+            if (state.status === 'MANUAL_REQUIRED') manualRequiredReasonCodes.push('READINESS_MANUAL');
+            if (build.status === 'MANUAL_REQUIRED') manualRequiredReasonCodes.push('BUILDER_MANUAL');
+            if (formula.formulaStatus === 'MANUAL_REQUIRED') manualRequiredReasonCodes.push('FORMULA_MANUAL');
+            if (mass.massStatus === 'MANUAL_REQUIRED') manualRequiredReasonCodes.push('MASS_MANUAL');
+
+            const diagnosticCandidate = {
+                zone: 'ends',
+                previewOnly: true,
+                candidateOnly: true,
+                notForMixing: true,
+                productionReady: false, // strictly false for preview
+                endsRecipeReady: false, // strictly false
+                sourceRefs: {
+                    readinessReasonCode: state.reasonCode || null,
+                    builderStatus: build.status || null,
+                    formulaType: formula.formulaType || null,
+                    massStatus: mass.massStatus || null
+                },
+                safetyReasonCodes: safetyReasonCodes,
+                manualRequiredReasonCodes: manualRequiredReasonCodes
+            };
+
+            return {
+                diagnosticReady: true,
+                wiringStatus: 'READY',
+                diagnosticCandidate,
+                sourceRefs: {
+                    readinessReasonCode: state.reasonCode || null,
+                    builderStatus: build.status || null,
+                    formulaType: formula.formulaType || null,
+                    massStatus: mass.massStatus || null
+                },
+                safetyReasonCodes: safetyReasonCodes,
+                manualRequiredReasonCodes: manualRequiredReasonCodes
+            };
+        }
+
         function classifyThreeZoneActivation(input) {
             const { ends_level, length_level, root_level, ends_condition, ends_history, ends_base_type, target_level } = input;
             

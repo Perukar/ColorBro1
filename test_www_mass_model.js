@@ -2705,58 +2705,16 @@ console.log('Production endsRec assembly contract tests PASSED');
 // CONTROLLED ENDSREC WIRING CONTRACT TESTS (SPEC MIRROR)
 // ============================================================================
 
-/**
- * Local spec helper to mirror the future controlled endsRec wiring behavior.
- * This represents the wiring execution under test.
- */
+const coreSourceForWiring = fs.readFileSync('./www/core.js', 'utf8');
+const coreSandboxForWiring = {};
+vm.createContext(coreSandboxForWiring);
+vm.runInContext(coreSourceForWiring, coreSandboxForWiring, { filename: 'www/core.js' });
+
 function runControlledEndsRecWiringSpecLocal(context, readiness, builderResult, formulaContract, massAllocation, assemblyResult) {
-    // 23. WIRING-CONTRACT-PURITY: Ensure we do not mutate inputs
-    const isReady = readiness && readiness.ready === true;
-    const isBuilderCreated = builderResult && builderResult.created === true;
-    const isFormulaReady = formulaContract && formulaContract.formulaReady === true;
-    const isMassReady = massAllocation && massAllocation.massReady === true;
-    const isAssembled = assemblyResult && assemblyResult.assembled === true;
-    const candidate = assemblyResult && assemblyResult.productionEndsRecCandidate;
-    const productionBlocked = context && context.productionBlocked === true;
-
-    const isBlocked = (readiness && readiness.status === 'BLOCKED') ||
-                      (builderResult && builderResult.status === 'BLOCKED') ||
-                      (formulaContract && formulaContract.formulaStatus === 'BLOCKED') ||
-                      (massAllocation && massAllocation.massStatus === 'BLOCKED') ||
-                      (assemblyResult && assemblyResult.assemblyStatus === 'BLOCKED');
-
-    const isManual = (readiness && readiness.status === 'MANUAL_REQUIRED') ||
-                     (builderResult && builderResult.status === 'MANUAL_REQUIRED') ||
-                     (formulaContract && formulaContract.formulaStatus === 'MANUAL_REQUIRED') ||
-                     (massAllocation && massAllocation.massStatus === 'MANUAL_REQUIRED') ||
-                     (assemblyResult && assemblyResult.assemblyStatus === 'MANUAL_REQUIRED');
-
-    const canWire = isReady && isBuilderCreated && isFormulaReady && isMassReady &&
-                    isAssembled && candidate && !productionBlocked && !isBlocked && !isManual;
-
-    if (!canWire) {
-        return {
-            allowed: false,
-            diagnosticCandidate: null
-        };
-    }
-
-    // 10. WIRING-CONTRACT-DIAGNOSTIC-FLAGS-REQUIRED
-    const diagnosticCandidate = {
-        zone: 'ends',
-        candidateOnly: true,
-        previewOnly: true,
-        notForMixing: true, // Safety flag
-        productionReady: false, // 11. WIRING-CONTRACT-NO-PRODUCTION-ENDSREC
-        endsRecipeReady: false, // 17. WIRING-CONTRACT-ENDSRECIPE-STAYS-FALSE
-        sourceRefs: Object.assign({}, candidate.sourceRefs),
-        safetyReasonCodes: Array.isArray(candidate.safetyReasonCodes) ? candidate.safetyReasonCodes.slice() : [],
-        manualRequiredReasonCodes: Array.isArray(candidate.manualRequiredReasonCodes) ? candidate.manualRequiredReasonCodes.slice() : []
-    };
-
+    const resultObj = coreSandboxForWiring.buildControlledEndsRecDiagnosticWiringContract(context, readiness, builderResult, formulaContract, massAllocation, assemblyResult);
     return {
-        allowed: true,
-        diagnosticCandidate: diagnosticCandidate
+        allowed: resultObj.diagnosticReady,
+        diagnosticCandidate: resultObj.diagnosticCandidate
     };
 }
 
