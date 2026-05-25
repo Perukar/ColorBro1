@@ -2319,3 +2319,440 @@ function classifyEndsRecMassAllocationContract(readiness, builderResult, formula
 console.log('Production endsRec mass allocation contract tests PASSED');
 
 
+// ============================================================================
+// PRODUCTION ENDSREC ASSEMBLY CONTRACT TESTS (SPEC MIRROR)
+// ============================================================================
+
+/**
+ * Local spec helper to mirror the future assembleProductionEndsRecContract behavior.
+ * This helper represents the assembly logic under test.
+ */
+function assembleProductionEndsRecContractSpecLocal(readiness, builderResult, formulaContract, massAllocation) {
+    // 19. ASSEMBLY-CONTRACT-PURITY: Ensure we do not mutate inputs
+    const isReady = readiness && readiness.ready === true;
+    const isBuilderCreated = builderResult && builderResult.created === true;
+    const isFormulaReady = formulaContract && formulaContract.formulaReady === true;
+    const isMassReady = massAllocation && massAllocation.massReady === true;
+    const hasProductionReadySkeleton = builderResult && builderResult.endsRec && builderResult.endsRec.productionReady === true;
+    const hasEndsRecipeNotReady = builderResult && builderResult.endsRec && builderResult.endsRec.endsRecipeReady === false;
+
+    // Check blocked state
+    const isBlocked = (readiness && readiness.status === 'BLOCKED') ||
+                      (builderResult && builderResult.status === 'BLOCKED') ||
+                      (formulaContract && formulaContract.formulaStatus === 'BLOCKED') ||
+                      (massAllocation && massAllocation.massStatus === 'BLOCKED');
+
+    // Check manual required state
+    const isManual = (readiness && readiness.status === 'MANUAL_REQUIRED') ||
+                     (builderResult && builderResult.status === 'MANUAL_REQUIRED') ||
+                     (formulaContract && formulaContract.formulaStatus === 'MANUAL_REQUIRED') ||
+                     (massAllocation && massAllocation.massStatus === 'MANUAL_REQUIRED');
+
+    const canAssemble = isReady && isBuilderCreated && isFormulaReady && isMassReady &&
+                        hasProductionReadySkeleton && hasEndsRecipeNotReady && !isBlocked && !isManual;
+
+    let assemblyStatus = 'NOT_ASSEMBLED';
+    if (isBlocked) {
+        assemblyStatus = 'BLOCKED';
+    } else if (isManual) {
+        assemblyStatus = 'MANUAL_REQUIRED';
+    } else if (canAssemble) {
+        assemblyStatus = 'ASSEMBLED';
+    }
+
+    const safetyReasonCodes = [];
+    if (readiness && readiness.reasons) safetyReasonCodes.push(...readiness.reasons);
+    if (builderResult && builderResult.endsRec && builderResult.endsRec.safetyReasonCodes) {
+        safetyReasonCodes.push(...builderResult.endsRec.safetyReasonCodes);
+    }
+    if (formulaContract && formulaContract.safetyReasonCodes) safetyReasonCodes.push(...formulaContract.safetyReasonCodes);
+    if (massAllocation && massAllocation.safetyReasonCodes) safetyReasonCodes.push(...massAllocation.safetyReasonCodes);
+
+    const manualRequiredReasonCodes = [];
+    if (readiness && readiness.status === 'MANUAL_REQUIRED') manualRequiredReasonCodes.push('READINESS_MANUAL');
+    if (builderResult && builderResult.status === 'MANUAL_REQUIRED') manualRequiredReasonCodes.push('BUILDER_MANUAL');
+    if (formulaContract && formulaContract.formulaStatus === 'MANUAL_REQUIRED') manualRequiredReasonCodes.push('FORMULA_MANUAL');
+    if (massAllocation && massAllocation.massStatus === 'MANUAL_REQUIRED') manualRequiredReasonCodes.push('MASS_MANUAL');
+
+    let productionEndsRecCandidate = null;
+    if (canAssemble) {
+        productionEndsRecCandidate = {
+            zone: 'ends',
+            productionReady: true,
+            endsRecipeReady: false, // 15. ASSEMBLY-CONTRACT-ENDSRECIPE-STAYS-FALSE: Candidate must remain false
+            safetyReasonCodes: safetyReasonCodes
+        };
+    }
+
+    return {
+        assembled: canAssemble,
+        assemblyStatus: assemblyStatus,
+        productionEndsRecCandidate: productionEndsRecCandidate,
+        sourceRefs: {
+            readinessReasonCode: (readiness && readiness.reasons && readiness.reasons[0]) || null,
+            builderStatus: (builderResult && builderResult.status) || null,
+            formulaType: (formulaContract && formulaContract.formulaType) || null,
+            massStatus: (massAllocation && massAllocation.massStatus) || null
+        },
+        safetyReasonCodes: safetyReasonCodes,
+        manualRequiredReasonCodes: manualRequiredReasonCodes
+    };
+}
+
+// 1. ASSEMBLY-CONTRACT-READY-CREATES-CANDIDATE
+(function testAssemblyContractReadyCreatesCandidate() {
+    const id = 'ASSEMBLY-CONTRACT-READY-CREATES-CANDIDATE';
+    const readiness = { ready: true, status: 'READY', reasons: ['low-risk'] };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false, safetyReasonCodes: ['builder-ok'] } };
+    const formula = { formulaReady: true, formulaStatus: 'READY', formulaType: 'toning', safetyReasonCodes: ['formula-ok'] };
+    const mass = { massReady: true, massStatus: 'READY', safetyReasonCodes: ['mass-ok'] };
+
+    const result = assembleProductionEndsRecContractSpecLocal(readiness, builder, formula, mass);
+
+    assert.strictEqual(result.assembled, true, id);
+    assert.strictEqual(result.assemblyStatus, 'ASSEMBLED', id);
+    assert.ok(result.productionEndsRecCandidate !== null, id);
+    assert.strictEqual(result.productionEndsRecCandidate.zone, 'ends', id);
+    assert.strictEqual(result.productionEndsRecCandidate.productionReady, true, id);
+    assert.strictEqual(result.productionEndsRecCandidate.endsRecipeReady, false, id);
+    console.log(id + ' safe.');
+})();
+
+// 2. ASSEMBLY-CONTRACT-REQUIRES-READINESS-READY
+(function testAssemblyContractRequiresReadinessReady() {
+    const id = 'ASSEMBLY-CONTRACT-REQUIRES-READINESS-READY';
+    const readiness = { ready: false, status: 'NOT_READY', reasons: ['risky-history'] };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, massStatus: 'READY' };
+
+    const result = assembleProductionEndsRecContractSpecLocal(readiness, builder, formula, mass);
+
+    assert.strictEqual(result.assembled, false, id);
+    assert.strictEqual(result.productionEndsRecCandidate, null, id);
+    console.log(id + ' safe.');
+})();
+
+// 3. ASSEMBLY-CONTRACT-REQUIRES-BUILDER-CREATED
+(function testAssemblyContractRequiresBuilderCreated() {
+    const id = 'ASSEMBLY-CONTRACT-REQUIRES-BUILDER-CREATED';
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: false, status: 'NOT_CREATED', endsRec: null };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, massStatus: 'READY' };
+
+    const result = assembleProductionEndsRecContractSpecLocal(readiness, builder, formula, mass);
+
+    assert.strictEqual(result.assembled, false, id);
+    assert.strictEqual(result.productionEndsRecCandidate, null, id);
+    console.log(id + ' safe.');
+})();
+
+// 4. ASSEMBLY-CONTRACT-REQUIRES-FORMULA-READY
+(function testAssemblyContractRequiresFormulaReady() {
+    const id = 'ASSEMBLY-CONTRACT-REQUIRES-FORMULA-READY';
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: false, formulaStatus: 'NOT_READY' };
+    const mass = { massReady: true, massStatus: 'READY' };
+
+    const result = assembleProductionEndsRecContractSpecLocal(readiness, builder, formula, mass);
+
+    assert.strictEqual(result.assembled, false, id);
+    assert.strictEqual(result.productionEndsRecCandidate, null, id);
+    console.log(id + ' safe.');
+})();
+
+// 5. ASSEMBLY-CONTRACT-REQUIRES-MASS-READY
+(function testAssemblyContractRequiresMassReady() {
+    const id = 'ASSEMBLY-CONTRACT-REQUIRES-MASS-READY';
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: false, massStatus: 'NOT_READY' };
+
+    const result = assembleProductionEndsRecContractSpecLocal(readiness, builder, formula, mass);
+
+    assert.strictEqual(result.assembled, false, id);
+    assert.strictEqual(result.productionEndsRecCandidate, null, id);
+    console.log(id + ' safe.');
+})();
+
+// 6. ASSEMBLY-CONTRACT-REQUIRES-PRODUCTION-READY-ENDSREC
+(function testAssemblyContractRequiresProductionReadyEndsRec() {
+    const id = 'ASSEMBLY-CONTRACT-REQUIRES-PRODUCTION-READY-ENDSREC';
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: false, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, massStatus: 'READY' };
+
+    const result = assembleProductionEndsRecContractSpecLocal(readiness, builder, formula, mass);
+
+    assert.strictEqual(result.assembled, false, id);
+    assert.strictEqual(result.productionEndsRecCandidate, null, id);
+    console.log(id + ' safe.');
+})();
+
+// 7. ASSEMBLY-CONTRACT-REQUIRES-ENDSRECIPE-NOT-READY
+(function testAssemblyContractRequiresEndsRecipeNotReady() {
+    const id = 'ASSEMBLY-CONTRACT-REQUIRES-ENDSRECIPE-NOT-READY';
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: true } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, massStatus: 'READY' };
+
+    const result = assembleProductionEndsRecContractSpecLocal(readiness, builder, formula, mass);
+
+    assert.strictEqual(result.assembled, false, id);
+    assert.strictEqual(result.productionEndsRecCandidate, null, id);
+    console.log(id + ' safe.');
+})();
+
+// 8. ASSEMBLY-CONTRACT-BLOCKED-NO-ASSEMBLY
+(function testAssemblyContractBlockedNoAssembly() {
+    const id = 'ASSEMBLY-CONTRACT-BLOCKED-NO-ASSEMBLY';
+    const readiness = { ready: false, status: 'BLOCKED' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, massStatus: 'READY' };
+
+    const result = assembleProductionEndsRecContractSpecLocal(readiness, builder, formula, mass);
+
+    assert.strictEqual(result.assembled, false, id);
+    assert.strictEqual(result.assemblyStatus, 'BLOCKED', id);
+    assert.strictEqual(result.productionEndsRecCandidate, null, id);
+    console.log(id + ' safe.');
+})();
+
+// 9. ASSEMBLY-CONTRACT-MANUAL-NO-ASSEMBLY
+(function testAssemblyContractManualNoAssembly() {
+    const id = 'ASSEMBLY-CONTRACT-MANUAL-NO-ASSEMBLY';
+    const readiness = { ready: false, status: 'MANUAL_REQUIRED' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, massStatus: 'READY' };
+
+    const result = assembleProductionEndsRecContractSpecLocal(readiness, builder, formula, mass);
+
+    assert.strictEqual(result.assembled, false, id);
+    assert.strictEqual(result.assemblyStatus, 'MANUAL_REQUIRED', id);
+    assert.strictEqual(result.productionEndsRecCandidate, null, id);
+    console.log(id + ' safe.');
+})();
+
+// 10. ASSEMBLY-CONTRACT-NO-DYEMASS-OXIDIZERMASS
+(function testAssemblyContractNoDyeMassOxidizerMass() {
+    const id = 'ASSEMBLY-CONTRACT-NO-DYEMASS-OXIDIZERMASS';
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, massStatus: 'READY' };
+
+    const result = assembleProductionEndsRecContractSpecLocal(readiness, builder, formula, mass);
+
+    assert.strictEqual(result.dyeMass, undefined, id);
+    assert.strictEqual(result.oxidizerMass, undefined, id);
+    if (result.productionEndsRecCandidate) {
+        assert.strictEqual(result.productionEndsRecCandidate.dyeMass, undefined, id);
+        assert.strictEqual(result.productionEndsRecCandidate.oxidizerMass, undefined, id);
+    }
+    console.log(id + ' safe.');
+})();
+
+// 11. ASSEMBLY-CONTRACT-NO-EXACT-GRAMS
+(function testAssemblyContractNoExactGrams() {
+    const id = 'ASSEMBLY-CONTRACT-NO-EXACT-GRAMS';
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, massStatus: 'READY' };
+
+    const result = assembleProductionEndsRecContractSpecLocal(readiness, builder, formula, mass);
+
+    assert.strictEqual(result.exactGrams, undefined, id);
+    assert.strictEqual(result.dyeGrams, undefined, id);
+    assert.strictEqual(result.oxidizerGrams, undefined, id);
+    if (result.productionEndsRecCandidate) {
+        assert.strictEqual(result.productionEndsRecCandidate.exactGrams, undefined, id);
+    }
+    console.log(id + ' safe.');
+})();
+
+// 12. ASSEMBLY-CONTRACT-NO-ENDSMASS
+(function testAssemblyContractNoEndsMass() {
+    const id = 'ASSEMBLY-CONTRACT-NO-ENDSMASS';
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, massStatus: 'READY' };
+
+    const result = assembleProductionEndsRecContractSpecLocal(readiness, builder, formula, mass);
+
+    assert.strictEqual(result.endsMass, undefined, id);
+    if (result.productionEndsRecCandidate) {
+        assert.strictEqual(result.productionEndsRecCandidate.endsMass, undefined, id);
+    }
+    console.log(id + ' safe.');
+})();
+
+// 13. ASSEMBLY-CONTRACT-NO-3ZONE-MASSMODEL
+(function testAssemblyContractNo3ZoneMassModel() {
+    const id = 'ASSEMBLY-CONTRACT-NO-3ZONE-MASSMODEL';
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, massStatus: 'READY' };
+
+    const result = assembleProductionEndsRecContractSpecLocal(readiness, builder, formula, mass);
+
+    assert.strictEqual(result.mode, undefined, id);
+    if (result.productionEndsRecCandidate) {
+        assert.strictEqual(result.productionEndsRecCandidate.mode, undefined, id);
+    }
+    console.log(id + ' safe.');
+})();
+
+// 14. ASSEMBLY-CONTRACT-NO-FINAL-FORMULA
+(function testAssemblyContractNoFinalFormula() {
+    const id = 'ASSEMBLY-CONTRACT-NO-FINAL-FORMULA';
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, massStatus: 'READY' };
+
+    const result = assembleProductionEndsRecContractSpecLocal(readiness, builder, formula, mass);
+
+    assert.strictEqual(result.endsFormula, undefined, id);
+    if (result.productionEndsRecCandidate) {
+        assert.strictEqual(result.productionEndsRecCandidate.endsFormula, undefined, id);
+    }
+    console.log(id + ' safe.');
+})();
+
+// 15. ASSEMBLY-CONTRACT-ENDSRECIPE-STAYS-FALSE
+(function testAssemblyContractEndsRecipeStaysFalse() {
+    const id = 'ASSEMBLY-CONTRACT-ENDSRECIPE-STAYS-FALSE';
+    const readiness = { ready: true, status: 'READY' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, massStatus: 'READY' };
+
+    const result = assembleProductionEndsRecContractSpecLocal(readiness, builder, formula, mass);
+
+    assert.strictEqual(result.assembled, true, id);
+    assert.strictEqual(result.productionEndsRecCandidate.endsRecipeReady, false, id);
+    console.log(id + ' safe.');
+})();
+
+// 16. ASSEMBLY-CONTRACT-NO-CALCULATEPROTOCOL-WIRING
+(function testAssemblyContractNoCalculateProtocolWiring() {
+    const id = 'ASSEMBLY-CONTRACT-NO-CALCULATEPROTOCOL-WIRING';
+    const source = fs.readFileSync('./www/core.js', 'utf8');
+    const sandbox = {};
+    vm.createContext(sandbox);
+    vm.runInContext(source, sandbox, { filename: 'www/core.js' });
+    const calcProtoSource = sandbox.calculateProtocol.toString();
+
+    assert.strictEqual(calcProtoSource.includes('assembleProductionEndsRecContract'), false, id + ': assembleProductionEndsRecContract must not be called inside calculateProtocol');
+    console.log(id + ' safe.');
+})();
+
+// 17. ASSEMBLY-CONTRACT-NO-PREVIEW-MASS-PROMOTION
+(function testAssemblyContractNoPreviewMassPromotion() {
+    const id = 'ASSEMBLY-CONTRACT-NO-PREVIEW-MASS-PROMOTION';
+    const context = makeReadinessContext();
+    const readiness = validateProductionEndsRecReadiness(context);
+    const builder = buildProductionEndsRecSkeletonContract(readiness);
+    const formula = classifyFormulaContractSpecData(readiness, builder);
+    const mass = classifyEndsRecMassAllocationContract(readiness, builder, formula);
+
+    const result = assembleProductionEndsRecContractSpecLocal(readiness, builder, formula, mass);
+
+    assert.ok(context.threeZoneCandidateMassModel);
+    assert.strictEqual(context.threeZoneCandidateMassModel.endsMass, 12, id + ': candidate endsMass must be 12');
+    assert.strictEqual(context.massModel.endsMass, null, id + ': production massModel.endsMass must remain null');
+    assert.strictEqual(result.endsMass, undefined, id + ': contract endsMass must not exist');
+    console.log(id + ' safe.');
+})();
+
+// 18. ASSEMBLY-CONTRACT-NO-AUTO-ASSEMBLY-ON-MANUAL
+(function testAssemblyContractNoAutoAssemblyOnManual() {
+    const id = 'ASSEMBLY-CONTRACT-NO-AUTO-ASSEMBLY-ON-MANUAL';
+    const readiness = { ready: false, status: 'MANUAL_REQUIRED' };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false } };
+    const formula = { formulaReady: true, formulaStatus: 'READY' };
+    const mass = { massReady: true, massStatus: 'READY' };
+
+    const result = assembleProductionEndsRecContractSpecLocal(readiness, builder, formula, mass);
+
+    assert.strictEqual(result.assembled, false, id);
+    assert.strictEqual(result.assemblyStatus, 'MANUAL_REQUIRED', id);
+    console.log(id + ' safe.');
+})();
+
+// 19. ASSEMBLY-CONTRACT-PURITY
+(function testAssemblyContractPurity() {
+    const id = 'ASSEMBLY-CONTRACT-PURITY';
+    const readiness = { ready: true, status: 'READY', reasons: ['ok'] };
+    const builder = { created: true, status: 'CREATED', endsRec: { productionReady: true, endsRecipeReady: false, safetyReasonCodes: ['ok'] } };
+    const formula = { formulaReady: true, formulaStatus: 'READY', safetyReasonCodes: ['ok'] };
+    const mass = { massReady: true, massStatus: 'READY', safetyReasonCodes: ['ok'] };
+
+    const beforeReadiness = JSON.stringify(readiness);
+    const beforeBuilder = JSON.stringify(builder);
+    const beforeFormula = JSON.stringify(formula);
+    const beforeMass = JSON.stringify(mass);
+
+    assembleProductionEndsRecContractSpecLocal(readiness, builder, formula, mass);
+
+    assert.strictEqual(JSON.stringify(readiness), beforeReadiness, id + ': readiness must not be mutated');
+    assert.strictEqual(JSON.stringify(builder), beforeBuilder, id + ': builder must not be mutated');
+    assert.strictEqual(JSON.stringify(formula), beforeFormula, id + ': formula must not be mutated');
+    assert.strictEqual(JSON.stringify(mass), beforeMass, id + ': mass must not be mutated');
+    console.log(id + ' safe.');
+})();
+
+// 20. ASSEMBLY-CONTRACT-CURRENT-RUNTIME-STILL-SAFE
+(function testAssemblyContractCurrentRuntimeStillSafe() {
+    const id = 'ASSEMBLY-CONTRACT-CURRENT-RUNTIME-STILL-SAFE';
+    const source = fs.readFileSync('./www/core.js', 'utf8');
+    const sandbox = {};
+    vm.createContext(sandbox);
+    vm.runInContext(source, sandbox, { filename: 'www/core.js' });
+
+    const scenarioValues = {
+        history: 'натуральні',
+        condition: 'здоровые',
+        thickness: 'средние',
+        density: 'средние',
+        length: 'средние',
+        grey_percent: '0',
+        grey_type: 'мягкая',
+        root_level: '6',
+        root_length: '1',
+        length_level: '6',
+        ends_level: '8',
+        ends_condition: 'здорові',
+        base_type: 'Натуральна',
+        target_level: '6',
+        target_direction: '1',
+        ends_history: 'натуральна',
+        ends_base_type: 'натуральна'
+    };
+    const output = { innerHTML: '' };
+    sandbox.document = {
+        getElementById(id) {
+            if (id === 'output') return output;
+            return { value: scenarioValues[id] };
+        }
+    };
+
+    sandbox.calculateProtocol();
+    const html = output.innerHTML;
+
+    assert.strictEqual(html.includes('assembled:'), false, id + ': html must not contain assembly status');
+    assert.strictEqual(html.includes('productionEndsRecCandidate'), false, id + ': html must not contain assembly candidate');
+    console.log(id + ' safe.');
+})();
+
+console.log('Production endsRec assembly contract tests PASSED');
