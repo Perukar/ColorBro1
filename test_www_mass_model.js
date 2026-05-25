@@ -1375,8 +1375,7 @@ function makeReadinessContext(overrides = {}) {
 
 // ---------------------------------------------------------------------------
 // SPEC CONTRACT: future buildProductionEndsRec(context, readiness)
-// These tests define the future builder contract without calling a production
-// helper that does not exist yet.
+// These tests define the builder contract without wiring production runtime.
 // ---------------------------------------------------------------------------
 
 function makeBuilderReadiness(overrides = {}) {
@@ -1539,11 +1538,71 @@ function buildProductionEndsRecSkeletonContract(readiness) {
     const sandbox = {};
     vm.createContext(sandbox);
     vm.runInContext(
-        source + '\nglobalThis.__calculateProtocolSource = calculateProtocol.toString();',
+        source + `
+globalThis.__calculateProtocolSource = calculateProtocol.toString();
+globalThis.__buildProductionEndsRecType = typeof buildProductionEndsRec;
+const __builderReadyReadiness = {
+    ready: true,
+    status: 'READY',
+    reasonCode: 'READY_LOW_RISK_TONING_CANDIDATE',
+    reasons: ['ALLOW_3_ZONE', 'SAFE_FOR_TONING'],
+    candidateSummary: {
+        zone: 'ends',
+        eligibilityStatus: 'SAFE_FOR_TONING',
+        hasDyeMass: false,
+        hasOxidizerMass: false,
+        hasEndsFormula: false
+    },
+    productionAllowed: true,
+    productionBlocked: false
+};
+const __builderContext = {
+    massModel: { mode: '2-zone', endsMass: null },
+    rootRec: { process: 'Перманент', mass: 18 },
+    lenRec: { process: 'Перманент', mass: 42 }
+};
+const __builderContextBefore = JSON.stringify(__builderContext);
+const __builderReadinessBefore = JSON.stringify(__builderReadyReadiness);
+globalThis.__builderContextBefore = __builderContextBefore;
+globalThis.__builderReadinessBefore = __builderReadinessBefore;
+globalThis.__builderReadyResult = buildProductionEndsRec(__builderContext, __builderReadyReadiness);
+globalThis.__builderContextAfter = JSON.stringify(__builderContext);
+globalThis.__builderReadinessAfter = JSON.stringify(__builderReadyReadiness);
+globalThis.__builderBlockedResult = buildProductionEndsRec({}, Object.assign({}, __builderReadyReadiness, {
+    ready: false,
+    status: 'BLOCKED',
+    productionAllowed: false,
+    productionBlocked: true
+}));
+globalThis.__builderNoCandidateResult = buildProductionEndsRec({}, Object.assign({}, __builderReadyReadiness, {
+    candidateSummary: null
+}));
+`,
         sandbox,
         { filename: 'www/core.js' }
     );
     const calculateProtocolSource = sandbox.__calculateProtocolSource;
+    assert.strictEqual(sandbox.__buildProductionEndsRecType, 'function', id);
+    assert.strictEqual(sandbox.__builderReadyResult.created, true, id);
+    assert.strictEqual(sandbox.__builderReadyResult.status, 'CREATED', id);
+    assert.strictEqual(sandbox.__builderReadyResult.endsRec.productionReady, true, id);
+    assert.strictEqual(sandbox.__builderReadyResult.endsRec.endsRecipeReady, false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(sandbox.__builderReadyResult.endsRec, 'dyeMass'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(sandbox.__builderReadyResult.endsRec, 'oxidizerMass'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(sandbox.__builderReadyResult.endsRec, 'endsMass'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(sandbox.__builderReadyResult.endsRec, 'endsFormula'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(sandbox.__builderReadyResult.endsRec, 'candidateOnly'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(sandbox.__builderReadyResult.endsRec, 'previewOnly'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(sandbox.__builderReadyResult.endsRec, 'notForMixing'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(sandbox.__builderReadyResult.endsRec.sourceCandidateSummary, 'candidateOnly'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(sandbox.__builderReadyResult.endsRec.sourceCandidateSummary, 'previewOnly'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(sandbox.__builderReadyResult.endsRec.sourceCandidateSummary, 'notForMixing'), false, id);
+    assert.strictEqual(sandbox.__builderContextAfter, sandbox.__builderContextBefore, id);
+    assert.strictEqual(sandbox.__builderReadinessAfter, sandbox.__builderReadinessBefore, id);
+    assert.strictEqual(sandbox.__builderBlockedResult.created, false, id);
+    assert.strictEqual(sandbox.__builderBlockedResult.endsRec, null, id);
+    assert.strictEqual(sandbox.__builderNoCandidateResult.created, false, id);
+    assert.strictEqual(sandbox.__builderNoCandidateResult.status, 'NO_CANDIDATE', id);
     assert.strictEqual(calculateProtocolSource.includes('buildProductionEndsRec('), false, id);
     assert.strictEqual(calculateProtocolSource.includes('endsRec:'), false, id);
 })();

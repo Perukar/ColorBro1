@@ -618,6 +618,88 @@ const pigmentMap = {
             return result('READY', 'READY_LOW_RISK_TONING_CANDIDATE', [gate.reason, eligibility.reason], candidate);
         }
 
+        /**
+         * buildProductionEndsRec(context, readiness)
+         *
+         * INACTIVE HELPER. Builds only a production endsRec skeleton after a
+         * separate readiness validator has returned READY. This helper is not
+         * called from calculateProtocol() and does not allocate mass or formula.
+         */
+        function buildProductionEndsRec(context, readiness) {
+            const state = readiness || {};
+            const candidateSource = state.candidateSummary || state.candidateRef || null;
+
+            function normalizeReasons(reasons, fallback) {
+                const list = Array.isArray(reasons) ? reasons.slice() : [];
+                if (fallback) list.push(fallback);
+                return list.filter(Boolean);
+            }
+
+            function blockedResult(status, reasonCode, reasons) {
+                return {
+                    created: false,
+                    status,
+                    reasonCode,
+                    reasons: normalizeReasons(reasons, reasonCode),
+                    endsRec: null
+                };
+            }
+
+            function hasOwn(target, key) {
+                return Boolean(target) && Object.prototype.hasOwnProperty.call(target, key);
+            }
+
+            function sourceCandidateSummary(candidate) {
+                if (!candidate) return null;
+                return {
+                    zone: candidate.zone || null,
+                    eligibilityStatus: candidate.eligibilityStatus || null
+                };
+            }
+
+            if (state.status === 'BLOCKED') {
+                return blockedResult('BLOCKED', state.reasonCode || 'READINESS_BLOCKED', state.reasons);
+            }
+            if (state.status === 'MANUAL_REQUIRED') {
+                return blockedResult('MANUAL_REQUIRED', state.reasonCode || 'READINESS_MANUAL_REQUIRED', state.reasons);
+            }
+            if (!candidateSource) {
+                return blockedResult('NO_CANDIDATE', state.reasonCode || 'NO_CANDIDATE_SUMMARY_OR_REF', state.reasons);
+            }
+            if (state.ready !== true || state.status !== 'READY' || state.productionAllowed !== true) {
+                return blockedResult('NOT_READY', state.reasonCode || 'READINESS_NOT_READY', state.reasons);
+            }
+            if (state.productionBlocked !== false) {
+                return blockedResult('BLOCKED', state.reasonCode || 'READINESS_PRODUCTION_BLOCKED', state.reasons);
+            }
+            if (
+                candidateSource.hasDyeMass === true ||
+                candidateSource.hasOxidizerMass === true ||
+                candidateSource.hasEndsFormula === true ||
+                hasOwn(candidateSource, 'dyeMass') ||
+                hasOwn(candidateSource, 'oxidizerMass') ||
+                hasOwn(candidateSource, 'endsMass') ||
+                hasOwn(candidateSource, 'endsFormula')
+            ) {
+                return blockedResult('BLOCKED', 'CANDIDATE_HAS_PRODUCTION_FIELDS', state.reasons);
+            }
+
+            const reasonCode = state.reasonCode || 'READY_LOW_RISK_TONING_CANDIDATE';
+            return {
+                created: true,
+                status: 'CREATED',
+                reasonCode,
+                reasons: normalizeReasons(state.reasons, reasonCode),
+                endsRec: {
+                    productionReady: true,
+                    endsRecipeReady: false,
+                    source: 'endsRecCandidatePreview',
+                    sourceCandidateSummary: sourceCandidateSummary(candidateSource),
+                    safetyReasonCodes: [reasonCode].filter(Boolean)
+                }
+            };
+        }
+
         function classifyThreeZoneActivation(input) {
             const { ends_level, length_level, root_level, ends_condition, ends_history, ends_base_type, target_level } = input;
             
