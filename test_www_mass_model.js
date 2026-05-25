@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 /**
  * test_www_mass_model.js
@@ -2005,5 +2005,306 @@ console.log('WWW mass model test contract passed.');
 })();
 
 console.log('Production endsRec current-state safety contract tests (mass model) PASSED');
+
+// ============================================================================
+// PRODUCTION ENDSREC MASS ALLOCATION CONTRACT TESTS
+// ============================================================================
+
+function classifyEndsRecMassAllocationContract(readiness, builderResult, formulaContract) {
+    const state = readiness || {};
+    const build = builderResult || {};
+    const formula = formulaContract || {};
+    const endsRec = build.endsRec || null;
+
+    function result(massStatus, reasonCode, overrides = {}) {
+        return Object.assign({
+            massReady: massStatus === 'MASS_CONTRACT_READY',
+            massStatus,
+            candidateAllowed: false,
+            endsMass: null,
+            mode: '2-zone',
+            reasonCode
+        }, overrides);
+    }
+
+    if (state.status === 'BLOCKED') {
+        return result('BLOCKED', state.reasonCode || 'READINESS_BLOCKED');
+    }
+    if (state.status === 'MANUAL_REQUIRED') {
+        return result('MANUAL_REQUIRED', state.reasonCode || 'READINESS_MANUAL_REQUIRED');
+    }
+    if (state.ready !== true || state.status !== 'READY') {
+        return result('NOT_READY', state.reasonCode || 'READINESS_NOT_READY');
+    }
+    if (build.created !== true || (build.status !== 'SKELETON_ALLOWED' && build.status !== 'CREATED')) {
+        return result('NOT_READY', build.reasonCode || 'BUILDER_NOT_CREATED');
+    }
+    if (!endsRec || endsRec.productionReady !== true) {
+        return result('NOT_READY', 'ENDSREC_NOT_PRODUCTION_READY');
+    }
+    if (formula.formulaReady !== true) {
+        return result('NOT_READY', formula.reasonCode || 'FORMULA_NOT_READY');
+    }
+    if (endsRec.endsRecipeReady === true) {
+        return result('BLOCKED', 'ENDSRECIPE_READY_TRUE_SUSPICIOUS');
+    }
+
+    // 1. MASS-CONTRACT-READY-ALLOWS-MASS-CANDIDATE
+    return result('MASS_CONTRACT_READY', 'MASS_CANDIDATE_ALLOWED_PRODUCTION_GRAMS_PENDING', {
+        candidateAllowed: true,
+        endsMass: null, // contract does not allow production endsMass yet
+        mode: '2-zone'  // contract does not allow 3-zone massModel mode yet
+    });
+}
+
+// TEST 1: MASS-CONTRACT-READY-ALLOWS-MASS-CANDIDATE
+(function testMassContractReadyAllowsMassCandidate() {
+    const id = 'MASS-CONTRACT-READY-ALLOWS-MASS-CANDIDATE';
+    const readiness = makeBuilderReadiness();
+    const builder = makeFormulaBuilderResult();
+    const formula = classifyFormulaContractSpecData(readiness, builder);
+    const contract = classifyEndsRecMassAllocationContract(readiness, builder, formula);
+
+    assert.strictEqual(contract.massReady, true, id + ': massReady must be true');
+    assert.strictEqual(contract.candidateAllowed, true, id + ': candidateAllowed must be true');
+    assert.strictEqual(contract.endsMass, null, id + ': production endsMass must remain null');
+    assert.strictEqual(contract.mode, '2-zone', id + ': mode must remain 2-zone');
+    assert.strictEqual(contract.dyeMass, undefined, id + ': dyeMass must not be created');
+    assert.strictEqual(contract.oxidizerMass, undefined, id + ': oxidizerMass must not be created');
+    console.log(id + ' safe.');
+})();
+
+// TEST 2: MASS-CONTRACT-REQUIRES-READINESS-READY
+(function testMassContractRequiresReadinessReady() {
+    const id = 'MASS-CONTRACT-REQUIRES-READINESS-READY';
+    const readiness = makeBuilderReadiness({ ready: false, status: 'NOT_READY' });
+    const builder = makeFormulaBuilderResult();
+    const formula = classifyFormulaContractSpecData(readiness, builder);
+    const contract = classifyEndsRecMassAllocationContract(readiness, builder, formula);
+
+    assert.strictEqual(contract.massReady, false, id);
+    console.log(id + ' safe.');
+})();
+
+// TEST 3: MASS-CONTRACT-REQUIRES-BUILDER-CREATED
+(function testMassContractRequiresBuilderCreated() {
+    const id = 'MASS-CONTRACT-REQUIRES-BUILDER-CREATED';
+    const readiness = makeBuilderReadiness();
+    const builder = makeFormulaBuilderResult({ created: false, status: 'NOT_CREATED', endsRec: null });
+    const formula = classifyFormulaContractSpecData(readiness, builder);
+    const contract = classifyEndsRecMassAllocationContract(readiness, builder, formula);
+
+    assert.strictEqual(contract.massReady, false, id);
+    console.log(id + ' safe.');
+})();
+
+// TEST 4: MASS-CONTRACT-REQUIRES-FORMULA-READY
+(function testMassContractRequiresFormulaReady() {
+    const id = 'MASS-CONTRACT-REQUIRES-FORMULA-READY';
+    const readiness = makeBuilderReadiness();
+    const builder = makeFormulaBuilderResult();
+    const formula = { formulaReady: false, formulaStatus: 'NOT_READY' };
+    const contract = classifyEndsRecMassAllocationContract(readiness, builder, formula);
+
+    assert.strictEqual(contract.massReady, false, id);
+    console.log(id + ' safe.');
+})();
+
+// TEST 5: MASS-CONTRACT-REQUIRES-PRODUCTION-READY-ENDSREC
+(function testMassContractRequiresProductionReadyEndsRec() {
+    const id = 'MASS-CONTRACT-REQUIRES-PRODUCTION-READY-ENDSREC';
+    const readiness = makeBuilderReadiness();
+    const builder = makeFormulaBuilderResult({
+        endsRec: { productionReady: false, endsRecipeReady: false }
+    });
+    const formula = classifyFormulaContractSpecData(readiness, builder);
+    const contract = classifyEndsRecMassAllocationContract(readiness, builder, formula);
+
+    assert.strictEqual(contract.massReady, false, id);
+    console.log(id + ' safe.');
+})();
+
+// TEST 6: MASS-CONTRACT-BLOCKED-NO-MASS
+(function testMassContractBlockedNoMass() {
+    const id = 'MASS-CONTRACT-BLOCKED-NO-MASS';
+    const readiness = makeBuilderReadiness({ ready: false, status: 'BLOCKED' });
+    const builder = makeFormulaBuilderResult();
+    const formula = classifyFormulaContractSpecData(readiness, builder);
+    const contract = classifyEndsRecMassAllocationContract(readiness, builder, formula);
+
+    assert.strictEqual(contract.massReady, false, id);
+    assert.strictEqual(contract.massStatus, 'BLOCKED', id);
+    assert.strictEqual(contract.endsMass, null, id);
+    console.log(id + ' safe.');
+})();
+
+// TEST 7: MASS-CONTRACT-MANUAL-NO-MASS
+(function testMassContractManualNoMass() {
+    const id = 'MASS-CONTRACT-MANUAL-NO-MASS';
+    const readiness = makeBuilderReadiness({ ready: false, status: 'MANUAL_REQUIRED' });
+    const builder = makeFormulaBuilderResult();
+    const formula = classifyFormulaContractSpecData(readiness, builder);
+    const contract = classifyEndsRecMassAllocationContract(readiness, builder, formula);
+
+    assert.strictEqual(contract.massReady, false, id);
+    assert.strictEqual(contract.massStatus, 'MANUAL_REQUIRED', id);
+    assert.strictEqual(contract.endsMass, null, id);
+    console.log(id + ' safe.');
+})();
+
+// TEST 8: MASS-CONTRACT-NO-DYEMASS-OXIDIZERMASS
+(function testMassContractNoDyeMassOxidizerMass() {
+    const id = 'MASS-CONTRACT-NO-DYEMASS-OXIDIZERMASS';
+    const readiness = makeBuilderReadiness();
+    const builder = makeFormulaBuilderResult();
+    const formula = classifyFormulaContractSpecData(readiness, builder);
+    const contract = classifyEndsRecMassAllocationContract(readiness, builder, formula);
+
+    assert.strictEqual(contract.dyeMass, undefined, id);
+    assert.strictEqual(contract.oxidizerMass, undefined, id);
+    console.log(id + ' safe.');
+})();
+
+// TEST 9: MASS-CONTRACT-NO-EXACT-GRAMS
+(function testMassContractNoExactGrams() {
+    const id = 'MASS-CONTRACT-NO-EXACT-GRAMS';
+    const readiness = makeBuilderReadiness();
+    const builder = makeFormulaBuilderResult();
+    const formula = classifyFormulaContractSpecData(readiness, builder);
+    const contract = classifyEndsRecMassAllocationContract(readiness, builder, formula);
+
+    assert.strictEqual(contract.exactGrams, undefined, id);
+    assert.strictEqual(contract.grams, undefined, id);
+    assert.strictEqual(contract.dyeGrams, undefined, id);
+    assert.strictEqual(contract.oxidizerGrams, undefined, id);
+    console.log(id + ' safe.');
+})();
+
+// TEST 10: MASS-CONTRACT-NO-PRODUCTION-ENDSMASS
+(function testMassContractNoProductionEndsMass() {
+    const id = 'MASS-CONTRACT-NO-PRODUCTION-ENDSMASS';
+    const readiness = makeBuilderReadiness();
+    const builder = makeFormulaBuilderResult();
+    const formula = classifyFormulaContractSpecData(readiness, builder);
+    const contract = classifyEndsRecMassAllocationContract(readiness, builder, formula);
+
+    assert.strictEqual(contract.endsMass, null, id);
+    console.log(id + ' safe.');
+})();
+
+// TEST 11: MASS-CONTRACT-NO-3ZONE-MASSMODEL
+(function testMassContractNo3ZoneMassModel() {
+    const id = 'MASS-CONTRACT-NO-3ZONE-MASSMODEL';
+    const readiness = makeBuilderReadiness();
+    const builder = makeFormulaBuilderResult();
+    const formula = classifyFormulaContractSpecData(readiness, builder);
+    const contract = classifyEndsRecMassAllocationContract(readiness, builder, formula);
+
+    assert.strictEqual(contract.mode, '2-zone', id);
+    assert.notStrictEqual(contract.mode, '3-zone', id);
+    console.log(id + ' safe.');
+})();
+
+// TEST 12: MASS-CONTRACT-NO-FINAL-FORMULA
+(function testMassContractNoFinalFormula() {
+    const id = 'MASS-CONTRACT-NO-FINAL-FORMULA';
+    const readiness = makeBuilderReadiness();
+    const builder = makeFormulaBuilderResult();
+    const formula = classifyFormulaContractSpecData(readiness, builder);
+    const contract = classifyEndsRecMassAllocationContract(readiness, builder, formula);
+
+    assert.strictEqual(contract.finalFormula, undefined, id);
+    console.log(id + ' safe.');
+})();
+
+// TEST 13: MASS-CONTRACT-NO-CALCULATEPROTOCOL-WIRING
+(function testMassContractNoCalculateProtocolWiring() {
+    const id = 'MASS-CONTRACT-NO-CALCULATEPROTOCOL-WIRING';
+    const source = fs.readFileSync('./www/core.js', 'utf8');
+    const sandbox = {};
+    vm.createContext(sandbox);
+    vm.runInContext(source, sandbox, { filename: 'www/core.js' });
+    const calcProtoSource = sandbox.calculateProtocol.toString();
+
+    assert.strictEqual(calcProtoSource.includes('classifyEndsRecMassAllocationContract'), false, id + ': classifyEndsRecMassAllocationContract must not be called inside calculateProtocol');
+    assert.strictEqual(calcProtoSource.includes('endsRec: {') || calcProtoSource.includes('endsRec:{'), false, id + ': production endsRec must not be initialized in calculateProtocol');
+    assert.strictEqual(calcProtoSource.includes('endsFormula:'), false, id + ': endsFormula must not be set inside calculateProtocol');
+    console.log(id + ' safe.');
+})();
+
+// TEST 14: MASS-CONTRACT-NO-PREVIEW-MASS-PROMOTION
+(function testMassContractNoPreviewMassPromotion() {
+    const id = 'MASS-CONTRACT-NO-PREVIEW-MASS-PROMOTION';
+    const context = makeReadinessContext();
+    const readiness = validateProductionEndsRecReadiness(context);
+    const builder = buildProductionEndsRecSkeletonContract(readiness);
+    const formula = classifyFormulaContractSpecData(readiness, builder);
+    const contract = classifyEndsRecMassAllocationContract(readiness, builder, formula);
+
+    assert.ok(context.threeZoneCandidateMassModel);
+    assert.strictEqual(context.threeZoneCandidateMassModel.endsMass, 12, id + ': candidate endsMass must be 12');
+    assert.strictEqual(context.massModel.endsMass, null, id + ': production massModel.endsMass must remain null');
+    assert.strictEqual(contract.endsMass, null, id + ': contract endsMass must be null');
+    console.log(id + ' safe.');
+})();
+
+// TEST 15: MASS-CONTRACT-NO-AUTO-MASS-ON-MANUAL
+(function testMassContractNoAutoMassOnManual() {
+    const id = 'MASS-CONTRACT-NO-AUTO-MASS-ON-MANUAL';
+    const readiness = makeBuilderReadiness({ ready: false, status: 'MANUAL_REQUIRED' });
+    const builder = makeFormulaBuilderResult();
+    const formula = classifyFormulaContractSpecData(readiness, builder);
+    const contract = classifyEndsRecMassAllocationContract(readiness, builder, formula);
+
+    assert.strictEqual(contract.massReady, false, id);
+    assert.notStrictEqual(contract.massStatus, 'MASS_CONTRACT_READY', id);
+    console.log(id + ' safe.');
+})();
+
+// TEST 16: MASS-CONTRACT-CURRENT-RUNTIME-STILL-SAFE
+(function testMassContractCurrentRuntimeStillSafe() {
+    const id = 'MASS-CONTRACT-CURRENT-RUNTIME-STILL-SAFE';
+    const source = fs.readFileSync('./www/core.js', 'utf8');
+    const sandbox = {};
+    vm.createContext(sandbox);
+    vm.runInContext(source, sandbox, { filename: 'www/core.js' });
+
+    const scenarioValues = {
+        history: 'натуральні',
+        condition: 'здоровые',
+        thickness: 'средние',
+        density: 'средние',
+        length: 'средние',
+        grey_percent: '0',
+        grey_type: 'мягкая',
+        root_level: '6',
+        root_length: '1',
+        length_level: '6',
+        ends_level: '8',
+        ends_condition: 'здорові',
+        base_type: 'Натуральна',
+        target_level: '6',
+        target_direction: '1',
+        ends_history: 'натуральна',
+        ends_base_type: 'натуральна'
+    };
+    const output = { innerHTML: '' };
+    sandbox.document = {
+        getElementById(id) {
+            if (id === 'output') return output;
+            return { value: scenarioValues[id] };
+        }
+    };
+
+    sandbox.calculateProtocol();
+    const html = output.innerHTML;
+
+    assert.strictEqual(html.includes('endsRec:'), false, id + ': html must not contain production endsRec');
+    assert.strictEqual(html.includes('&quot;mode&quot;:&quot;3-zone&quot;') && !html.includes('endsRecCandidatePreview'), false, id + ': html must not contain production 3-zone mode');
+    assert.strictEqual(html.includes('&quot;endsMass&quot;:') && !html.includes('null') && !html.includes('endsRecCandidatePreview'), false, id + ': production endsMass must remain null');
+    console.log(id + ' safe.');
+})();
+
+console.log('Production endsRec mass allocation contract tests PASSED');
 
 
