@@ -821,6 +821,102 @@ const pigmentMap = {
             });
         }
 
+        /**
+         * assembleProductionEndsRecContract(context, readiness, builderResult, formulaContract, massAllocation)
+         *
+         * INACTIVE HELPER. Assembles the final production endsRec candidate object
+         * from readiness, builder, formula, and mass allocation contracts.
+         * It does not activate the recipe (endsRecipeReady remains false) and does
+         * not perform any wiring, exact gram calculations, or runtime mutations.
+         */
+        function assembleProductionEndsRecContract(context, readiness, builderResult, formulaContract, massAllocation) {
+            const state = readiness || {};
+            const build = builderResult || {};
+            const formula = formulaContract || {};
+            const mass = massAllocation || {};
+            const endsRec = build.endsRec || null;
+
+            function cloneList(values) {
+                return Array.isArray(values) ? values.slice().filter(Boolean) : [];
+            }
+
+            const isReady = state.ready === true;
+            const isBuilderCreated = build.created === true;
+            const isFormulaReady = formula.formulaReady === true;
+            const isMassReady = mass.massReady === true;
+            const hasProductionReadySkeleton = Boolean(endsRec && endsRec.productionReady === true);
+            const hasEndsRecipeNotReady = Boolean(endsRec && endsRec.endsRecipeReady === false);
+
+            const isBlocked = state.status === 'BLOCKED' ||
+                              build.status === 'BLOCKED' ||
+                              formula.formulaStatus === 'BLOCKED' ||
+                              mass.massStatus === 'BLOCKED';
+
+            const isManual = state.status === 'MANUAL_REQUIRED' ||
+                             build.status === 'MANUAL_REQUIRED' ||
+                             formula.formulaStatus === 'MANUAL_REQUIRED' ||
+                             mass.massStatus === 'MANUAL_REQUIRED';
+
+            const canAssemble = isReady && isBuilderCreated && isFormulaReady && isMassReady &&
+                                hasProductionReadySkeleton && hasEndsRecipeNotReady && !isBlocked && !isManual;
+
+            let assemblyStatus = 'NOT_READY';
+            if (isBlocked) {
+                assemblyStatus = 'BLOCKED';
+            } else if (isManual) {
+                assemblyStatus = 'MANUAL_REQUIRED';
+            } else if (canAssemble) {
+                assemblyStatus = 'READY';
+            }
+
+            const safetyReasonCodes = [];
+            if (state.reasons) safetyReasonCodes.push(...state.reasons);
+            if (endsRec && endsRec.safetyReasonCodes) {
+                safetyReasonCodes.push(...endsRec.safetyReasonCodes);
+            }
+            if (formula.safetyReasonCodes) safetyReasonCodes.push(...formula.safetyReasonCodes);
+            if (mass.safetyReasonCodes) safetyReasonCodes.push(...mass.safetyReasonCodes);
+
+            const manualRequiredReasonCodes = [];
+            if (state.status === 'MANUAL_REQUIRED') manualRequiredReasonCodes.push('READINESS_MANUAL');
+            if (build.status === 'MANUAL_REQUIRED') manualRequiredReasonCodes.push('BUILDER_MANUAL');
+            if (formula.formulaStatus === 'MANUAL_REQUIRED') manualRequiredReasonCodes.push('FORMULA_MANUAL');
+            if (mass.massStatus === 'MANUAL_REQUIRED') manualRequiredReasonCodes.push('MASS_MANUAL');
+
+            let productionEndsRecCandidate = null;
+            if (canAssemble) {
+                productionEndsRecCandidate = {
+                    zone: 'ends',
+                    productionReady: true,
+                    endsRecipeReady: false, // Must remain false (no grams calculated yet)
+                    formulaReady: true,
+                    massReady: true,
+                    sourceRefs: {
+                        readinessReasonCode: state.reasonCode || null,
+                        builderStatus: build.status || null,
+                        formulaType: formula.formulaType || null,
+                        massStatus: mass.massStatus || null
+                    },
+                    safetyReasonCodes: safetyReasonCodes,
+                    manualRequiredReasonCodes: manualRequiredReasonCodes
+                };
+            }
+
+            return {
+                assembled: canAssemble,
+                assemblyStatus,
+                productionEndsRecCandidate,
+                sourceRefs: {
+                    readinessReasonCode: state.reasonCode || null,
+                    builderStatus: build.status || null,
+                    formulaType: formula.formulaType || null,
+                    massStatus: mass.massStatus || null
+                },
+                safetyReasonCodes: safetyReasonCodes,
+                manualRequiredReasonCodes: manualRequiredReasonCodes
+            };
+        }
+
         function classifyThreeZoneActivation(input) {
             const { ends_level, length_level, root_level, ends_condition, ends_history, ends_base_type, target_level } = input;
             

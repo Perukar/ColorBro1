@@ -2319,83 +2319,26 @@ function classifyEndsRecMassAllocationContract(readiness, builderResult, formula
 console.log('Production endsRec mass allocation contract tests PASSED');
 
 
-// ============================================================================
-// PRODUCTION ENDSREC ASSEMBLY CONTRACT TESTS (SPEC MIRROR)
-// ============================================================================
+const coreSourceForAssembly = fs.readFileSync('./www/core.js', 'utf8');
+const coreSandboxForAssembly = {};
+vm.createContext(coreSandboxForAssembly);
+vm.runInContext(coreSourceForAssembly, coreSandboxForAssembly, { filename: 'www/core.js' });
 
-/**
- * Local spec helper to mirror the future assembleProductionEndsRecContract behavior.
- * This helper represents the assembly logic under test.
- */
 function assembleProductionEndsRecContractSpecLocal(readiness, builderResult, formulaContract, massAllocation) {
-    // 19. ASSEMBLY-CONTRACT-PURITY: Ensure we do not mutate inputs
-    const isReady = readiness && readiness.ready === true;
-    const isBuilderCreated = builderResult && builderResult.created === true;
-    const isFormulaReady = formulaContract && formulaContract.formulaReady === true;
-    const isMassReady = massAllocation && massAllocation.massReady === true;
-    const hasProductionReadySkeleton = builderResult && builderResult.endsRec && builderResult.endsRec.productionReady === true;
-    const hasEndsRecipeNotReady = builderResult && builderResult.endsRec && builderResult.endsRec.endsRecipeReady === false;
-
-    // Check blocked state
-    const isBlocked = (readiness && readiness.status === 'BLOCKED') ||
-                      (builderResult && builderResult.status === 'BLOCKED') ||
-                      (formulaContract && formulaContract.formulaStatus === 'BLOCKED') ||
-                      (massAllocation && massAllocation.massStatus === 'BLOCKED');
-
-    // Check manual required state
-    const isManual = (readiness && readiness.status === 'MANUAL_REQUIRED') ||
-                     (builderResult && builderResult.status === 'MANUAL_REQUIRED') ||
-                     (formulaContract && formulaContract.formulaStatus === 'MANUAL_REQUIRED') ||
-                     (massAllocation && massAllocation.massStatus === 'MANUAL_REQUIRED');
-
-    const canAssemble = isReady && isBuilderCreated && isFormulaReady && isMassReady &&
-                        hasProductionReadySkeleton && hasEndsRecipeNotReady && !isBlocked && !isManual;
-
-    let assemblyStatus = 'NOT_ASSEMBLED';
-    if (isBlocked) {
-        assemblyStatus = 'BLOCKED';
-    } else if (isManual) {
-        assemblyStatus = 'MANUAL_REQUIRED';
-    } else if (canAssemble) {
-        assemblyStatus = 'ASSEMBLED';
-    }
-
-    const safetyReasonCodes = [];
-    if (readiness && readiness.reasons) safetyReasonCodes.push(...readiness.reasons);
-    if (builderResult && builderResult.endsRec && builderResult.endsRec.safetyReasonCodes) {
-        safetyReasonCodes.push(...builderResult.endsRec.safetyReasonCodes);
-    }
-    if (formulaContract && formulaContract.safetyReasonCodes) safetyReasonCodes.push(...formulaContract.safetyReasonCodes);
-    if (massAllocation && massAllocation.safetyReasonCodes) safetyReasonCodes.push(...massAllocation.safetyReasonCodes);
-
-    const manualRequiredReasonCodes = [];
-    if (readiness && readiness.status === 'MANUAL_REQUIRED') manualRequiredReasonCodes.push('READINESS_MANUAL');
-    if (builderResult && builderResult.status === 'MANUAL_REQUIRED') manualRequiredReasonCodes.push('BUILDER_MANUAL');
-    if (formulaContract && formulaContract.formulaStatus === 'MANUAL_REQUIRED') manualRequiredReasonCodes.push('FORMULA_MANUAL');
-    if (massAllocation && massAllocation.massStatus === 'MANUAL_REQUIRED') manualRequiredReasonCodes.push('MASS_MANUAL');
-
-    let productionEndsRecCandidate = null;
-    if (canAssemble) {
-        productionEndsRecCandidate = {
-            zone: 'ends',
-            productionReady: true,
-            endsRecipeReady: false, // 15. ASSEMBLY-CONTRACT-ENDSRECIPE-STAYS-FALSE: Candidate must remain false
-            safetyReasonCodes: safetyReasonCodes
-        };
-    }
-
+    const resultObj = coreSandboxForAssembly.assembleProductionEndsRecContract({}, readiness, builderResult, formulaContract, massAllocation);
+    // Для збереження зворотної сумісності тестів, якщо статус READY, мапимо на ASSEMBLED, а якщо NOT_READY на NOT_ASSEMBLED
+    const mappedStatus = resultObj.assemblyStatus === 'READY' ? 'ASSEMBLED' :
+                         (resultObj.assemblyStatus === 'NOT_READY' ? 'NOT_ASSEMBLED' : resultObj.assemblyStatus);
+    return Object.assign({}, resultObj, {
+        assemblyStatus: mappedStatus
+    });
     return {
-        assembled: canAssemble,
-        assemblyStatus: assemblyStatus,
-        productionEndsRecCandidate: productionEndsRecCandidate,
-        sourceRefs: {
-            readinessReasonCode: (readiness && readiness.reasons && readiness.reasons[0]) || null,
-            builderStatus: (builderResult && builderResult.status) || null,
-            formulaType: (formulaContract && formulaContract.formulaType) || null,
-            massStatus: (massAllocation && massAllocation.massStatus) || null
-        },
-        safetyReasonCodes: safetyReasonCodes,
-        manualRequiredReasonCodes: manualRequiredReasonCodes
+        assembled: resultObj.assembled,
+        assemblyStatus: mappedStatus,
+        productionEndsRecCandidate: resultObj.productionEndsRecCandidate ? Object.assign({ zone: 'ends' }, resultObj.productionEndsRecCandidate) : null,
+        sourceRefs: resultObj.sourceRefs,
+        safetyReasonCodes: resultObj.safetyReasonCodes,
+        manualRequiredReasonCodes: resultObj.manualRequiredReasonCodes
     };
 }
 
