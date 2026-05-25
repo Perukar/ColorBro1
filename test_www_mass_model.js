@@ -21,6 +21,8 @@
  */
 
 const assert = require('assert');
+const fs = require('fs');
+const vm = require('vm');
 
 // ---------------------------------------------------------------------------
 // SPEC MIRROR: replicate buildMassModel() per its documented contract.
@@ -1369,6 +1371,195 @@ function makeReadinessContext(overrides = {}) {
     const before = JSON.stringify(context.oxidizerLogic);
     validateProductionEndsRecReadiness(context);
     assert.strictEqual(JSON.stringify(context.oxidizerLogic), before, id);
+})();
+
+// ---------------------------------------------------------------------------
+// SPEC CONTRACT: future buildProductionEndsRec(context, readiness)
+// These tests define the future builder contract without calling a production
+// helper that does not exist yet.
+// ---------------------------------------------------------------------------
+
+function makeBuilderReadiness(overrides = {}) {
+    return Object.assign({
+        ready: true,
+        status: 'READY',
+        reasonCode: 'READY_LOW_RISK_TONING_CANDIDATE',
+        reasons: ['ALLOW_3_ZONE', 'SAFE_FOR_TONING'],
+        candidateSummary: {
+            zone: 'ends',
+            eligibilityStatus: 'SAFE_FOR_TONING',
+            hasDyeMass: false,
+            hasOxidizerMass: false,
+            hasEndsFormula: false
+        },
+        productionAllowed: true,
+        productionBlocked: false
+    }, overrides);
+}
+
+function builderContractCanCreateSkeleton(readiness) {
+    return Boolean(
+        readiness
+        && readiness.ready === true
+        && readiness.status === 'READY'
+        && readiness.productionAllowed === true
+        && readiness.productionBlocked === false
+        && readiness.candidateSummary
+        && readiness.status !== 'BLOCKED'
+        && readiness.status !== 'MANUAL_REQUIRED'
+    );
+}
+
+function buildProductionEndsRecSkeletonContract(readiness) {
+    if (!builderContractCanCreateSkeleton(readiness)) {
+        return {
+            created: false,
+            status: 'NOT_CREATED',
+            endsRec: null
+        };
+    }
+
+    return {
+        created: true,
+        status: 'SKELETON_ALLOWED',
+        endsRec: {
+            zone: 'ends',
+            productionReady: true,
+            endsRecipeReady: false,
+            safetyReasonCodes: [readiness.reasonCode].filter(Boolean),
+            sourceCandidateSummary: {
+                zone: readiness.candidateSummary.zone || null,
+                eligibilityStatus: readiness.candidateSummary.eligibilityStatus || null
+            }
+        }
+    };
+}
+
+(function testBuilderContractReadyCanCreateSkeleton() {
+    const id = 'BUILDER-CONTRACT-READY-CAN-CREATE-SKELETON';
+    const readiness = makeBuilderReadiness();
+    const contract = buildProductionEndsRecSkeletonContract(readiness);
+    assert.strictEqual(builderContractCanCreateSkeleton(readiness), true, id);
+    assert.strictEqual(contract.created, true, id);
+    assert.strictEqual(contract.status, 'SKELETON_ALLOWED', id);
+    assert.ok(contract.endsRec, id);
+    assert.strictEqual(contract.endsRec.productionReady, true, id);
+    assert.strictEqual(contract.endsRec.endsRecipeReady, false, id);
+    assert.deepStrictEqual(contract.endsRec.safetyReasonCodes, ['READY_LOW_RISK_TONING_CANDIDATE'], id);
+})();
+
+(function testBuilderContractNotReadyNoEndsRec() {
+    const id = 'BUILDER-CONTRACT-NOT-READY-NO-ENDSREC';
+    const readiness = makeBuilderReadiness({
+        ready: false,
+        status: 'NOT_READY',
+        productionAllowed: false,
+        productionBlocked: true
+    });
+    const contract = buildProductionEndsRecSkeletonContract(readiness);
+    assert.strictEqual(contract.created, false, id);
+    assert.strictEqual(contract.endsRec, null, id);
+})();
+
+(function testBuilderContractBlockedNoEndsRec() {
+    const id = 'BUILDER-CONTRACT-BLOCKED-NO-ENDSREC';
+    const contract = buildProductionEndsRecSkeletonContract(makeBuilderReadiness({
+        ready: false,
+        status: 'BLOCKED',
+        productionAllowed: false,
+        productionBlocked: true
+    }));
+    assert.strictEqual(contract.created, false, id);
+    assert.strictEqual(contract.endsRec, null, id);
+})();
+
+(function testBuilderContractManualNoEndsRec() {
+    const id = 'BUILDER-CONTRACT-MANUAL-NO-ENDSREC';
+    const contract = buildProductionEndsRecSkeletonContract(makeBuilderReadiness({
+        ready: false,
+        status: 'MANUAL_REQUIRED',
+        productionAllowed: false,
+        productionBlocked: true
+    }));
+    assert.strictEqual(contract.created, false, id);
+    assert.strictEqual(contract.endsRec, null, id);
+})();
+
+(function testBuilderContractRequiresCandidateSummary() {
+    const id = 'BUILDER-CONTRACT-REQUIRES-CANDIDATE-SUMMARY';
+    const contract = buildProductionEndsRecSkeletonContract(makeBuilderReadiness({
+        candidateSummary: null
+    }));
+    assert.strictEqual(contract.created, false, id);
+    assert.strictEqual(contract.endsRec, null, id);
+})();
+
+(function testBuilderContractNoDyeMassOxidizerMass() {
+    const id = 'BUILDER-CONTRACT-NO-DYEMASS-OXIDIZERMASS';
+    const contract = buildProductionEndsRecSkeletonContract(makeBuilderReadiness());
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(contract.endsRec, 'dyeMass'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(contract.endsRec, 'oxidizerMass'), false, id);
+})();
+
+(function testBuilderContractNoEndsMass() {
+    const id = 'BUILDER-CONTRACT-NO-ENDSMASS';
+    const contract = buildProductionEndsRecSkeletonContract(makeBuilderReadiness());
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(contract.endsRec, 'endsMass'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(contract.endsRec, 'massModel'), false, id);
+})();
+
+(function testBuilderContractNoFinalFormula() {
+    const id = 'BUILDER-CONTRACT-NO-FINAL-FORMULA';
+    const contract = buildProductionEndsRecSkeletonContract(makeBuilderReadiness());
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(contract.endsRec, 'endsFormula'), false, id);
+    assert.strictEqual(contract.endsRec.endsRecipeReady, false, id);
+})();
+
+(function testBuilderContractNo3ZoneMassModel() {
+    const id = 'BUILDER-CONTRACT-NO-3ZONE-MASSMODEL';
+    const contract = buildProductionEndsRecSkeletonContract(makeBuilderReadiness());
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(contract.endsRec, 'massModel'), false, id);
+    assert.notStrictEqual(contract.endsRec.mode, '3-zone', id);
+})();
+
+(function testBuilderContractNoPreviewFlagsInProduction() {
+    const id = 'BUILDER-CONTRACT-NO-PREVIEW-FLAGS-IN-PRODUCTION';
+    const contract = buildProductionEndsRecSkeletonContract(makeBuilderReadiness());
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(contract.endsRec, 'candidateOnly'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(contract.endsRec, 'previewOnly'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(contract.endsRec, 'notForMixing'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(contract.endsRec.sourceCandidateSummary, 'candidateOnly'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(contract.endsRec.sourceCandidateSummary, 'previewOnly'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(contract.endsRec.sourceCandidateSummary, 'notForMixing'), false, id);
+})();
+
+(function testBuilderContractNoCalculateProtocolWiring() {
+    const id = 'BUILDER-CONTRACT-NO-CALCULATEPROTOCOL-WIRING';
+    const source = fs.readFileSync('./www/core.js', 'utf8');
+    const sandbox = {};
+    vm.createContext(sandbox);
+    vm.runInContext(
+        source + '\nglobalThis.__calculateProtocolSource = calculateProtocol.toString();',
+        sandbox,
+        { filename: 'www/core.js' }
+    );
+    const calculateProtocolSource = sandbox.__calculateProtocolSource;
+    assert.strictEqual(calculateProtocolSource.includes('buildProductionEndsRec('), false, id);
+    assert.strictEqual(calculateProtocolSource.includes('endsRec:'), false, id);
+})();
+
+(function testBuilderContractCurrentStateStillSafe() {
+    const id = 'BUILDER-CONTRACT-CURRENT-STATE-STILL-SAFE';
+    const context = makeReadinessContext();
+    const readiness = validateProductionEndsRecReadiness(context);
+    const massModel = buildMassModel('средние', 'средние');
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(context, 'endsRec'), false, id);
+    assert.strictEqual(readiness.ready, true, id);
+    assert.strictEqual(massModel.mode, '2-zone', id);
+    assert.strictEqual(massModel.endsMass, null, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(context.endsRecCandidatePreview, 'dyeMass'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(context.endsRecCandidatePreview, 'oxidizerMass'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(context.endsRecCandidatePreview, 'endsFormula'), false, id);
 })();
 
 // ---------------------------------------------------------------------------
