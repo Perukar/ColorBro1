@@ -1622,6 +1622,227 @@ globalThis.__builderNoCandidateResult = buildProductionEndsRec({}, Object.assign
 })();
 
 // ---------------------------------------------------------------------------
+// SPEC CONTRACT: future production endsRec formula contract
+// Test-only data mirror. It does not call or define a production formula helper.
+// ---------------------------------------------------------------------------
+
+function makeFormulaBuilderResult(overrides = {}) {
+    return Object.assign({
+        created: true,
+        status: 'CREATED',
+        reasonCode: 'READY_LOW_RISK_TONING_CANDIDATE',
+        reasons: ['ALLOW_3_ZONE', 'SAFE_FOR_TONING'],
+        endsRec: {
+            productionReady: true,
+            endsRecipeReady: false,
+            source: 'endsRecCandidatePreview',
+            sourceCandidateSummary: {
+                zone: 'ends',
+                eligibilityStatus: 'SAFE_FOR_TONING'
+            },
+            safetyReasonCodes: ['READY_LOW_RISK_TONING_CANDIDATE']
+        }
+    }, overrides);
+}
+
+function classifyFormulaContractSpecData(readiness, builderResult) {
+    const state = readiness || {};
+    const build = builderResult || {};
+    const endsRec = build.endsRec || null;
+
+    function result(formulaStatus, reasonCode, overrides = {}) {
+        return Object.assign({
+            formulaReady: formulaStatus === 'FORMULA_CONTRACT_READY',
+            formulaStatus,
+            formulaType: 'NONE',
+            targetAction: formulaStatus === 'BLOCKED' ? 'block' : 'manual_review',
+            allowedProductClass: null,
+            forbiddenProductClass: null,
+            safetyReasonCodes: [],
+            manualRequiredReasonCodes: [],
+            reasonCode
+        }, overrides);
+    }
+
+    if (state.status === 'MANUAL_REQUIRED') {
+        return result('MANUAL_REQUIRED', state.reasonCode || 'READINESS_MANUAL_REQUIRED', {
+            manualRequiredReasonCodes: [state.reasonCode || 'READINESS_MANUAL_REQUIRED']
+        });
+    }
+    if (state.status === 'BLOCKED' || state.productionBlocked === true) {
+        return result('BLOCKED', state.reasonCode || 'READINESS_BLOCKED');
+    }
+    if (state.ready !== true || state.status !== 'READY') {
+        return result('NOT_READY', state.reasonCode || 'READINESS_NOT_READY');
+    }
+    if (build.created !== true || build.status !== 'CREATED') {
+        return result('NOT_READY', build.reasonCode || 'BUILDER_NOT_CREATED');
+    }
+    if (!endsRec || endsRec.productionReady !== true) {
+        return result('NOT_READY', 'ENDSREC_NOT_PRODUCTION_READY');
+    }
+    if (endsRec.endsRecipeReady === true) {
+        return result('BLOCKED', 'ENDSRECIPE_READY_TRUE_SUSPICIOUS');
+    }
+
+    return result('FORMULA_CONTRACT_READY', 'FORMULA_TONING_ONLY_ALLOWED', {
+        formulaType: 'TONING_ONLY',
+        targetAction: 'tone_ends',
+        allowedProductClass: ['low_oxidizer_toning'],
+        forbiddenProductClass: ['lightening_powder', 'high_lift', 'permanent_lift'],
+        safetyReasonCodes: (state.reasons || []).concat(endsRec.safetyReasonCodes || []).filter(Boolean)
+    });
+}
+
+(function testFormulaContractReadyToningOnly() {
+    const id = 'FORMULA-CONTRACT-READY-TONING-ONLY';
+    const formula = classifyFormulaContractSpecData(makeBuilderReadiness(), makeFormulaBuilderResult());
+    assert.strictEqual(formula.formulaReady, true, id);
+    assert.strictEqual(formula.formulaStatus, 'FORMULA_CONTRACT_READY', id);
+    assert.strictEqual(formula.formulaType, 'TONING_ONLY', id);
+    assert.strictEqual(formula.targetAction, 'tone_ends', id);
+    assert.deepStrictEqual(formula.allowedProductClass, ['low_oxidizer_toning'], id);
+})();
+
+(function testFormulaContractRequiresReadinessReady() {
+    const id = 'FORMULA-CONTRACT-REQUIRES-READINESS-READY';
+    const formula = classifyFormulaContractSpecData(makeBuilderReadiness({
+        ready: false,
+        status: 'NOT_READY',
+        productionAllowed: false,
+        productionBlocked: true
+    }), makeFormulaBuilderResult());
+    assert.strictEqual(formula.formulaReady, false, id);
+    assert.strictEqual(formula.formulaStatus, 'BLOCKED', id);
+})();
+
+(function testFormulaContractRequiresBuilderCreated() {
+    const id = 'FORMULA-CONTRACT-REQUIRES-BUILDER-CREATED';
+    const formula = classifyFormulaContractSpecData(makeBuilderReadiness(), makeFormulaBuilderResult({
+        created: false,
+        status: 'NOT_CREATED',
+        endsRec: null
+    }));
+    assert.strictEqual(formula.formulaReady, false, id);
+    assert.strictEqual(formula.formulaStatus, 'NOT_READY', id);
+})();
+
+(function testFormulaContractRequiresProductionReadyEndsRec() {
+    const id = 'FORMULA-CONTRACT-REQUIRES-PRODUCTION-READY-ENDSREC';
+    const builder = makeFormulaBuilderResult({
+        endsRec: Object.assign({}, makeFormulaBuilderResult().endsRec, { productionReady: false })
+    });
+    const formula = classifyFormulaContractSpecData(makeBuilderReadiness(), builder);
+    assert.strictEqual(formula.formulaReady, false, id);
+    assert.strictEqual(formula.reasonCode, 'ENDSREC_NOT_PRODUCTION_READY', id);
+})();
+
+(function testFormulaContractRequiresEndsRecipeNotReady() {
+    const id = 'FORMULA-CONTRACT-REQUIRES-ENDSRECIPE-NOT-READY';
+    const builder = makeFormulaBuilderResult({
+        endsRec: Object.assign({}, makeFormulaBuilderResult().endsRec, { endsRecipeReady: true })
+    });
+    const formula = classifyFormulaContractSpecData(makeBuilderReadiness(), builder);
+    assert.strictEqual(formula.formulaReady, false, id);
+    assert.strictEqual(formula.formulaStatus, 'BLOCKED', id);
+    assert.strictEqual(formula.reasonCode, 'ENDSRECIPE_READY_TRUE_SUSPICIOUS', id);
+})();
+
+(function testFormulaContractBlockedNoFormula() {
+    const id = 'FORMULA-CONTRACT-BLOCKED-NO-FORMULA';
+    const formula = classifyFormulaContractSpecData(makeBuilderReadiness({
+        ready: false,
+        status: 'BLOCKED',
+        productionAllowed: false,
+        productionBlocked: true
+    }), makeFormulaBuilderResult());
+    assert.strictEqual(formula.formulaReady, false, id);
+    assert.strictEqual(formula.formulaStatus, 'BLOCKED', id);
+})();
+
+(function testFormulaContractManualNoFormula() {
+    const id = 'FORMULA-CONTRACT-MANUAL-NO-FORMULA';
+    const formula = classifyFormulaContractSpecData(makeBuilderReadiness({
+        ready: false,
+        status: 'MANUAL_REQUIRED',
+        productionAllowed: false,
+        productionBlocked: true,
+        reasonCode: 'READINESS_MANUAL_REQUIRED'
+    }), makeFormulaBuilderResult());
+    assert.strictEqual(formula.formulaReady, false, id);
+    assert.strictEqual(formula.formulaStatus, 'MANUAL_REQUIRED', id);
+    assert.deepStrictEqual(formula.manualRequiredReasonCodes, ['READINESS_MANUAL_REQUIRED'], id);
+})();
+
+(function testFormulaContractNoDyeMassOxidizerMass() {
+    const id = 'FORMULA-CONTRACT-NO-DYEMASS-OXIDIZERMASS';
+    const formula = classifyFormulaContractSpecData(makeBuilderReadiness(), makeFormulaBuilderResult());
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(formula, 'dyeMass'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(formula, 'oxidizerMass'), false, id);
+})();
+
+(function testFormulaContractNoExactGrams() {
+    const id = 'FORMULA-CONTRACT-NO-EXACT-GRAMS';
+    const formula = classifyFormulaContractSpecData(makeBuilderReadiness(), makeFormulaBuilderResult());
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(formula, 'grams'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(formula, 'exactGrams'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(formula, 'dyeGrams'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(formula, 'oxidizerGrams'), false, id);
+})();
+
+(function testFormulaContractNoEndsMass() {
+    const id = 'FORMULA-CONTRACT-NO-ENDSMASS';
+    const formula = classifyFormulaContractSpecData(makeBuilderReadiness(), makeFormulaBuilderResult());
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(formula, 'endsMass'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(formula, 'massModel'), false, id);
+})();
+
+(function testFormulaContractNo3ZoneMassModel() {
+    const id = 'FORMULA-CONTRACT-NO-3ZONE-MASSMODEL';
+    const formula = classifyFormulaContractSpecData(makeBuilderReadiness(), makeFormulaBuilderResult());
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(formula, 'massModel'), false, id);
+    assert.notStrictEqual(formula.mode, '3-zone', id);
+})();
+
+(function testFormulaContractNoCalculateProtocolWiring() {
+    const id = 'FORMULA-CONTRACT-NO-CALCULATEPROTOCOL-WIRING';
+    const source = fs.readFileSync('./www/core.js', 'utf8');
+    const sandbox = {};
+    vm.createContext(sandbox);
+    vm.runInContext(
+        source + '\nglobalThis.__calculateProtocolSource = calculateProtocol.toString();',
+        sandbox,
+        { filename: 'www/core.js' }
+    );
+    assert.strictEqual(sandbox.__calculateProtocolSource.includes('FormulaContract'), false, id);
+    assert.strictEqual(sandbox.__calculateProtocolSource.includes('formulaReady'), false, id);
+})();
+
+(function testFormulaContractNoRuntimeEndsFormula() {
+    const id = 'FORMULA-CONTRACT-NO-RUNTIME-ENDSFORMULA';
+    const context = makeReadinessContext();
+    const readiness = validateProductionEndsRecReadiness(context);
+    const builder = buildProductionEndsRecSkeletonContract(readiness);
+    const formula = classifyFormulaContractSpecData(readiness, builder);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(context.endsRecCandidatePreview, 'endsFormula'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(builder.endsRec, 'endsFormula'), false, id);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(formula, 'endsFormula'), false, id);
+})();
+
+(function testFormulaContractNoAutoRecipeOnManual() {
+    const id = 'FORMULA-CONTRACT-NO-AUTO-RECIPE-ON-MANUAL';
+    const formula = classifyFormulaContractSpecData(makeBuilderReadiness({
+        ready: false,
+        status: 'MANUAL_REQUIRED',
+        productionAllowed: false,
+        productionBlocked: true,
+        reasonCode: 'READINESS_MANUAL_REQUIRED'
+    }), makeFormulaBuilderResult());
+    assert.strictEqual(formula.formulaReady, false, id);
+    assert.notStrictEqual(formula.formulaStatus, 'FORMULA_CONTRACT_READY', id);
+})();
+
+// ---------------------------------------------------------------------------
 // SUMMARY
 // ---------------------------------------------------------------------------
 
