@@ -275,8 +275,8 @@ const diagnosticDisplayCandidate = Object.freeze({
         formulaType: 'preview-only',
         massStatus: 'READY'
     },
-    safetyReasonCodes: ['READY_LOW_RISK_TONING_CANDIDATE'],
-    manualRequiredReasonCodes: [],
+    safetyReasonCodes: ['READY_LOW_RISK_TONING_CANDIDATE', 'HEALTHY_NATURAL'],
+    manualRequiredReasonCodes: ['READINESS_MANUAL'],
     dyeMass: 20,
     oxidizerMass: 20,
     grams: 40,
@@ -340,8 +340,14 @@ assertIncludes(diagnosticDisplayBlockHtml, 'Не наносити за цим б
 assertIncludes(diagnosticDisplayBlockHtml, 'productionReady');
 assertIncludes(diagnosticDisplayBlockHtml, 'endsRecipeReady');
 assertIncludes(diagnosticDisplayBlockHtml, 'false');
-assertIncludes(diagnosticDisplayBlockHtml, 'sourceRefs');
-assertIncludes(diagnosticDisplayBlockHtml, 'READY_LOW_RISK_TONING_CANDIDATE');
+assertIncludes(diagnosticDisplayBlockHtml, 'sourceRefs.readinessReasonCode');
+assertIncludes(diagnosticDisplayBlockHtml, 'sourceRefs.builderStatus');
+assertIncludes(diagnosticDisplayBlockHtml, 'safetyReasonCodes');
+assertIncludes(diagnosticDisplayBlockHtml, 'manualRequiredReasonCodes');
+assertIncludes(diagnosticDisplayBlockHtml, 'Кінці визначені як низькоризиковий кандидат для діагностичного тонування.');
+assertIncludes(diagnosticDisplayBlockHtml, 'Кінці позначені як здорові та натуральні.');
+assertIncludes(diagnosticDisplayBlockHtml, 'Diagnostic candidate builder створив preview-кандидата.');
+assertIncludes(diagnosticDisplayBlockHtml, 'Потрібна ручна перевірка перед продовженням diagnostic path.');
 diagnosticDisplayRenderContract.forbiddenProductionHeadings.forEach((heading) => {
     assertNotIncludes(diagnosticDisplayHtml, heading);
 });
@@ -358,6 +364,34 @@ assertNotIncludes(diagnosticDisplayBlockHtml, 'Forbidden formula-to-mix');
 assertNotIncludes(diagnosticDisplayBlockHtml, 'third-zone production');
 assertNotIncludes(diagnosticDisplayBlockHtml, 'readyForMixing');
 assertNotIncludes(diagnosticDisplayBlockHtml, 'mixingReady');
+
+const unknownReasonHtml = PerucarWwwRenderV1.renderStateToHtml({
+    status: 'MANUAL_REQUIRED',
+    endsRecDiagnosticWiringCandidate: {
+        previewOnly: true,
+        candidateOnly: true,
+        notForMixing: true,
+        productionReady: false,
+        endsRecipeReady: false,
+        sourceRefs: {
+            readinessReasonCode: 'UNKNOWN_SOURCE_REASON'
+        },
+        safetyReasonCodes: ['UNKNOWN_SAFE_REASON'],
+        manualRequiredReasonCodes: ['UNKNOWN_MANUAL_REASON']
+    }
+});
+const unknownReasonBlockHtml = extractFirstDivBlockByHeading(unknownReasonHtml, 'Діагностика кінців');
+assertIncludes(unknownReasonBlockHtml, 'Невідома діагностична причина: UNKNOWN_SOURCE_REASON');
+assertIncludes(unknownReasonBlockHtml, 'Невідома діагностична причина: UNKNOWN_SAFE_REASON');
+assertIncludes(unknownReasonBlockHtml, 'Невідома діагностична причина: UNKNOWN_MANUAL_REASON');
+assertIncludes(unknownReasonBlockHtml, 'Не для змішування');
+assertIncludes(unknownReasonBlockHtml, 'Потрібна ручна перевірка');
+diagnosticDisplayRenderContract.forbiddenDisplayFields.forEach((field) => {
+    assertNotIncludes(unknownReasonBlockHtml, field);
+});
+diagnosticDisplayRenderContract.forbiddenRecipeTexts.forEach((text) => {
+    assertNotIncludes(unknownReasonBlockHtml, text);
+});
 
 const structuredPhasesHtml = PerucarWwwRenderV1.renderPhases([
     {
@@ -581,6 +615,9 @@ function assertSafeRuntimeDiagnosticDisplay(html, id) {
     assertIncludes(diagnosticBlockHtml, 'Потрібна ручна перевірка');
     assertIncludes(diagnosticBlockHtml, 'Не є фінальним рецептом');
     assertIncludes(diagnosticBlockHtml, 'Не наносити за цим блоком');
+    assertIncludes(diagnosticBlockHtml, 'Кінці визначені як низькоризиковий кандидат для діагностичного тонування.');
+    assertIncludes(diagnosticBlockHtml, 'Кінці позначені як здорові та натуральні.');
+    assertIncludes(diagnosticBlockHtml, 'Diagnostic candidate builder створив preview-кандидата.');
     assertIncludes(massModelBlockHtml, '&quot;mode&quot;: &quot;2-zone&quot;');
     assertIncludes(massModelBlockHtml, '&quot;endsMass&quot;: null');
     assertNotIncludes(massModelBlockHtml, '&quot;mode&quot;: &quot;3-zone&quot;');

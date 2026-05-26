@@ -106,6 +106,25 @@ const pigmentMap = {
         });
 
         const PerucarWwwRenderV1 = Object.freeze({
+            DIAGNOSTIC_REASON_LABELS: Object.freeze({
+                READY_LOW_RISK_TONING_CANDIDATE: 'Кінці визначені як низькоризиковий кандидат для діагностичного тонування.',
+                HEALTHY_NATURAL: 'Кінці позначені як здорові та натуральні.',
+                'Low risk toning': 'Оцінка ризику низька; потрібна ручна перевірка перед будь-якою дією.',
+                FORMULA_TONING_ONLY_ALLOWED: 'Дозволена лише diagnostic оцінка тонування; фінальна формула не сформована.',
+                MASS_CANDIDATE_ALLOWED_PRODUCTION_GRAMS_PENDING: 'Масовий етап лишається preview-only; робочі кількості не виводяться.',
+                READINESS_MANUAL: 'Потрібна ручна перевірка перед продовженням diagnostic path.',
+                BUILDER_MANUAL: 'Потрібна ручна перевірка candidate builder.',
+                FORMULA_MANUAL: 'Потрібна ручна перевірка формульної оцінки.',
+                MASS_MANUAL: 'Потрібна ручна перевірка mass safety check.',
+                READINESS_MANUAL_REQUIRED: 'Readiness check вимагає ручної перевірки.',
+                THREE_ZONE_MANUAL_REQUIRED: 'Розділення зон потребує ручної перевірки.',
+                ENDSREC_ELIGIBILITY_MANUAL_REQUIRED: 'Придатність кінців потребує ручної перевірки.',
+                CREATED: 'Diagnostic candidate builder створив preview-кандидата.',
+                'preview-only': 'Дані показані тільки як попередній перегляд.',
+                TONING_ONLY: 'Тип оцінки: тільки тонування у preview mode.',
+                READY: 'Статус перевірки: готово для diagnostic preview.'
+            }),
+
             escapeHtml(value) {
                 return String(value ?? '')
                     .replace(/&/g, '&amp;')
@@ -156,6 +175,30 @@ const pigmentMap = {
                 return [reasons];
             },
 
+            formatDiagnosticReasonCode(code) {
+                const normalized = String(code ?? '').trim();
+                if (!normalized) return 'Діагностична причина не вказана.';
+                return this.DIAGNOSTIC_REASON_LABELS[normalized] ||
+                    `Невідома діагностична причина: ${normalized}`;
+            },
+
+            renderDiagnosticCodeItems(title, codes) {
+                if (!Array.isArray(codes) || codes.length === 0) return [];
+                return codes
+                    .filter((code) => code !== undefined && code !== null && String(code).trim() !== '')
+                    .map((code) => ({ title, message: this.formatDiagnosticReasonCode(code) }));
+            },
+
+            renderDiagnosticSourceRefItems(sourceRefs) {
+                if (!sourceRefs || typeof sourceRefs !== 'object') return [];
+                return Object.entries(sourceRefs)
+                    .filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== '')
+                    .map(([key, value]) => ({
+                        title: `sourceRefs.${key}`,
+                        message: this.formatDiagnosticReasonCode(value)
+                    }));
+            },
+
             renderDiagnostics(diagnostics, reasons) {
                 const items = [];
                 if (Array.isArray(diagnostics)) items.push(...diagnostics);
@@ -195,14 +238,10 @@ const pigmentMap = {
                     'Не наносити за цим блоком'
                 ];
                 if (Object.keys(safeSourceRefs).length > 0) {
-                    items.push({ title: 'sourceRefs', message: JSON.stringify(safeSourceRefs) });
+                    items.push(...this.renderDiagnosticSourceRefItems(safeSourceRefs));
                 }
-                if (Array.isArray(candidate.safetyReasonCodes) && candidate.safetyReasonCodes.length > 0) {
-                    items.push({ title: 'safetyReasonCodes', message: JSON.stringify(candidate.safetyReasonCodes) });
-                }
-                if (Array.isArray(candidate.manualRequiredReasonCodes) && candidate.manualRequiredReasonCodes.length > 0) {
-                    items.push({ title: 'manualRequiredReasonCodes', message: JSON.stringify(candidate.manualRequiredReasonCodes) });
-                }
+                items.push(...this.renderDiagnosticCodeItems('safetyReasonCodes', candidate.safetyReasonCodes));
+                items.push(...this.renderDiagnosticCodeItems('manualRequiredReasonCodes', candidate.manualRequiredReasonCodes));
                 if (hasForbiddenField) {
                     items.push('Небезпечні технічні поля приховано');
                 }
