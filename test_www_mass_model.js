@@ -1533,7 +1533,7 @@ function buildProductionEndsRecSkeletonContract(readiness) {
 })();
 
 (function testBuilderContractNoCalculateProtocolWiring() {
-    const id = 'BUILDER-CONTRACT-CALCULATEPROTOCOL-IS-WIRED';
+    const id = 'BUILDER-CONTRACT-NO-CALCULATEPROTOCOL-WIRING';
     const source = fs.readFileSync('./www/core.js', 'utf8');
     const sandbox = {};
     vm.createContext(sandbox);
@@ -1603,7 +1603,7 @@ globalThis.__builderNoCandidateResult = buildProductionEndsRec({}, Object.assign
     assert.strictEqual(sandbox.__builderBlockedResult.endsRec, null, id);
     assert.strictEqual(sandbox.__builderNoCandidateResult.created, false, id);
     assert.strictEqual(sandbox.__builderNoCandidateResult.status, 'NO_CANDIDATE', id);
-    assert.strictEqual(calculateProtocolSource.includes('buildProductionEndsRec('), true, id);
+    assert.strictEqual(calculateProtocolSource.includes('buildProductionEndsRec('), false, id);
     assert.strictEqual(calculateProtocolSource.includes('endsRec:'), false, id);
 })();
 
@@ -1804,8 +1804,8 @@ function classifyFormulaContractSpecData(readiness, builderResult) {
     assert.notStrictEqual(formula.mode, '3-zone', id);
 })();
 
-(function testFormulaContractCalculateProtocolIsWired() {
-    const id = 'FORMULA-CONTRACT-CALCULATEPROTOCOL-IS-WIRED';
+(function testFormulaContractNoCalculateProtocolWiring() {
+    const id = 'FORMULA-CONTRACT-NO-CALCULATEPROTOCOL-WIRING';
     const source = fs.readFileSync('./www/core.js', 'utf8');
     const sandbox = {};
     vm.createContext(sandbox);
@@ -1892,7 +1892,7 @@ globalThis.__formulaSuspiciousResult = classifyProductionEndsRecFormulaContract(
     assert.strictEqual(sandbox.__formulaNotReadyResult.formulaStatus, 'NOT_READY', id);
     assert.strictEqual(sandbox.__formulaSuspiciousResult.formulaReady, false, id);
     assert.strictEqual(sandbox.__formulaSuspiciousResult.formulaStatus, 'BLOCKED', id);
-    assert.strictEqual(sandbox.__calculateProtocolSource.includes('FormulaContract'), true, id);
+    assert.strictEqual(sandbox.__calculateProtocolSource.includes('FormulaContract'), false, id);
     assert.strictEqual(sandbox.__calculateProtocolSource.includes('formulaReady'), false, id);
 })();
 
@@ -2188,16 +2188,16 @@ function classifyEndsRecMassAllocationContract(readiness, builderResult, formula
     console.log(id + ' safe.');
 })();
 
-// TEST 13: MASS-CONTRACT-CALCULATEPROTOCOL-IS-WIRED
-(function testMassContractCalculateProtocolIsWired() {
-    const id = 'MASS-CONTRACT-CALCULATEPROTOCOL-IS-WIRED';
+// TEST 13: MASS-CONTRACT-NO-CALCULATEPROTOCOL-WIRING
+(function testMassContractNoCalculateProtocolWiring() {
+    const id = 'MASS-CONTRACT-NO-CALCULATEPROTOCOL-WIRING';
     const source = fs.readFileSync('./www/core.js', 'utf8');
     const sandbox = {};
     vm.createContext(sandbox);
     vm.runInContext(source, sandbox, { filename: 'www/core.js' });
     const calcProtoSource = sandbox.calculateProtocol.toString();
 
-    assert.strictEqual(calcProtoSource.includes('classifyProductionEndsRecMassAllocationContract'), true, id + ': classifyProductionEndsRecMassAllocationContract must be called inside calculateProtocol');
+    assert.strictEqual(calcProtoSource.includes('classifyEndsRecMassAllocationContract'), false, id + ': classifyEndsRecMassAllocationContract must not be called inside calculateProtocol');
     assert.strictEqual(calcProtoSource.includes('endsRec: {') || calcProtoSource.includes('endsRec:{'), false, id + ': production endsRec must not be initialized in calculateProtocol');
     assert.strictEqual(calcProtoSource.includes('endsFormula:'), false, id + ': endsFormula must not be set inside calculateProtocol');
     console.log(id + ' safe.');
@@ -2587,16 +2587,16 @@ function assembleProductionEndsRecContractSpecLocal(readiness, builderResult, fo
     console.log(id + ' safe.');
 })();
 
-// 16. ASSEMBLY-CONTRACT-CALCULATEPROTOCOL-IS-WIRED
-(function testAssemblyContractCalculateProtocolIsWired() {
-    const id = 'ASSEMBLY-CONTRACT-CALCULATEPROTOCOL-IS-WIRED';
+// 16. ASSEMBLY-CONTRACT-NO-CALCULATEPROTOCOL-WIRING
+(function testAssemblyContractNoCalculateProtocolWiring() {
+    const id = 'ASSEMBLY-CONTRACT-NO-CALCULATEPROTOCOL-WIRING';
     const source = fs.readFileSync('./www/core.js', 'utf8');
     const sandbox = {};
     vm.createContext(sandbox);
     vm.runInContext(source, sandbox, { filename: 'www/core.js' });
     const calcProtoSource = sandbox.calculateProtocol.toString();
 
-    assert.strictEqual(calcProtoSource.includes('assembleProductionEndsRecContract'), true, id + ': assembleProductionEndsRecContract must be called inside calculateProtocol');
+    assert.strictEqual(calcProtoSource.includes('assembleProductionEndsRecContract'), false, id + ': assembleProductionEndsRecContract must not be called inside calculateProtocol');
     console.log(id + ' safe.');
 })();
 
@@ -3079,9 +3079,9 @@ function runControlledEndsRecWiringSpecLocal(context, readiness, builderResult, 
     console.log(id + ' safe.');
 })();
 
-// 20. WIRING-CONTRACT-CALCULATEPROTOCOL-IS-WIRED
-(function testWiringContractCalculateProtocolIsWired() {
-    const id = 'WIRING-CONTRACT-CALCULATEPROTOCOL-IS-WIRED';
+// 20. WIRING-CONTRACT-CALCULATEPROTOCOL-NOT-WIRED-YET
+(function testWiringContractCalculateProtocolNotWiredYet() {
+    const id = 'WIRING-CONTRACT-CALCULATEPROTOCOL-NOT-WIRED-YET';
     const source = fs.readFileSync('./www/core.js', 'utf8');
     const sandbox = {};
     vm.createContext(sandbox);
@@ -3090,7 +3090,7 @@ function runControlledEndsRecWiringSpecLocal(context, readiness, builderResult, 
 
     // None of these should be present inside calculateProtocol as production wiring
     assert.strictEqual(calcProtoSource.includes('endsRecAssemblyCandidate'), false, id + ': endsRecAssemblyCandidate must not be present in calculateProtocol');
-    assert.strictEqual(calcProtoSource.includes('diagnosticCandidate'), true, id + ': diagnosticCandidate must be present in calculateProtocol');
+    assert.strictEqual(calcProtoSource.includes('diagnosticCandidate'), false, id + ': diagnosticCandidate must not be present in calculateProtocol');
     console.log(id + ' safe.');
 })();
 
@@ -3718,18 +3718,18 @@ function runGuardedDiagnosticWiringSpecLocal(context, readiness, builderResult, 
     console.log(id + ' safe.');
 })();
 
-// 20. GUARDED-WIRING-CALCULATEPROTOCOL-IS-WIRED
-(function testGuardedWiringCalculateProtocolIsWired() {
-    const id = 'GUARDED-WIRING-CALCULATEPROTOCOL-IS-WIRED';
+// 20. GUARDED-WIRING-CALCULATEPROTOCOL-NOT-WIRED-YET
+(function testGuardedWiringCalculateProtocolNotWiredYet() {
+    const id = 'GUARDED-WIRING-CALCULATEPROTOCOL-NOT-WIRED-YET';
     const source = fs.readFileSync('./www/core.js', 'utf8');
     const sandbox = {};
     vm.createContext(sandbox);
     vm.runInContext(source, sandbox, { filename: 'www/core.js' });
     const calcProtoSource = sandbox.calculateProtocol.toString();
 
-    // The calculateProtocol execution block should contain wiring execution variable logic
+    // The calculateProtocol execution block should not contain wiring execution variable logic yet
     assert.strictEqual(calcProtoSource.includes('guardedDiagnosticCandidate'), false, id);
-    assert.strictEqual(calcProtoSource.includes('endsRecDiagnosticWiringCandidate'), true, id);
+    assert.strictEqual(calcProtoSource.includes('endsRecDiagnosticWiringCandidate'), false, id);
     console.log(id + ' safe.');
 })();
 
