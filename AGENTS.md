@@ -215,9 +215,14 @@ For ПЕРУКАР specifically:
 - high damage / сильне пошкодження / критичне пошкодження не має давати automatic APPROVED для lift, powder, Special Blond або високого оксиду;
 - high porosity / пористе полотно має мінімум MANUAL_REQUIRED при хімічному процесі;
 - brittle / ламкі кінці або критично пошкоджені кінці мають блокувати або вимагати ручного рішення для освітлення;
-- low elasticity / низька еластичність має бути safety-сигналом і не має ігноруватися при освітленні;
+- low elasticity / низька еластичність тепер має реальне UI-поле `#elasticity`;
+- значення `low` / `weak` / `poor` / `низька` / `слабка` / `погана` / `тягнеться` мають переводити сценарій у MANUAL_REQUIRED;
+- `normal` / `good` / `нормальна еластичність` не має давати false-positive;
+- automatic APPROVED і approved-recipe заборонені для low elasticity сценаріїв;
 - warning-only не достатній для high-risk lift-сценаріїв;
-- тести ENDS-DAMAGED-LIFT, ENDS-CONDITION-POROUS-LIFT, ENDS-CONDITION-BRITTLE-HIGH-LIFT, ENDS-CONDITION-DAMAGED-CHEMISTRY мають залишатися захистом контракту.
+- тести `ELASTICITY-LOW-LIFT-NO-APPROVED`, `ELASTICITY-LOW-SPECIAL-BLOND-NO-APPROVED`, `ELASTICITY-LOW-TONING-MANUAL-MINIMUM`, `ELASTICITY-NORMAL-LIFT-NO-FALSE-POSITIVE` мають залишатися захистом контракту;
+- тести ENDS-DAMAGED-LIFT, ENDS-CONDITION-POROUS-LIFT, ENDS-CONDITION-BRITTLE-HIGH-LIFT, ENDS-CONDITION-DAMAGED-CHEMISTRY мають залишатися захистом контракту;
+- Примітка: загальний damage matrix ще не повністю покритий, існують gaps.
 
 ## Правило виконання малих дозволених задач
 

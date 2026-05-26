@@ -121,7 +121,7 @@ BLACK-EXIT coverage status:
 - Ends/third-zone production dark cosmetic base: still known gap / diagnostic-only. Production ends-level guard не вмикати без окремого контракту третьої зони.
 
 - Хна / металеві солі: HENNA/METALS root/length general history covered by guard/tests. Ends/third-zone production path diagnostic-only / known gap.
-- Пошкоджене волосся / еластичність / пористість: DAMAGE / POROSITY / ELASTICITY is partially covered by existing guards/tests. Gap: немає повної матриці по root/length/ends, low elasticity, high oxidizer, powder, Special Blond, toning, darkening.
+- Пошкоджене волосся / еластичність / пористість: DAMAGE / POROSITY / ELASTICITY is partially covered by existing guards/tests. Low elasticity covered by UI field + guard + tests. Gap: немає повної матриці по root/length/ends, high oxidizer, powder, Special Blond + high porosity, toning, darkening, multi-zone damage conflict, root damaged powder, length brittle lift.
 - Несумісність брендів: окремого production guard і тестової matrix не знайдено.
 - Brand-specific palette constraints: є manual review для Special Blond, але немає brand palette engine або brand-specific rule matrix.
 - Ручний browser/UI smoke: у `docs/` є попередні browser QA документи, але в цій задачі browser не використовувався і актуальний ручний UI smoke не запускався.
@@ -136,9 +136,9 @@ BLACK-EXIT coverage status:
 
 | Порядок | Блок | Чому це ризик | Мінімальний тест | Production guard потрібен | AGENTS.md contract потрібен |
 |---|---|---|---|---|---|
-| 1 | Уточнення damage matrix або brand-specific constraints | Потреба у повній матриці пошкоджень та перевірці несумісності брендів | Brand/system input + forbidden process/palette combinations | Так | Так |
+| 1 | Special Blond + high porosity або root/length damage matrix | Потреба у повній матриці пошкоджень та перевірці несумісності брендів | Brand/system input + forbidden process/palette combinations | Так | Так |
 | 2 | Brand-specific constraints | Special Blond, `.00`, oxidizers і palette rules можуть відрізнятися між брендами | Brand/system input + forbidden process/palette combinations | Так | Так |
-| 3 | Різнозонне полотно / довгі історії фарбування | Різні зони можуть мати різну косметичну історію, пористість і реакцію | Multi-zone history 3-5 years + different porosity -> no automatic approved unified recipe | Так | Так |
+| 3 | multi-zone damage conflict / різнозонне полотно | Різні зони можуть мати різну косметичну історію, пористість і реакцію | Multi-zone history 3-5 years + different porosity -> no automatic approved unified recipe | Так | Так |
 | 4 | UI/browser smoke | Node tests не бачать реального layout, кликів, select values і visual regressions | Manual/browser smoke для current form values, diagnostic block, warning/manual blocks | Не завжди | Так, як QA contract |
 | 5 | Android/Capacitor build smoke | Android wrapper може мати окремі runtime/build проблеми навіть при green Node tests | Build/sync smoke для Capacitor webDir і Android asset path | Не завжди | Так, як release/readiness contract |
 
