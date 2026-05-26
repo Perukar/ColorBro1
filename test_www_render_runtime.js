@@ -47,6 +47,19 @@ function assertBefore(html, first, second) {
     assert.ok(html.indexOf(first) < html.indexOf(second), 'Expected "' + first + '" before "' + second + '"');
 }
 
+function assertArrayIncludesEvery(actual, expected, id) {
+    expected.forEach((item) => assert.ok(actual.includes(item), id + ' missing required item: ' + item));
+}
+
+function extractFirstDivBlockByHeading(html, heading) {
+    const marker = '<h3>' + heading + '</h3>';
+    const markerIndex = html.indexOf(marker);
+    assert.ok(markerIndex !== -1, 'Missing block heading: ' + heading + '\\nHTML:\\n' + html);
+    const start = html.lastIndexOf('<div', markerIndex);
+    const next = html.indexOf('<div', markerIndex + marker.length);
+    return html.slice(start, next === -1 ? html.length : next);
+}
+
 const approvedHtml = PerucarWwwRenderV1.renderStateToHtml({
     status: 'APPROVED',
     target: '8.1',
@@ -160,6 +173,140 @@ assertIncludes(reasonsHtml, 'Сивина впливає на рішення');
 assertIncludes(reasonsHtml, 'mass');
 assertIncludes(reasonsHtml, 'source');
 assertIncludes(reasonsHtml, 'density');
+
+// Contract marker for the future diagnostic display. This test must not activate production ends rendering.
+const diagnosticDisplayRenderContract = Object.freeze({
+    id: 'DIAGNOSTIC-DISPLAY-RENDER-CONTRACT',
+    status: 'PENDING_IMPLEMENTATION',
+    blockRole: 'informational-warning-only',
+    separatedFromProductionRecipes: true,
+    existingTwoZoneRenderMustStayStable: true,
+    notForMixing: true,
+    requiredWarningLabels: [
+        'Діагностика кінців',
+        'Preview only',
+        'Не для змішування',
+        'Потрібна ручна перевірка',
+        'Не є фінальним рецептом',
+        'Не наносити за цим блоком'
+    ],
+    forbiddenProductionHeadings: [
+        '<h3>Кінці</h3>',
+        '<h3>Ends</h3>',
+        '<h3>endsRec</h3>'
+    ],
+    forbiddenDisplayFields: [
+        'dyeMass',
+        'oxidizerMass',
+        'grams',
+        'exactGrams',
+        'finalFormula',
+        'endsFormula',
+        'productionRecipe',
+        'formula-to-mix'
+    ],
+    forbiddenRecipeTexts: [
+        'змішати',
+        'пропорції нанесення',
+        'готовий рецепт для кінців',
+        'готовий рецепт'
+    ]
+});
+
+assert.strictEqual(diagnosticDisplayRenderContract.blockRole, 'informational-warning-only');
+assert.strictEqual(diagnosticDisplayRenderContract.separatedFromProductionRecipes, true);
+assert.strictEqual(diagnosticDisplayRenderContract.existingTwoZoneRenderMustStayStable, true);
+assert.strictEqual(diagnosticDisplayRenderContract.notForMixing, true);
+assertArrayIncludesEvery(diagnosticDisplayRenderContract.requiredWarningLabels, [
+    'Діагностика кінців',
+    'Preview only',
+    'Не для змішування',
+    'Потрібна ручна перевірка',
+    'Не є фінальним рецептом',
+    'Не наносити за цим блоком'
+], diagnosticDisplayRenderContract.id);
+assertArrayIncludesEvery(diagnosticDisplayRenderContract.forbiddenDisplayFields, [
+    'dyeMass',
+    'oxidizerMass',
+    'grams',
+    'exactGrams',
+    'finalFormula',
+    'endsFormula',
+    'productionRecipe',
+    'formula-to-mix'
+], diagnosticDisplayRenderContract.id);
+assertArrayIncludesEvery(diagnosticDisplayRenderContract.forbiddenRecipeTexts, [
+    'змішати',
+    'пропорції нанесення',
+    'готовий рецепт для кінців',
+    'готовий рецепт'
+], diagnosticDisplayRenderContract.id);
+
+const diagnosticDisplayCandidate = Object.freeze({
+    displayType: 'diagnostic-display',
+    labels: diagnosticDisplayRenderContract.requiredWarningLabels,
+    previewOnly: true,
+    candidateOnly: true,
+    notForMixing: true,
+    productionReady: false,
+    endsRecipeReady: false,
+    purpose: diagnosticDisplayRenderContract.blockRole
+});
+
+assert.strictEqual(diagnosticDisplayCandidate.notForMixing, true, diagnosticDisplayRenderContract.id);
+assert.strictEqual(diagnosticDisplayCandidate.productionReady, false, diagnosticDisplayRenderContract.id);
+assert.strictEqual(diagnosticDisplayCandidate.endsRecipeReady, false, diagnosticDisplayRenderContract.id);
+diagnosticDisplayRenderContract.forbiddenDisplayFields.forEach((field) => {
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(diagnosticDisplayCandidate, field), false,
+        diagnosticDisplayRenderContract.id + ' candidate must not carry production field: ' + field);
+});
+
+const twoZoneContractState = {
+    status: 'APPROVED',
+    rootRec: {
+        process: 'Перманент',
+        dye: 'Root 8.1',
+        ox: '6%',
+        mass: 30,
+        ratio: '1:1'
+    },
+    lenRec: {
+        process: 'Перманент',
+        dye: 'Length 8.1',
+        ox: '6%',
+        mass: 45,
+        ratio: '1:1'
+    }
+};
+
+const twoZoneBaselineHtml = PerucarWwwRenderV1.renderStateToHtml(twoZoneContractState);
+const diagnosticDisplayHtml = PerucarWwwRenderV1.renderStateToHtml({
+    ...twoZoneContractState,
+    endsRecDiagnosticDisplayCandidate: diagnosticDisplayCandidate
+});
+
+assert.strictEqual(
+    extractFirstDivBlockByHeading(diagnosticDisplayHtml, 'Корінь'),
+    extractFirstDivBlockByHeading(twoZoneBaselineHtml, 'Корінь'),
+    diagnosticDisplayRenderContract.id + ' must not mix diagnostic data into rootRec'
+);
+assert.strictEqual(
+    extractFirstDivBlockByHeading(diagnosticDisplayHtml, 'Довжина'),
+    extractFirstDivBlockByHeading(twoZoneBaselineHtml, 'Довжина'),
+    diagnosticDisplayRenderContract.id + ' must not mix diagnostic data into lenRec'
+);
+diagnosticDisplayRenderContract.forbiddenProductionHeadings.forEach((heading) => {
+    assertNotIncludes(diagnosticDisplayHtml, heading);
+});
+diagnosticDisplayRenderContract.forbiddenDisplayFields.forEach((field) => {
+    assertNotIncludes(diagnosticDisplayHtml, field);
+});
+diagnosticDisplayRenderContract.forbiddenRecipeTexts.forEach((text) => {
+    assertNotIncludes(diagnosticDisplayHtml, text);
+});
+assertNotIncludes(diagnosticDisplayHtml, 'third-zone production');
+assertNotIncludes(diagnosticDisplayHtml, 'readyForMixing');
+assertNotIncludes(diagnosticDisplayHtml, 'mixingReady');
 
 const structuredPhasesHtml = PerucarWwwRenderV1.renderPhases([
     {
