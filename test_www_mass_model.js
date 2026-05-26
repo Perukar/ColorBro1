@@ -4498,4 +4498,264 @@ function validateProductionActivationRemainsForbidden(context) {
     console.log(id + ' safe.');
 })();
 
-console.log('Production endsRec guarded wiring contract tests PASSED');
+// ---------------------------------------------------------------------------
+// SPEC MIRROR: validateProductionThirdZoneReadinessSpec (matches www/core.js)
+// ---------------------------------------------------------------------------
+
+function validateProductionThirdZoneReadinessSpec(input) {
+    const ctx = input || {};
+
+    const criticalInputs = [
+        { key: 'root_level', label: 'root level' },
+        { key: 'length_level', label: 'length level' },
+        { key: 'ends_level', label: 'ends level' },
+        { key: 'target_level', label: 'target level' },
+        { key: 'target_direction', label: 'target direction' },
+        { key: 'ends_history', label: 'ends history' },
+        { key: 'porosity', label: 'porosity' },
+        { key: 'damage', label: 'damage/sensitivity' },
+        { key: 'previous_chemical_history', label: 'previous chemical history' },
+        { key: 'brand_or_system', label: 'brand/system constraints' },
+        { key: 'oxidizer_constraints', label: 'oxidizer constraints' },
+        { key: 'application_zone_logic', label: 'application-zone logic' },
+        { key: 'manual_verification_flags', label: 'manual verification flags' }
+    ];
+    const missingCriticalInputs = [];
+    for (const ci of criticalInputs) {
+        const val = ctx[ci.key];
+        if (val === undefined || val === null || val === '' || (typeof val === 'number' && !Number.isFinite(val))) {
+            missingCriticalInputs.push(ci.label);
+        }
+    }
+
+    const endsHistory = String(ctx.ends_history || '').toLowerCase();
+    const damage = String(ctx.damage || ctx.damage_sensitivity || '').toLowerCase();
+    const porosity = String(ctx.porosity || '').toLowerCase();
+    const prevChem = String(ctx.previous_chemical_history || '').toLowerCase();
+    const hasDiagnosticOnly = Boolean(ctx.endsRecDiagnosticWiringCandidate) && !ctx.root_level && !ctx.length_level;
+
+    const safetyReasonCodes = [];
+    const manualRequiredReasonCodes = [];
+    let blocked = false;
+    let manualRequired = false;
+
+    const isHighDamage = damage.includes('high') || damage.includes('critical') || damage.includes('сильно') || damage.includes('критично');
+    const isUnknownChem = prevChem === '' || prevChem === 'unknown' || prevChem === 'невідома';
+    const isUncertainEndsHist = endsHistory === '' || endsHistory === 'unknown' || endsHistory === 'невідома';
+    const isIncompatibleEndsHist = endsHistory.includes('henna') || endsHistory.includes('хна') || endsHistory.includes('metal') || endsHistory.includes('метал');
+    const isPorousEnds = porosity.includes('high') || porosity.includes('porous') || porosity.includes('висока') || porosity.includes('порист');
+
+    if (hasDiagnosticOnly) { blocked = true; safetyReasonCodes.push('DIAGNOSTIC_CANDIDATE_ONLY'); }
+    if (isHighDamage) { manualRequired = true; manualRequiredReasonCodes.push('HIGH_DAMAGE_SENSITIVITY'); safetyReasonCodes.push('HIGH_DAMAGE_SENSITIVITY'); }
+    if (isUnknownChem) { manualRequired = true; manualRequiredReasonCodes.push('UNKNOWN_CHEMICAL_HISTORY'); safetyReasonCodes.push('UNKNOWN_CHEMICAL_HISTORY'); }
+    if (isUncertainEndsHist) { manualRequired = true; manualRequiredReasonCodes.push('UNCERTAIN_ENDS_HISTORY'); safetyReasonCodes.push('UNCERTAIN_ENDS_HISTORY'); }
+    if (isIncompatibleEndsHist) { blocked = true; safetyReasonCodes.push('INCOMPATIBLE_ENDS_HISTORY'); }
+    if (isPorousEnds) { manualRequired = true; manualRequiredReasonCodes.push('POROUS_ENDS'); safetyReasonCodes.push('POROUS_ENDS'); }
+
+    const hasMissing = missingCriticalInputs.length > 0;
+    const hasManual = manualRequiredReasonCodes.length > 0;
+    const hasBlockers = safetyReasonCodes.length > 0;
+    const ready = !hasMissing && !hasBlockers && !hasManual && !blocked && !manualRequired;
+
+    return {
+        contractType: "productionThirdZoneReadiness",
+        previewOnly: true,
+        candidateOnly: true,
+        notForMixing: true,
+        productionReady: false,
+        endsRecipeReady: false,
+        ready: ready,
+        blocked: hasMissing || blocked || hasBlockers,
+        manualRequired: hasManual || manualRequired,
+        missingCriticalInputs: missingCriticalInputs,
+        manualRequiredReasonCodes: manualRequiredReasonCodes,
+        safetyReasonCodes: safetyReasonCodes,
+        sourceRefs: {
+            endsLevel: ctx.ends_level || null,
+            targetLevel: ctx.target_level || null,
+            endsHistory: ctx.ends_history || null,
+            damage: ctx.damage || ctx.damage_sensitivity || null,
+            porosity: ctx.porosity || null
+        }
+    };
+}
+
+// ---------------------------------------------------------------------------
+// PRODUCTION THIRD-ZONE READINESS HELPER CONTRACT TESTS (safe redo)
+// ---------------------------------------------------------------------------
+
+(function testProductionThirdZoneReadinessHelperExists() {
+    const id = 'PRODUCTION-THIRD-ZONE-READINESS-HELPER-EXISTS';
+
+    const source = fs.readFileSync('./www/core.js', 'utf8');
+    const sandbox = {};
+    vm.createContext(sandbox);
+    vm.runInContext(source, sandbox, { filename: 'www/core.js' });
+
+    assert.strictEqual(typeof sandbox.validateProductionThirdZoneReadiness, 'function', id + ': helper must exist');
+    
+    const calcProtoSource = sandbox.calculateProtocol.toString();
+    assert.strictEqual(calcProtoSource.includes('validateProductionThirdZoneReadiness('), false, id + ': helper must not be called from calculateProtocol');
+    
+    const result = sandbox.validateProductionThirdZoneReadiness({});
+    assert.strictEqual(result.contractType, 'productionThirdZoneReadiness', id + ': must return contract type');
+    assert.strictEqual(result.productionReady, false, id + ': productionReady must be false');
+    assert.strictEqual(result.endsRecipeReady, false, id + ': endsRecipeReady must be false');
+    assert.strictEqual(result.notForMixing, true, id + ': notForMixing must be true');
+
+    console.log(id + ' safe.');
+})();
+
+(function testProductionThirdZoneReadinessCompleteInputs() {
+    const id = 'PRODUCTION-THIRD-ZONE-READINESS-COMPLETE-INPUTS';
+
+    const source = fs.readFileSync('./www/core.js', 'utf8');
+    const sandbox = {};
+    vm.createContext(sandbox);
+    vm.runInContext(source, sandbox, { filename: 'www/core.js' });
+
+    const result = sandbox.validateProductionThirdZoneReadiness({
+        root_level: 6, length_level: 6, ends_level: 8, target_level: 8,
+        target_direction: '1', ends_history: 'natural',
+        porosity: 'low', damage: 'low', previous_chemical_history: 'none',
+        brand_or_system: 'generic', oxidizer_constraints: 'safe',
+        application_zone_logic: '2-zone', manual_verification_flags: 'resolved'
+    });
+
+    assert.strictEqual(result.ready, true, id + ': must be ready');
+    assert.strictEqual(result.blocked, false, id + ': not blocked');
+    assert.strictEqual(result.manualRequired, false, id + ': not manual required');
+    assert.strictEqual(result.missingCriticalInputs.length, 0, id + ': no missing inputs');
+    assert.strictEqual(result.productionReady, false, id + ': productionReady false');
+    assert.strictEqual(result.endsRecipeReady, false, id + ': endsRecipeReady false');
+    assert.strictEqual(result.notForMixing, true, id + ': notForMixing true');
+    assert.strictEqual(result.previewOnly, true, id + ': previewOnly true');
+    assert.strictEqual(result.candidateOnly, true, id + ': candidateOnly true');
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(result, 'grams'), false, id + ': no grams');
+
+    console.log(id + ' safe.');
+})();
+
+(function testProductionThirdZoneReadinessMissingInputs() {
+    const id = 'PRODUCTION-THIRD-ZONE-READINESS-MISSING-INPUTS';
+
+    const source = fs.readFileSync('./www/core.js', 'utf8');
+    const sandbox = {};
+    vm.createContext(sandbox);
+    vm.runInContext(source, sandbox, { filename: 'www/core.js' });
+
+    const resultEmpty = sandbox.validateProductionThirdZoneReadiness({});
+    assert.strictEqual(resultEmpty.ready, false, id + ': not ready with empty input');
+    assert.strictEqual(resultEmpty.blocked, true, id + ': blocked');
+    assert.ok(resultEmpty.missingCriticalInputs.length >= 13, id + ': all 13 critical inputs missing');
+    assert.strictEqual(resultEmpty.productionReady, false, id + ': productionReady false');
+
+    const resultPartial = sandbox.validateProductionThirdZoneReadiness({
+        root_level: 6, length_level: 6, target_level: 8, ends_history: 'natural'
+    });
+    assert.strictEqual(resultPartial.ready, false, id + ': partial not ready');
+    assert.ok(resultPartial.missingCriticalInputs.includes('ends level'), id + ': ends level missing');
+    assert.ok(resultPartial.missingCriticalInputs.includes('target direction'), id + ': target direction missing');
+
+    console.log(id + ' safe.');
+})();
+
+(function testProductionThirdZoneReadinessManualBlockers() {
+    const id = 'PRODUCTION-THIRD-ZONE-READINESS-MANUAL-BLOCKERS';
+
+    const source = fs.readFileSync('./www/core.js', 'utf8');
+    const sandbox = {};
+    vm.createContext(sandbox);
+    vm.runInContext(source, sandbox, { filename: 'www/core.js' });
+
+    const completeBase = {
+        root_level: 6, length_level: 6, ends_level: 8, target_level: 8,
+        target_direction: '1', ends_history: 'natural',
+        porosity: 'low', damage: 'low', previous_chemical_history: 'none',
+        brand_or_system: 'generic', oxidizer_constraints: 'safe',
+        application_zone_logic: '2-zone', manual_verification_flags: 'resolved'
+    };
+
+    const highDamage = sandbox.validateProductionThirdZoneReadiness(Object.assign({}, completeBase, { damage: 'high' }));
+    assert.strictEqual(highDamage.manualRequired, true, id + ': high damage requires manual');
+    assert.strictEqual(highDamage.productionReady, false, id + ': productionReady false');
+
+    const unknownChem = sandbox.validateProductionThirdZoneReadiness(Object.assign({}, completeBase, { previous_chemical_history: 'unknown' }));
+    assert.strictEqual(unknownChem.manualRequired, true, id + ': unknown chem requires manual');
+
+    const uncertainEnds = sandbox.validateProductionThirdZoneReadiness(Object.assign({}, completeBase, { ends_history: 'unknown' }));
+    assert.strictEqual(uncertainEnds.manualRequired, true, id + ': uncertain ends history requires manual');
+
+    const hennaEnds = sandbox.validateProductionThirdZoneReadiness(Object.assign({}, completeBase, { ends_history: 'henna_metals' }));
+    assert.strictEqual(hennaEnds.blocked, true, id + ': henna ends blocked');
+    assert.ok(hennaEnds.safetyReasonCodes.includes('INCOMPATIBLE_ENDS_HISTORY'), id + ': reason code present');
+
+    const porousEnds = sandbox.validateProductionThirdZoneReadiness(Object.assign({}, completeBase, { porosity: 'high' }));
+    assert.strictEqual(porousEnds.manualRequired, true, id + ': porous ends requires manual');
+
+    console.log(id + ' safe.');
+})();
+
+(function testProductionThirdZoneReadinessDiagnosticIsolation() {
+    const id = 'PRODUCTION-THIRD-ZONE-READINESS-DIAGNOSTIC-ISOLATION';
+
+    const source = fs.readFileSync('./www/core.js', 'utf8');
+    const sandbox = {};
+    vm.createContext(sandbox);
+    vm.runInContext(source, sandbox, { filename: 'www/core.js' });
+
+    const diagnosticOnly = sandbox.validateProductionThirdZoneReadiness({
+        endsRecDiagnosticWiringCandidate: {
+            previewOnly: true, candidateOnly: true, notForMixing: true, productionReady: false
+        }
+    });
+    assert.strictEqual(diagnosticOnly.ready, false, id + ': diagnostic alone not ready');
+    assert.strictEqual(diagnosticOnly.blocked, true, id + ': blocked');
+    assert.ok(diagnosticOnly.safetyReasonCodes.includes('DIAGNOSTIC_CANDIDATE_ONLY'), id + ': reason code present');
+    assert.strictEqual(diagnosticOnly.productionReady, false, id + ': productionReady false');
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(diagnosticOnly, 'dyeMass'), false, id + ': no dyeMass');
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(diagnosticOnly, 'oxidizerMass'), false, id + ': no oxidizerMass');
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(diagnosticOnly, 'grams'), false, id + ': no grams');
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(diagnosticOnly, 'endsFormula'), false, id + ': no endsFormula');
+
+    console.log(id + ' safe.');
+})();
+
+(function testProductionThirdZoneReadinessExistingStable() {
+    const id = 'PRODUCTION-THIRD-ZONE-READINESS-EXISTING-STABLE';
+
+    const source = fs.readFileSync('./www/core.js', 'utf8');
+    const sandbox = {};
+    vm.createContext(sandbox);
+    vm.runInContext(source, sandbox, { filename: 'www/core.js' });
+
+    const mass = sandbox.buildMassModel('средние', 'средние');
+    assert.strictEqual(mass.mode, '2-zone', id + ': massModel still 2-zone');
+    assert.strictEqual(mass.endsMass, null, id + ': endsMass still null');
+
+    const calcProto = sandbox.calculateProtocol.toString();
+    assert.strictEqual(calcProto.includes('validateProductionThirdZoneReadiness'), false, id + ': calculateProtocol does not call new helper');
+
+    const testCases = [
+        { input: {}, expectedReady: false },
+        { input: {
+            root_level: 6, length_level: 6, ends_level: 8, target_level: 8,
+            target_direction: '1', ends_history: 'natural',
+            porosity: 'low', damage: 'low', previous_chemical_history: 'none',
+            brand_or_system: 'generic', oxidizer_constraints: 'safe',
+            application_zone_logic: '2-zone', manual_verification_flags: 'resolved'
+        }, expectedReady: true }
+    ];
+
+    for (const tc of testCases) {
+        const coreResult = sandbox.validateProductionThirdZoneReadiness(tc.input);
+        const specResult = validateProductionThirdZoneReadinessSpec(tc.input);
+        assert.strictEqual(coreResult.ready, specResult.ready, id + ': spec matches core ready');
+        assert.strictEqual(coreResult.blocked, specResult.blocked, id + ': spec matches core blocked');
+        assert.strictEqual(coreResult.productionReady, specResult.productionReady, id + ': spec matches core productionReady');
+    }
+
+    console.log(id + ' safe.');
+})();
+
+console.log('Production third-zone readiness helper contract tests PASSED');
