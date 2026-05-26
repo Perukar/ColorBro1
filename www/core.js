@@ -314,7 +314,8 @@ const pigmentMap = {
                 massModel: runtime.massModel || null,
                 timingInfo: runtime.timingInfo || null,
                 diagnostics: Array.isArray(runtime.diagnostics) ? runtime.diagnostics : [],
-                reasons: runtime.reasons || []
+                reasons: runtime.reasons || [],
+                endsRecDiagnosticWiringCandidate: runtime.endsRecDiagnosticWiringCandidate || null
             };
         }
 
@@ -1560,6 +1561,52 @@ const pigmentMap = {
                     }
                 }
 
+                               let endsRecDiagnosticWiringCandidate = null;
+                try {
+                    const diagnosticContext = {
+                        ends_level: eLevel,
+                        length_level: lLevel,
+                        root_level: rLevel,
+                        ends_condition: endsCondition,
+                        ends_history: endsHistory,
+                        ends_base_type: endsBaseType,
+                        target_level: tLevel,
+                        length: length,
+                        density: density,
+                        threeZoneGateDecision,
+                        threeZoneCandidateMassModel,
+                        threeZonePreviewOnly,
+                        threeZoneEndsRecipeReady,
+                        endsRecCandidatePreview,
+                        massModel,
+                        rootRec,
+                        lenRec
+                    };
+
+                    const dReadiness = validateProductionEndsRecReadiness(diagnosticContext);
+                    const dBuilder = buildProductionEndsRec(diagnosticContext, dReadiness);
+                    const dFormula = classifyProductionEndsRecFormulaContract(diagnosticContext, dReadiness, dBuilder);
+                    const dMass = classifyProductionEndsRecMassAllocationContract(diagnosticContext, dReadiness, dBuilder, dFormula);
+                    const dAssembly = assembleProductionEndsRecContract(diagnosticContext, dReadiness, dBuilder, dFormula, dMass);
+                    const dWiring = buildControlledEndsRecDiagnosticWiringContract(diagnosticContext, dReadiness, dBuilder, dFormula, dMass, dAssembly);
+
+                    if (dWiring && dWiring.diagnosticReady && dWiring.diagnosticCandidate) {
+                        endsRecDiagnosticWiringCandidate = {
+                            zone: 'ends',
+                            candidateOnly: true,
+                            previewOnly: true,
+                            notForMixing: true,
+                            productionReady: false,
+                            endsRecipeReady: false,
+                            sourceRefs: Object.assign({}, dWiring.diagnosticCandidate.sourceRefs),
+                            safetyReasonCodes: Array.isArray(dWiring.diagnosticCandidate.safetyReasonCodes) ? dWiring.diagnosticCandidate.safetyReasonCodes.slice() : [],
+                            manualRequiredReasonCodes: Array.isArray(dWiring.diagnosticCandidate.manualRequiredReasonCodes) ? dWiring.diagnosticCandidate.manualRequiredReasonCodes.slice() : []
+                        };
+                    }
+                } catch (err) {
+                    // Fail-safe: do not disrupt primary 2-zone calculation paths
+                }
+
                 const reasons = { rootStep: rStep, lengthStep: lStep, endsLevel: eLevel, endsCondition, endsHistory, endsBaseType, hotRoot, grey, specialBlondBase6NeedsConfirmation, significantDarkeningNeedsPrepig, zoneLevelDifference, zoneProcessesDiffer, zoneDecisionNeedsConfirmation, endsLevelProvided, endsDiffersFromRoot, endsDiffersFromLength, endsLevelNeedsConfirmation, endsConditionProvided, riskyEndsCondition, endsLighteningNeeded, endsChemicalInterventionLikely, endsConditionNeedsConfirmation, endsConditionMissingWithDifferentLevel, endsHistoryProvided, endsBaseTypeProvided, riskyEndsHistory, riskyEndsBaseType, endsHistoryNeedsConfirmation, endsBaseTypeNeedsConfirmation, threeZonePreviewEligible, threeZoneGateDecision, threeZoneCandidateMassModel, threeZonePreviewOnly, threeZoneEndsRecipeReady };
                 if (endsRecCandidatePreview) {
                     reasons.endsRecCandidatePreview = endsRecCandidatePreview;
@@ -1578,7 +1625,8 @@ const pigmentMap = {
                     mixtoneInfo: { root: rootRec.mixtone, length: lenRec.mixtone },
                     massModel: Object.assign({}, massModel, { rootMass: rMass, lengthMass: lMass }),
                     timingInfo: { totalMinutes: timing, modifierMinutes: tMod },
-                    reasons
+                    reasons,
+                    endsRecDiagnosticWiringCandidate
                 });
                 document.getElementById('output').innerHTML = PerucarWwwRenderV1.renderStateToHtml(state);
             } catch (e) {
