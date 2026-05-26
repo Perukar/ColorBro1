@@ -349,7 +349,75 @@ function runDiagnosticScenario(name, values) {
     };
 }
 
-const blackExitScenario = runDiagnosticScenario('BLACK-EXIT-1', {
+function analyzeBlackExitContractScenario(name, values) {
+    const scenario = runDiagnosticScenario(name, values);
+    assert.ok(scenario.requestedIds.includes('output'), name + ' should access output');
+
+    const html = scenario.html;
+    const htmlText = html.toLowerCase();
+    const hasApproved = html.includes('APPROVED')
+        || html.includes('ПРОТОКОЛ ЗАТВЕРДЖЕНО');
+    const hasApprovedRecipe = html.includes('approved-recipe');
+    const hasManualSignal = html.includes('MANUAL_REQUIRED')
+        || html.includes('Потрібне ручне рішення')
+        || html.includes('needs_confirmation');
+    const hasBlackExitDiagnosticText = (
+        htmlText.includes('вихід з чорного')
+        || htmlText.includes('темної косметичної')
+        || htmlText.includes('темного косметичного')
+        || htmlText.includes('косметичних нашарув')
+    ) && (
+        htmlText.includes('діагност')
+        || htmlText.includes('тест-пасм')
+        || htmlText.includes('фон освітлення')
+    );
+
+    assert.ok(!scenario.error, name + ' should not throw');
+    assert.ok(hasManualSignal, name + ' should require manual decision');
+    assert.ok(!hasApproved, name + ' should not be automatic APPROVED');
+    assert.ok(!hasApprovedRecipe, name + ' should not render approved recipe blocks');
+    assert.ok(hasBlackExitDiagnosticText, name + ' should warn about dark cosmetic base diagnostics and test strand');
+
+    return {
+        status: 'SAFE',
+        hasApproved,
+        hasApprovedRecipe,
+        hasManualSignal,
+        hasBlackExitDiagnosticText,
+        hasError: Boolean(scenario.error)
+    };
+}
+
+function analyzeBlackExitNegativeScenario(name, values) {
+    const scenario = runDiagnosticScenario(name, values);
+    assert.ok(scenario.requestedIds.includes('output'), name + ' should access output');
+    assert.ok(!scenario.error, name + ' should not throw');
+
+    const htmlText = scenario.html.toLowerCase();
+    const forbiddenBlackExitSignals = [
+        'вихід з чорного',
+        'темної косметичної',
+        'темного косметичного',
+        'косметичних нашарув',
+        'змивок',
+        'тест-пасмо'
+    ];
+    const presentForbiddenSignals = forbiddenBlackExitSignals.filter(signal => htmlText.includes(signal));
+
+    assert.deepStrictEqual(
+        presentForbiddenSignals,
+        [],
+        name + ' should not render BLACK-EXIT text for natural dark base lift'
+    );
+
+    return {
+        status: 'SAFE',
+        presentForbiddenSignals,
+        hasError: Boolean(scenario.error)
+    };
+}
+
+const blackExitScenario = analyzeBlackExitContractScenario('BLACK-EXIT-1', {
     history: 'чорний косметичний пігмент',
     condition: 'середньо пористе',
     thickness: 'средние',
@@ -369,40 +437,74 @@ const blackExitScenario = runDiagnosticScenario('BLACK-EXIT-1', {
     target_direction: '1'
 });
 
-assert.ok(blackExitScenario.requestedIds.includes('output'), 'BLACK-EXIT-1 should access output');
+const blackExitCosmeticDarkBaseNoMarkerScenario = analyzeBlackExitContractScenario('BLACK-EXIT-COSMETIC-DARK-BASE-NO-MARKER', {
+    history: 'косметичний пігмент',
+    condition: 'середньо пористе',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '3',
+    root_length: '1',
+    length_level: '3',
+    ends_level: '3',
+    ends_condition: 'здорові',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна',
+    base_type: 'Косметична',
+    target_level: '7',
+    target_direction: '1'
+});
 
-const blackExitHtml = blackExitScenario.html;
-const blackExitHasApproved = blackExitHtml.includes('APPROVED')
-    || blackExitHtml.includes('ПРОТОКОЛ ЗАТВЕРДЖЕНО');
-const blackExitHasRecipe = blackExitHtml.includes('КОРІНЬ')
-    || blackExitHtml.includes('ДОВЖИНА')
-    || blackExitHtml.includes('Барвник');
-const blackExitHasManualSignal = blackExitHtml.includes('MANUAL_REQUIRED')
-    || blackExitHtml.includes('Потрібне ручне рішення')
-    || blackExitHtml.includes('needs_confirmation');
-const blackExitHasDiagnostics = blackExitHtml.includes('діагност')
-    || blackExitHtml.includes('нашарув')
-    || blackExitHtml.includes('змив')
-    || blackExitHtml.includes('фон');
-const blackExitKnownRisk = !blackExitScenario.error
-    && blackExitHasApproved
-    && blackExitHasRecipe
-    && !blackExitHasManualSignal
-    && !blackExitHasDiagnostics;
+const blackExitDarkCosmeticLengthScenario = analyzeBlackExitContractScenario('BLACK-EXIT-DARK-COSMETIC-LENGTH', {
+    history: 'косметична довжина з нашаруванням барвника',
+    condition: 'середньо пористе',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '6',
+    root_length: '1',
+    length_level: '4',
+    ends_level: '4',
+    ends_condition: 'здорові',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна',
+    base_type: 'Косметична',
+    target_level: '7',
+    target_direction: '1'
+});
 
-console.log(
-    blackExitKnownRisk
-        ? 'BLACK-EXIT-1 KNOWN_RISK: exact recipe can be rendered without explicit layering/removal/background diagnostics.'
-        : 'BLACK-EXIT-1 diagnostic observed: blocking/manual/diagnostic signal or runtime rejection present.'
-);
+const blackExitNaturalDarkBaseNoFalsePositiveScenario = analyzeBlackExitNegativeScenario('BLACK-EXIT-NATURAL-DARK-BASE-NO-FALSE-POSITIVE', {
+    history: 'натуральні',
+    condition: 'середньо пористе',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '4',
+    root_length: '1',
+    length_level: '4',
+    ends_level: '4',
+    ends_condition: 'здорові',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна',
+    base_type: 'Натуральна',
+    target_level: '7',
+    target_direction: '1'
+});
+
+console.log('BLACK-EXIT safety contract observed.');
 
 globalThis.__blackExitResult = {
-    status: blackExitKnownRisk ? 'KNOWN_RISK' : 'DIAGNOSTIC_OBSERVED',
-    hasApproved: blackExitHasApproved,
-    hasRecipe: blackExitHasRecipe,
-    hasManualSignal: blackExitHasManualSignal,
-    hasDiagnostics: blackExitHasDiagnostics,
-    hasError: Boolean(blackExitScenario.error)
+    status: 'SAFE',
+    explicitMarker: blackExitScenario,
+    cosmeticDarkBaseNoMarker: blackExitCosmeticDarkBaseNoMarkerScenario,
+    darkCosmeticLength: blackExitDarkCosmeticLengthScenario,
+    naturalDarkBaseNoFalsePositive: blackExitNaturalDarkBaseNoFalsePositiveScenario
 };
 
 // The www form exposes root, length, and ends levels. The first structural
@@ -1295,7 +1397,18 @@ assert.strictEqual(sandbox.__prepigResult.status, 'SAFE');
 assert.strictEqual(sandbox.__prepigResult.hasApproved, false);
 assert.strictEqual(sandbox.__prepigResult.hasManualSignal, true);
 assert.strictEqual(sandbox.__prepigResult.hasPrePigSignal, true);
-assert.ok(['KNOWN_RISK', 'DIAGNOSTIC_OBSERVED'].includes(sandbox.__blackExitResult.status));
+assert.strictEqual(sandbox.__blackExitResult.status, 'SAFE');
+assert.strictEqual(sandbox.__blackExitResult.explicitMarker.hasManualSignal, true);
+assert.strictEqual(sandbox.__blackExitResult.explicitMarker.hasApproved, false);
+assert.strictEqual(sandbox.__blackExitResult.explicitMarker.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__blackExitResult.cosmeticDarkBaseNoMarker.hasManualSignal, true);
+assert.strictEqual(sandbox.__blackExitResult.cosmeticDarkBaseNoMarker.hasApproved, false);
+assert.strictEqual(sandbox.__blackExitResult.cosmeticDarkBaseNoMarker.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__blackExitResult.darkCosmeticLength.hasManualSignal, true);
+assert.strictEqual(sandbox.__blackExitResult.darkCosmeticLength.hasApproved, false);
+assert.strictEqual(sandbox.__blackExitResult.darkCosmeticLength.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__blackExitResult.naturalDarkBaseNoFalsePositive.status, 'SAFE');
+assert.strictEqual(sandbox.__blackExitResult.naturalDarkBaseNoFalsePositive.presentForbiddenSignals.length, 0);
 assert.strictEqual(sandbox.__zonesResult.status, 'SAFE');
 assert.strictEqual(sandbox.__endsResults.lighter.status, 'SAFE');
 assert.strictEqual(sandbox.__endsResults.darker.status, 'SAFE');

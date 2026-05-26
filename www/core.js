@@ -1395,23 +1395,39 @@ const pigmentMap = {
                 let totalMass = massModel.totalMass;
 
                 const historyText = String(history || '').toLowerCase();
+                const blackExitEndsHistoryText = String(endsHistory || '').toLowerCase();
                 const baseTypeText = String(bType || '').toLowerCase();
-                const darkestCurrentLevel = Math.min(rLevel, lLevel);
                 const blackOrDarkHistory = historyText.includes('чорн')
                     || historyText.includes('черн')
                     || historyText.includes('black')
                     || historyText.includes('темн');
                 const cosmeticBase = baseTypeText.includes('космет');
-                const blackExitNeedsDiagnostics = cosmeticBase
-                    && blackOrDarkHistory
-                    && darkestCurrentLevel <= 4
-                    && tLevel > darkestCurrentLevel;
+                const naturalHistoryMarkers = ['натурал', 'natural'];
+                const cosmeticHistoryMarkers = ['космет', 'фарб', 'окраш', 'пігмент', 'пигмент', 'color', 'colour', 'dye', 'remover', 'змив'];
+                const hasNaturalHistory = naturalHistoryMarkers.some(marker => historyText.includes(marker));
+                const hasNaturalEndsHistory = naturalHistoryMarkers.some(marker => blackExitEndsHistoryText.includes(marker));
+                const hasCosmeticHistory = cosmeticHistoryMarkers.some(marker => historyText.includes(marker));
+                const hasCosmeticEndsHistory = cosmeticHistoryMarkers.some(marker => blackExitEndsHistoryText.includes(marker));
+                const hasNonNaturalHistory = Boolean(historyText) && !hasNaturalHistory;
+                const hasNonNaturalEndsHistory = Boolean(blackExitEndsHistoryText) && !hasNaturalEndsHistory;
+                const darkLiftOnRootOrLength =
+                    (rLevel <= 4 && tLevel > rLevel) ||
+                    (lLevel <= 4 && tLevel > lLevel);
+                const blackExitRiskyCanvas = cosmeticBase
+                    || hasCosmeticHistory
+                    || hasCosmeticEndsHistory
+                    || hasNonNaturalHistory
+                    || hasNonNaturalEndsHistory;
+                const blackExitNeedsDiagnostics = darkLiftOnRootOrLength && (
+                    blackExitRiskyCanvas
+                    || (blackOrDarkHistory && !hasNaturalHistory)
+                );
 
                 if (blackExitNeedsDiagnostics) {
-                    warnings.push("⚠️ ВИХІД З ЧОРНОГО / ТЕМНОГО КОСМЕТИЧНОГО ПІГМЕНТУ: потрібна додаткова діагностика нашарувань, змивок, фону освітлення, стану полотна та тест-пасмо.");
+                    warnings.push("⚠️ ВИХІД З ЧОРНОГО / ТЕМНОЇ КОСМЕТИЧНОЇ БАЗИ АБО ДОВЖИНИ: потрібна додаткова діагностика косметичних нашарувань, змивок, фону освітлення, стану полотна та тест-пасмо.");
                     manualDecisions.push({
-                        title: "Вихід з чорного / темного косметичного пігменту",
-                        message: "Уточнити кількість нашарувань, кислотні або лужні змивки, поточний фон освітлення, стан полотна та результат тест-пасма перед виконанням рецепта."
+                        title: "Вихід з чорного / темної косметичної бази або довжини",
+                        message: "Уточнити кількість косметичних нашарувань, кислотні або лужні змивки, поточний фон освітлення, стан полотна та результат тест-пасма перед виконанням рецепта."
                     });
                 }
 
