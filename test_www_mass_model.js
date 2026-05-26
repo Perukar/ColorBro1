@@ -3930,4 +3930,80 @@ function runGuardedDiagnosticWiringSpecLocal(context, readiness, builderResult, 
     console.log(id + ' safe.');
 })();
 
+// 26. GUARDED-WIRING-DIAGNOSTIC-INVARIANTS
+(function testGuardedWiringDiagnosticInvariants() {
+    const id = 'GUARDED-WIRING-DIAGNOSTIC-INVARIANTS';
+    const source = fs.readFileSync('./www/core.js', 'utf8');
+    const sandbox = {};
+    vm.createContext(sandbox);
+    vm.runInContext(source, sandbox, { filename: 'www/core.js' });
+
+    // Mock document values for a scenario that is eligible for diagnostic endsRec calculations
+    const scenarioValues = {
+        history: 'натуральні',
+        condition: 'здоровые',
+        thickness: 'средние',
+        density: 'средние',
+        length: 'средние',
+        grey_percent: '0',
+        grey_type: 'мягкая',
+        root_level: '6',
+        root_length: '1',
+        length_level: '6',
+        ends_level: '8',
+        ends_condition: 'здорові',
+        base_type: 'Натуральна',
+        target_level: '6',
+        target_direction: '1',
+        ends_history: 'натуральна',
+        ends_base_type: 'натуральна'
+    };
+    const output = { innerHTML: '' };
+    sandbox.document = {
+        getElementById(id) {
+            if (id === 'output') return output;
+            return { value: scenarioValues[id] };
+        }
+    };
+
+    // Intercept buildWwwRenderState to capture the calculated state object
+    const originalBuildWwwRenderState = sandbox.buildWwwRenderState;
+    let capturedState = null;
+    sandbox.buildWwwRenderState = function(runtime) {
+        capturedState = originalBuildWwwRenderState(runtime);
+        return capturedState;
+    };
+
+    sandbox.calculateProtocol();
+
+    assert.ok(capturedState, id + ': calculateProtocol must build state');
+
+    // Invariant 1: diagnostic container exists and has previewOnly / candidateOnly / notForMixing etc.
+    const candidate = capturedState.endsRecDiagnosticWiringCandidate;
+    assert.ok(candidate, id + ': endsRecDiagnosticWiringCandidate must be present');
+    assert.strictEqual(candidate.previewOnly, true, id + ': previewOnly must be true');
+    assert.strictEqual(candidate.candidateOnly, true, id + ': candidateOnly must be true');
+    assert.strictEqual(candidate.notForMixing, true, id + ': notForMixing must be true');
+    assert.strictEqual(candidate.productionReady, false, id + ': productionReady must be false');
+    assert.strictEqual(candidate.endsRecipeReady, false, id + ': endsRecipeReady must be false');
+    assert.ok(candidate.sourceRefs, id + ': sourceRefs must exist');
+    assert.ok(Array.isArray(candidate.safetyReasonCodes), id + ': safetyReasonCodes must be array');
+    assert.ok(Array.isArray(candidate.manualRequiredReasonCodes), id + ': manualRequiredReasonCodes must be array');
+
+    // Invariant 2: Diagnostic container does not activate production recipe or 3-zone mass model
+    assert.strictEqual(capturedState.massModel.mode, '2-zone', id + ': massModel mode must stay 2-zone');
+    assert.strictEqual(capturedState.massModel.endsMass, null, id + ': endsMass must stay null');
+    assert.strictEqual(capturedState.endsRec, undefined, id + ': production endsRec must not be defined');
+    assert.strictEqual(capturedState.dyeMass ? capturedState.dyeMass.ends : undefined, undefined, id + ': ends dyeMass must not be defined');
+    assert.strictEqual(capturedState.oxidizerMass ? capturedState.oxidizerMass.ends : undefined, undefined, id + ': ends oxidizerMass must not be defined');
+    assert.strictEqual(capturedState.endsFormula, undefined, id + ': endsFormula must not be defined');
+    assert.strictEqual(capturedState.endsRecipeReady, undefined, id + ': endsRecipeReady flag must not be on root state');
+
+    // Invariant 3: Diagnostic container does not mutate rootRec/lenRec branches
+    assert.strictEqual(capturedState.rootRec.endsRec, undefined, id);
+    assert.strictEqual(capturedState.lenRec.endsRec, undefined, id);
+
+    console.log(id + ' safe.');
+})();
+
 console.log('Production endsRec guarded wiring contract tests PASSED');
