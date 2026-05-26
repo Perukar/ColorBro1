@@ -239,3 +239,87 @@ Explicit non-goals:
 * diagnostic display не є third-zone production;
 * diagnostic display не рахує grams;
 * diagnostic display не змінює root/length recipe.
+
+---
+
+## 12. Diagnostic Reason Labels
+Статус після commit `11b73f8` - Implement diagnostic reason labels: diagnostic display block отримав display-only mapping для читабельності reason codes. Мета цієї фази - зробити блок зрозумілим для майстра, а не змінити розрахунок.
+
+Призначення:
+* показувати людські українські пояснення замість сирих technical reason codes;
+* пояснювати `sourceRefs`, `safetyReasonCodes` і `manualRequiredReasonCodes` як diagnostic context;
+* не змінювати calculation logic;
+* не активувати production recipe.
+
+Що реалізовано:
+* display-only mapping function/object для reason codes;
+* `safetyReasonCodes` мають human-readable labels;
+* `manualRequiredReasonCodes` мають human-readable labels;
+* `sourceRefs` показуються безпечно як diagnostic context;
+* unknown reason code має safe fallback;
+* existing warning labels збережені.
+
+Важлива межа: reason labels - це тільки UI/display layer. Вони **НЕ**:
+* змінюють candidate creation;
+* змінюють readiness;
+* змінюють recipe calculation;
+* створюють production `endsRec`;
+* створюють grams;
+* створюють `formula-to-mix`;
+* переводять `endsRecipeReady` у `true`.
+
+Unknown code fallback:
+* невідомий code не має ламати render;
+* fallback має бути безпечним і зрозумілим;
+* fallback не має виглядати як рецепт;
+* fallback не має пропонувати змішування або нанесення.
+
+Existing warning labels мають залишатися присутніми:
+* `Діагностика кінців`;
+* `Не для змішування`;
+* `Потрібна ручна перевірка`;
+* `Не є фінальним рецептом`;
+* `Не наносити за цим блоком`.
+
+Заборонені display поля лишаються забороненими:
+* `grams`;
+* `dyeMass`;
+* `oxidizerMass`;
+* `exactGrams`;
+* `finalFormula`;
+* `productionRecipe`;
+* `formula-to-mix`;
+* mixing instruction;
+* готовий рецепт для кінців;
+* CTA типу `готовий рецепт`.
+
+Production safety boundary:
+* no `massModel.mode = "3-zone"`;
+* no `massModel.endsMass` number;
+* no production `endsRec`;
+* no `dyeMass` / `oxidizerMass` runtime;
+* no exact grams runtime;
+* no final `endsFormula`;
+* no `endsRecipeReady === true`;
+* no preview mass promotion;
+* no `calcMixtone` change;
+* no oxidizer logic change.
+
+Test coverage:
+* reason labels rendered;
+* `safetyReasonCodes` human-readable;
+* `manualRequiredReasonCodes` human-readable;
+* `sourceRefs` display safe;
+* unknown code fallback safe;
+* existing warning labels preserved;
+* no grams rendered;
+* no `formula-to-mix` rendered;
+* UI reachability preserved;
+* existing 2-zone output stable.
+
+Future rules:
+* якщо додається новий reason code, треба додати або label, або явно перевірений fallback;
+* не можна використовувати reason labels як production decision logic;
+* не можна через labels активувати third-zone recipe;
+* не можна показувати reason label як інструкцію до нанесення;
+* не можна прибирати warning labels при додаванні нових labels.
