@@ -213,6 +213,39 @@ assert.strictEqual(grey30GlassySbHtml.includes('APPROVED'), false, 'GREY-30-GLAS
 assert.ok(grey30GlassySbHtml.includes('MANUAL_REQUIRED') || grey30GlassySbHtml.includes('Ручне рішення'), 'GREY-30-GLASSY-SPECIAL-BLOND-MANUAL-REQUIRED should require manual decision');
 console.log('GREY-30-GLASSY-SPECIAL-BLOND-MANUAL-REQUIRED safe behavior observed.');
 
+// === GREY-30-PERMANENT-SOFT-WARNING ===
+const grey30PermSoftValues = {
+    history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
+    grey_percent: '30', grey_type: 'мягкая',
+    root_level: '5', root_length: '1', length_level: '5', ends_level: '5', ends_condition: 'здорові',
+    base_type: 'Натуральна', target_level: '6', target_direction: '1', ends_history: 'натуральні', ends_base_type: 'натуральна'
+};
+const grey30PermSoftOutput = { innerHTML: '' };
+document.getElementById = (id) => id === 'output' ? grey30PermSoftOutput : { value: grey30PermSoftValues[id] };
+calculateProtocol();
+const grey30PermSoftHtml = grey30PermSoftOutput.innerHTML;
+assert.ok(!grey30PermSoftHtml.includes('▪️ База'), 'GREY-30-PERMANENT-SOFT-WARNING should NOT auto-add .00 base to recipe');
+assert.ok(grey30PermSoftHtml.includes('APPROVED'), 'GREY-30-PERMANENT-SOFT-WARNING should be APPROVED');
+assert.ok(grey30PermSoftHtml.includes('можлива прозорість') || grey30PermSoftHtml.includes('недостатнє покриття'), 'GREY-30-PERMANENT-SOFT-WARNING should have warning about transparency and .00 base');
+console.log('GREY-30-PERMANENT-SOFT-WARNING safe behavior observed.');
+
+// === GREY-30-PERMANENT-GLASSY-MANUAL-REQUIRED ===
+const grey30PermGlassyValues = {
+    history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
+    grey_percent: '30', grey_type: 'стекловидная',
+    root_level: '5', root_length: '1', length_level: '5', ends_level: '5', ends_condition: 'здорові',
+    base_type: 'Натуральна', target_level: '6', target_direction: '1', ends_history: 'натуральні', ends_base_type: 'натуральна'
+};
+const grey30PermGlassyOutput = { innerHTML: '' };
+document.getElementById = (id) => id === 'output' ? grey30PermGlassyOutput : { value: grey30PermGlassyValues[id] };
+calculateProtocol();
+const grey30PermGlassyHtml = grey30PermGlassyOutput.innerHTML;
+assert.ok(!grey30PermGlassyHtml.includes('▪️ База'), 'GREY-30-PERMANENT-GLASSY-MANUAL-REQUIRED should NOT auto-add .00 base to recipe');
+assert.ok(grey30PermGlassyHtml.includes('мордонсаж'), 'GREY-30-PERMANENT-GLASSY-MANUAL-REQUIRED should have warning about mordonsage');
+assert.ok(!grey30PermGlassyHtml.includes('APPROVED'), 'GREY-30-PERMANENT-GLASSY-MANUAL-REQUIRED should NOT be APPROVED');
+assert.ok(grey30PermGlassyHtml.includes('MANUAL_REQUIRED') || grey30PermGlassyHtml.includes('Ручне рішення'), 'GREY-30-PERMANENT-GLASSY-MANUAL-REQUIRED should require manual decision');
+console.log('GREY-30-PERMANENT-GLASSY-MANUAL-REQUIRED safe behavior observed.');
+
 const prepigHasApproved = prepigHtml.includes('APPROVED')
     || prepigHtml.includes('ПРОТОКОЛ ЗАТВЕРДЖЕНО');
 const prepigHasRecipe = prepigHtml.includes('КОРІНЬ')

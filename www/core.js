@@ -1499,6 +1499,22 @@ const pigmentMap = {
                     massModel = Object.assign({}, massModel, { rootMass: rMass });
                 }
 
+                // ПАТЧ: Попередження для 30% сивини
+                if (grey >= 30 && grey < 50) {
+                    let isValidRootGrey = rootRec && String(rootRec.process).includes("Перманент") && ["6%", "9%", "12%"].includes(rootRec.ox);
+                    let isValidLenGrey = lenRec && String(lenRec.process).includes("Перманент") && ["6%", "9%", "12%"].includes(lenRec.ox);
+
+                    if (isValidRootGrey || isValidLenGrey) {
+                        warnings.push("⚠️ СИВИНА 30-49%: Система не додає базу .00 автоматично. Можлива прозорість або недостатнє покриття. За потреби, додайте базу самостійно (напр. 1/4 маси).");
+                        if (greyType === 'стекловидная') {
+                            manualDecisions.push({
+                                title: "Скловидна сивина 30%",
+                                message: "Скловидна сивина важко піддається фарбуванню. Окрім мордонсажу, розгляньте додавання бази .00 для щільності."
+                            });
+                        }
+                    }
+                }
+
                 // ПАТЧ: Фізична зміна рецептури при сивині >= 50% (Захист від низьких оксидів)
                 if (grey >= 50) {
                     let dLevel = tLevel > 1 ? tLevel - 1 : 1;
