@@ -337,6 +337,134 @@ Production activation **must be blocked** if any of the following is true:
 
 ---
 
+## 12.2 Step 2 — Inactive Production Third-Zone Readiness Helper
+
+**Status:** Completed.
+
+**Test Commit:**
+* `f70bd35 Add inactive production third-zone readiness helper`
+
+**Implementation State:**
+* **Inactive runtime helper**: test-backed pure isolated helper only.
+* Not wired into `calculateProtocol`.
+* No production activation.
+* No UI/render changes.
+* No docs change in that commit.
+* No `AGENTS.md` change in that commit.
+* Full test suite PASS.
+
+**Helper Details:**
+* **Helper name:** `validateProductionThirdZoneReadiness(input)`
+* **Location:** `www/core.js`
+* **Type:** pure isolated helper.
+* **Purpose:** classify production third-zone readiness candidate safely before any future production recipe work.
+* **Current phase:** helper skeleton / contract helper only.
+
+**Helper Safety Contract:**
+* Always keeps `productionReady === false`.
+* Always keeps `endsRecipeReady === false`.
+* Returns `notForMixing === true`.
+* May return ready candidate state only as a non-mixing readiness candidate.
+* Does not create production `endsRec`.
+* Does not create `massModel.mode` `"3-zone"`.
+* Does not create `massModel.endsMass` number.
+* Does not create `dyeMass`.
+* Does not create `oxidizerMass`.
+* Does not create exact `grams`.
+* Does not create final `endsFormula`.
+* Does not create `formula-to-mix`.
+* Does not create application instruction for ends.
+
+**Critical Inputs Handled:**
+* Root level
+* Length level
+* Ends level
+* Target level
+* Target direction
+* Ends history
+* Porosity
+* Damage/sensitivity
+* Previous chemical history
+* Brand/system constraints або generic-safe mode
+* Oxidizer constraints
+* Application-zone logic
+* Manual verification flags resolved
+
+**Missing Input Behavior:**
+* Missing critical inputs produce blocked/not-ready contract.
+* `missingCriticalInputs` identifies absent fields.
+* `productionReady` remains `false`.
+* `endsRecipeReady` remains `false`.
+
+**Manual Blocker Behavior:**
+Manual/safety blockers include:
+* High damage/sensitivity
+* Unknown chemical history
+* Uncertain ends history
+* Incompatible ends history such as henna/metals
+* High porosity / porous ends
+* Diagnostic candidate only
+* `notForMixing` production block
+
+**Diagnostic Candidate Isolation:**
+`state.endsRecDiagnosticWiringCandidate` alone **MUST NOT** become production source.
+Diagnostic candidate alone **MUST NOT**:
+* Make `productionReady` true
+* Make `endsRecipeReady` true
+* Create production `endsRec`
+* Create `massModel.mode` `"3-zone"`
+* Create `massModel.endsMass` number
+* Create `grams`
+* Create `dyeMass` / `oxidizerMass`
+* Create final `endsFormula`
+* Create `formula-to-mix`
+
+**Tests Added/Updated:**
+Documented 6 helper tests:
+* `PRODUCTION-THIRD-ZONE-READINESS-HELPER-EXISTS`
+* `PRODUCTION-THIRD-ZONE-READINESS-COMPLETE-INPUTS`
+* `PRODUCTION-THIRD-ZONE-READINESS-MISSING-INPUTS`
+* `PRODUCTION-THIRD-ZONE-READINESS-MANUAL-BLOCKERS`
+* `PRODUCTION-THIRD-ZONE-READINESS-DIAGNOSTIC-ISOLATION`
+* `PRODUCTION-THIRD-ZONE-READINESS-EXISTING-STABLE`
+
+**Regression Result:**
+* mass model PASS
+* business scenarios PASS
+* render runtime PASS
+* mapping PASS
+* `git diff --check` PASS
+* repo clean after commit
+
+**Recovery Note:**
+* Earlier bad helper commit `4748cd9` was reverted by `a7282a5` because it damaged `test_www_mass_model.js` line structure.
+* Accepted helper implementation is `f70bd35`.
+* `f70bd35` does not repeat the thousands-deletions problem.
+* `f70bd35` stat is acceptable: 2 files changed, 374 insertions(+), 1 deletion(-).
+
+**Next Phase Boundary:**
+Наступна фаза **НЕ** production activation.
+Наступна логічна фаза:
+* production third-zone formula contract tests
+або
+* production third-zone formula helper skeleton
+тільки окремою bounded task.
+
+До окремої future phase все ще заборонено:
+* wired integration у `calculateProtocol`;
+* UI/render production recipe;
+* `productionReady` true;
+* `endsRecipeReady` true;
+* `massModel.mode` `"3-zone"`;
+* `massModel.endsMass` number;
+* `dyeMass` / `oxidizerMass`;
+* exact `grams`;
+* final `endsFormula`;
+* `formula-to-mix`;
+* application instruction for ends.
+
+---
+
 ## 13. Explicit Non-Goals
 
 Цей документ **НЕ дозволяє**:
