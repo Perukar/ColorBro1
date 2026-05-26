@@ -4006,4 +4006,87 @@ function runGuardedDiagnosticWiringSpecLocal(context, readiness, builderResult, 
     console.log(id + ' safe.');
 })();
 
+// 27. GUARDED-WIRING-DIAGNOSTIC-OUTPUT-CONTRACT
+(function testGuardedWiringDiagnosticOutputContract() {
+    const id = 'GUARDED-WIRING-DIAGNOSTIC-OUTPUT-CONTRACT';
+    const source = fs.readFileSync('./www/core.js', 'utf8');
+    const sandbox = {};
+    vm.createContext(sandbox);
+    vm.runInContext(source, sandbox, { filename: 'www/core.js' });
+
+    // Mock document values for a scenario that is eligible for diagnostic endsRec calculations
+    const scenarioValues = {
+        history: 'натуральні',
+        condition: 'здоровые',
+        thickness: 'средние',
+        density: 'средние',
+        length: 'средние',
+        grey_percent: '0',
+        grey_type: 'мягкая',
+        root_level: '6',
+        root_length: '1',
+        length_level: '6',
+        ends_level: '8',
+        ends_condition: 'здорові',
+        base_type: 'Натуральна',
+        target_level: '6',
+        target_direction: '1',
+        ends_history: 'натуральна',
+        ends_base_type: 'натуральна'
+    };
+    const output = { innerHTML: '' };
+    sandbox.document = {
+        getElementById(id) {
+            if (id === 'output') return output;
+            return { value: scenarioValues[id] };
+        }
+    };
+
+    // Capture state object
+    const originalBuildWwwRenderState = sandbox.buildWwwRenderState;
+    let capturedState = null;
+    sandbox.buildWwwRenderState = function(runtime) {
+        capturedState = originalBuildWwwRenderState(runtime);
+        return capturedState;
+    };
+
+    sandbox.calculateProtocol();
+
+    assert.ok(capturedState, id + ': calculateProtocol must build state');
+    const candidate = capturedState.endsRecDiagnosticWiringCandidate;
+    assert.ok(candidate, id + ': endsRecDiagnosticWiringCandidate must be present');
+    assert.strictEqual(typeof candidate, 'object', id + ': candidate must be an object');
+
+    // Contract 1: Check required safety flags on diagnostic candidate
+    assert.strictEqual(candidate.previewOnly, true, id + ': previewOnly must be true');
+    assert.strictEqual(candidate.candidateOnly, true, id + ': candidateOnly must be true');
+    assert.strictEqual(candidate.notForMixing, true, id + ': notForMixing must be true');
+    assert.strictEqual(candidate.productionReady, false, id + ': productionReady must be false');
+    assert.strictEqual(candidate.endsRecipeReady, false, id + ': endsRecipeReady must be false');
+
+    // Contract 2: Check reason/source fields structures
+    assert.strictEqual(typeof candidate.sourceRefs, 'object', id + ': sourceRefs must be an object');
+    assert.ok(Array.isArray(candidate.safetyReasonCodes), id + ': safetyReasonCodes must be array');
+    assert.ok(Array.isArray(candidate.manualRequiredReasonCodes), id + ': manualRequiredReasonCodes must be array');
+
+    // Contract 3: Diagnostic container must NOT have mixing-ready or final recipe fields
+    assert.strictEqual(candidate.dyeMass, undefined, id + ': candidate must not contain dyeMass');
+    assert.strictEqual(candidate.oxidizerMass, undefined, id + ': candidate must not contain oxidizerMass');
+    assert.strictEqual(candidate.grams, undefined, id + ': candidate must not contain grams');
+    assert.strictEqual(candidate.exactGrams, undefined, id + ': candidate must not contain exactGrams');
+    assert.strictEqual(candidate.finalFormula, undefined, id + ': candidate must not contain finalFormula');
+    assert.strictEqual(candidate.endsFormula, undefined, id + ': candidate must not contain endsFormula');
+    assert.strictEqual(candidate.massModel, undefined, id + ': candidate must not contain massModel');
+    assert.strictEqual(candidate.recipeReady, undefined, id + ': candidate must not contain recipeReady');
+    assert.strictEqual(candidate.productionRecipe, undefined, id + ': candidate must not contain productionRecipe');
+
+    // Contract 4: Diagnostic container must not expose labels indicating it is ready to be mixed
+    assert.strictEqual(candidate.approved, undefined, id);
+    assert.strictEqual(candidate.final, undefined, id);
+    assert.strictEqual(candidate.readyForMixing, undefined, id);
+    assert.strictEqual(candidate.mixingReady, undefined, id);
+
+    console.log(id + ' safe.');
+})();
+
 console.log('Production endsRec guarded wiring contract tests PASSED');
