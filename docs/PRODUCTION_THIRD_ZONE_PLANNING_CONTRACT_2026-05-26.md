@@ -225,6 +225,118 @@ Production activation **must be blocked** if any of the following is true:
 
 ---
 
+## 12.1 Step 1 — Production Third-Zone Readiness Contract Tests
+
+**Status:** Completed.
+
+**Test Commit:**
+* `5e375e2 Add production third-zone readiness contract tests`
+
+**Implementation State:**
+* **Test-only phase**: no runtime implementation.
+* No production activation.
+* No UI/render changes.
+* No docs change in that commit.
+* Full test suite PASS.
+
+**Documented Test IDs (6 cases):**
+1. `PRODUCTION-THIRD-ZONE-READINESS-MARKER-NOT-DIAGNOSTIC`
+2. `PRODUCTION-THIRD-ZONE-READINESS-REQUIRES-CRITICAL-INPUTS`
+3. `MISSING-CRITICAL-INPUTS-BLOCK-PRODUCTION-THIRD-ZONE-READINESS`
+4. `MANUAL-REVIEW-BLOCKERS-PREVENT-PRODUCTION-THIRD-ZONE-ACTIVATION`
+5. `DIAGNOSTIC-CANDIDATE-NOT-PRODUCTION-SOURCE-ISOLATION`
+6. `PRODUCTION-THIRD-ZONE-ACTIVATION-FORBIDDEN`
+
+**Test Coverage Summary:**
+* Production third-zone readiness є окремим contract (це не diagnostic display і не `state.endsRecDiagnosticWiringCandidate`).
+* Positive readiness candidate можливий тільки при повних critical inputs.
+* Missing critical inputs block readiness.
+* Manual review blockers prevent activation.
+* Diagnostic candidate alone is not production source.
+* `notForMixing` blocks production readiness.
+* Production activation remains forbidden.
+
+**Critical Inputs Documented:**
+* Root level
+* Length level
+* Ends level
+* Target level
+* Target direction
+* Ends history
+* Porosity
+* Damage/sensitivity
+* Previous chemical history
+* Brand/system constraints або generic-safe mode
+* Oxidizer constraints
+* Application-zone logic
+* Manual verification flags resolved
+
+**Missing Inputs that Block Readiness:**
+* Ends level missing
+* Ends history missing/unknown
+* Target level missing
+* Target direction missing
+* Porosity missing
+* Damage/sensitivity missing
+* Chemical history missing
+
+**Manual Review Blockers:**
+* High damage/sensitivity
+* Unknown previous chemical history
+* Incompatible/uncertain ends history
+* `manual-required` reason codes
+* `notForMixing === true`
+* Diagnostic candidate is the only source
+
+**Diagnostic Candidate Isolation:**
+`state.endsRecDiagnosticWiringCandidate` alone **MUST NOT**:
+* Make `productionReady` true
+* Make `endsRecipeReady` true
+* Create production `endsRec`
+* Create `massModel.mode` `"3-zone"`
+* Create `massModel.endsMass` number
+* Create `grams`
+* Create `dyeMass` / `oxidizerMass`
+* Create final `endsFormula`
+* Create `formula-to-mix`
+
+**Safety Invariants Validated:**
+Після Step 1 усе ще заборонено:
+* Production `endsRec`
+* `massModel.mode = "3-zone"`
+* `massModel.endsMass` as number
+* `dyeMass`, `oxidizerMass`, exact `grams`
+* Final `endsFormula`
+* `endsRecipeReady` true
+* `formula-to-mix`
+* Application instruction for ends
+
+**Test Suite Result:**
+* mass model PASS
+* business scenarios PASS
+* render runtime PASS
+* mapping PASS
+* `git diff --check` PASS
+
+**Meaning for Next Phase:**
+Наступна фаза **НЕ має** бути production activation.
+Наступна логічна фаза:
+* Implement readiness helper skeleton або readiness helper implementation only after contract.
+* Must still not create grams.
+* Must still not activate 3-zone.
+* Must still keep `productionReady` false unless explicitly defined by future contract.
+
+**Future Rule:**
+Будь-яка наступна зміна, яка хоче:
+* створити production readiness helper;
+* змінити `www/core.js`;
+* додати `productionReady` logic;
+* додати `endsRecipeReady`;
+* додати `massModel.mode` `"3-zone"`;
+має бути **окремою bounded task** з allowed scope, tests, safety audit і **no shortcut** через diagnostic candidate.
+
+---
+
 ## 13. Explicit Non-Goals
 
 Цей документ **НЕ дозволяє**:
