@@ -210,6 +210,15 @@ For ПЕРУКАР specifically:
 - ends/third-zone production path не вмикати без окремого контракту;
 - тести HENNA-METALS-ROOT-LIFT-NO-APPROVED, HENNA-METALS-SPECIAL-BLOND-NO-APPROVED, HENNA-METALS-TONING-MANUAL-MINIMUM мають залишатися захистом контракту.
 
+## Правило DAMAGE / POROSITY / ELASTICITY
+
+- high damage / сильне пошкодження / критичне пошкодження не має давати automatic APPROVED для lift, powder, Special Blond або високого оксиду;
+- high porosity / пористе полотно має мінімум MANUAL_REQUIRED при хімічному процесі;
+- brittle / ламкі кінці або критично пошкоджені кінці мають блокувати або вимагати ручного рішення для освітлення;
+- low elasticity / низька еластичність має бути safety-сигналом і не має ігноруватися при освітленні;
+- warning-only не достатній для high-risk lift-сценаріїв;
+- тести ENDS-DAMAGED-LIFT, ENDS-CONDITION-POROUS-LIFT, ENDS-CONDITION-BRITTLE-HIGH-LIFT, ENDS-CONDITION-DAMAGED-CHEMISTRY мають залишатися захистом контракту.
+
 ## Правило виконання малих дозволених задач
 
 Якщо користувач дає конкретну задачу або промпт для малої контрольованої дії, агент має виконувати її одразу без повторного питання "Дозволяю виконати?", якщо виконуються всі умови:
