@@ -64,7 +64,8 @@ const pigmentMap = {
                     ends_base_type: this.getWwwValue('ends_base_type'),
                     base_type: this.getWwwValue('base_type'),
                     target_level: this.getWwwValue('target_level'),
-                    target_direction: this.getWwwValue('target_direction')
+                    target_direction: this.getWwwValue('target_direction'),
+                    elasticity: this.getWwwValue('elasticity')
                 };
             },
 
@@ -97,7 +98,7 @@ const pigmentMap = {
                     baseType: String(wwwValues.base_type || '').trim(),
                     targetLevel: toIntegerOrNull(wwwValues.target_level),
                     targetDirection: String(wwwValues.target_direction || '').trim(),
-                    elasticity: '1',
+                    elasticity: String(wwwValues.elasticity || '').trim(),
                     isMidActive: false,
                     midLevel: null,
                     midBaseType: null
@@ -1440,6 +1441,26 @@ const pigmentMap = {
                         message: "Не вважати рецепт автоматично затвердженим. Потрібне ручне рішення майстра після уточнення складу попереднього фарбування, металевих солей і результату тест-пасма."
                     });
                 }
+
+                // LOW ELASTICITY SAFETY GUARD
+                // Reads ctx.elasticity / ctx.hair_elasticity / ctx.wet_stretch from fake DOM or test input.
+                // The field is optional — absent means no signal.
+                const elasticityElement = document.getElementById('elasticity');
+                const elasticityRaw = elasticityElement ? String(elasticityElement.value || '').toLowerCase() : '';
+
+                const lowElasticityNegativeMarkers = ['low', 'poor', 'weak', 'bad', 'низьк', 'низк', 'слаб', 'поган', 'плох', 'тягн', 'тян'];
+                const normalElasticityMarkers = ['normal', 'good', 'норм', 'хорош', 'добра'];
+                const isNormalElasticity = normalElasticityMarkers.some(m => elasticityRaw.includes(m));
+                const hasLowElasticitySignal = !isNormalElasticity && lowElasticityNegativeMarkers.some(m => elasticityRaw.includes(m));
+
+                if (hasLowElasticitySignal) {
+                    warnings.push("⚠️ НИЗЬКА ЕЛАСТИЧНІСТЬ: Волосся може розтягуватися, ламатися або нерівномірно поглинати фарбник. Необхідна попередня діагностика та тест-пасмо. Рецепт не може бути автоматично затверджений.");
+                    manualDecisions.push({
+                        title: "Низька еластичність / ризик розтягування",
+                        message: "Підтвердити стан еластичності полотна та виконати тест-пасмо або оцінку вологого розтягування перед хімічним процесом. Ламке або слабке волосся не має отримувати автоматично затверджений рецепт освітлення."
+                    });
+                }
+
 
                 if (alerts.length > 0) {
                     const state = buildWwwRenderState({

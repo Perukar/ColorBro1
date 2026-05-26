@@ -21,7 +21,8 @@ const fakeValues = {
     ends_base_type: 'освітлена',
     base_type: 'Натуральна',
     target_level: '8',
-    target_direction: '1'
+    target_direction: '1',
+    elasticity: 'нормальна еластичність'
 };
 
 const requestedIds = [];
@@ -66,7 +67,8 @@ const expectedWwwValues = {
     ends_base_type: 'освітлена',
     base_type: 'Натуральна',
     target_level: '8',
-    target_direction: '1'
+    target_direction: '1',
+    elasticity: 'нормальна еластичність'
 };
 
 const expectedRequestedIds = Object.keys(expectedWwwValues);
@@ -89,7 +91,7 @@ const expectedRawInput = {
     baseType: 'Натуральна',
     targetLevel: 8,
     targetDirection: '1',
-    elasticity: '1',
+    elasticity: 'нормальна еластичність',
     isMidActive: false,
     midLevel: null,
     midBaseType: null

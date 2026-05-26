@@ -1494,6 +1494,158 @@ globalThis.__productionEndsRecReadinessResults = {
     noCandidate: readinessNoCandidate.reasonCode,
     suspicious: readinessSuspicious.status
 };
+
+// === LOW ELASTICITY SAFETY CONTRACT ===
+function analyzeLowElasticitySafetyContractScenario(name, values) {
+    const scenario = runDiagnosticScenario(name, values);
+    assert.ok(scenario.requestedIds.includes('output'), name + ' should access output');
+
+    const html = scenario.html;
+    const htmlText = html.toLowerCase();
+    const hasApproved = html.includes('APPROVED')
+        || html.includes('ПРОТОКОЛ ЗАТВЕРДЖЕНО');
+    const hasApprovedRecipe = html.includes('approved-recipe');
+    const hasManualSignal = html.includes('MANUAL_REQUIRED')
+        || html.includes('Потрібне ручне рішення')
+        || html.includes('needs_confirmation');
+    const hasElasticityText = (
+        htmlText.includes('еластичн')
+        || htmlText.includes('elasticit')
+        || htmlText.includes('розтяг')
+        || htmlText.includes('тест-пасм')
+        || htmlText.includes('слабк')
+        || htmlText.includes('ламк')
+        || htmlText.includes('низька еластичн')
+        || htmlText.includes('ризик розтягування')
+    );
+
+    assert.ok(!scenario.error, name + ' should not throw');
+    assert.ok(!hasApproved, name + ' should not be automatic APPROVED');
+    assert.ok(!hasApprovedRecipe, name + ' should not render approved recipe blocks');
+    assert.ok(hasManualSignal, name + ' should require manual/block signal');
+    assert.ok(hasElasticityText, name + ' should mention elasticity risk or test strand');
+
+    return {
+        status: 'SAFE',
+        hasApproved,
+        hasApprovedRecipe,
+        hasManualSignal,
+        hasElasticityText,
+        hasError: Boolean(scenario.error)
+    };
+}
+
+const elasticityLowLiftResult = analyzeLowElasticitySafetyContractScenario('ELASTICITY-LOW-LIFT-NO-APPROVED', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '6',
+    root_length: '1',
+    length_level: '6',
+    ends_level: '6',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '8',
+    target_direction: '3',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна',
+    elasticity: 'низька еластичність'
+});
+console.log('ELASTICITY-LOW-LIFT-NO-APPROVED safe behavior observed.');
+
+const elasticityLowSbResult = analyzeLowElasticitySafetyContractScenario('ELASTICITY-LOW-SPECIAL-BLOND-NO-APPROVED', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '10',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна',
+    elasticity: 'low elasticity'
+});
+console.log('ELASTICITY-LOW-SPECIAL-BLOND-NO-APPROVED safe behavior observed.');
+
+const elasticityLowToningResult = analyzeLowElasticitySafetyContractScenario('ELASTICITY-LOW-TONING-MANUAL-MINIMUM', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '8',
+    root_length: '1',
+    length_level: '8',
+    ends_level: '8',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '8',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна',
+    elasticity: 'слабка еластичність'
+});
+console.log('ELASTICITY-LOW-TONING-MANUAL-MINIMUM safe behavior observed.');
+
+// === ELASTICITY-NORMAL-LIFT-NO-FALSE-POSITIVE ===
+(function() {
+    const scenario = runDiagnosticScenario('ELASTICITY-NORMAL-LIFT-NO-FALSE-POSITIVE', {
+        history: 'натуральні',
+        condition: 'здоровые',
+        thickness: 'средние',
+        density: 'средние',
+        length: 'средние',
+        grey_percent: '0',
+        grey_type: 'мягкая',
+        root_level: '6',
+        root_length: '1',
+        length_level: '6',
+        ends_level: '6',
+        ends_condition: 'здорові',
+        base_type: 'Натуральна',
+        target_level: '8',
+        target_direction: '3',
+        ends_history: 'натуральні',
+        ends_base_type: 'натуральна',
+        elasticity: 'нормальна еластичність'
+    });
+    assert.ok(!scenario.error, 'ELASTICITY-NORMAL-LIFT-NO-FALSE-POSITIVE should not throw');
+    const htmlText = scenario.html.toLowerCase();
+    const forbiddenFalsePositives = [
+        'низька еластичн',
+        'слабка еластичн',
+        'ризик розтягування',
+        'ламке або слабке'
+    ];
+    const presentFalsePositives = forbiddenFalsePositives.filter(s => htmlText.includes(s));
+    assert.deepStrictEqual(
+        presentFalsePositives,
+        [],
+        'ELASTICITY-NORMAL-LIFT-NO-FALSE-POSITIVE should not render low-elasticity warning for normal elasticity'
+    );
+    globalThis.__elasticityNormalFalsePositiveResult = { status: 'SAFE', presentFalsePositives };
+    console.log('ELASTICITY-NORMAL-LIFT-NO-FALSE-POSITIVE safe behavior observed.');
+})();
+
+globalThis.__elasticityResults = {
+    lowLift: elasticityLowLiftResult,
+    lowSb: elasticityLowSbResult,
+    lowToning: elasticityLowToningResult
+};
 `;
 
 const sandbox = {
@@ -1580,5 +1732,23 @@ assert.strictEqual(sandbox.__threeZoneGateResults.gateRiskyHistory.hasManualSign
 assert.strictEqual(sandbox.__threeZoneGateResults.gateRiskyBase.hasManualSignal, true);
 assert.strictEqual(sandbox.__threeZoneGateResults.gateRiskyCond.hasManualSignal, true);
 assert.strictEqual(sandbox.__threeZoneGateResults.gateAllow.hasNoEndsRecipeSignal, true);
+
+assert.strictEqual(sandbox.__elasticityResults.lowLift.status, 'SAFE');
+assert.strictEqual(sandbox.__elasticityResults.lowLift.hasApproved, false);
+assert.strictEqual(sandbox.__elasticityResults.lowLift.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__elasticityResults.lowLift.hasManualSignal, true);
+assert.strictEqual(sandbox.__elasticityResults.lowLift.hasElasticityText, true);
+assert.strictEqual(sandbox.__elasticityResults.lowSb.status, 'SAFE');
+assert.strictEqual(sandbox.__elasticityResults.lowSb.hasApproved, false);
+assert.strictEqual(sandbox.__elasticityResults.lowSb.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__elasticityResults.lowSb.hasManualSignal, true);
+assert.strictEqual(sandbox.__elasticityResults.lowSb.hasElasticityText, true);
+assert.strictEqual(sandbox.__elasticityResults.lowToning.status, 'SAFE');
+assert.strictEqual(sandbox.__elasticityResults.lowToning.hasApproved, false);
+assert.strictEqual(sandbox.__elasticityResults.lowToning.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__elasticityResults.lowToning.hasManualSignal, true);
+assert.strictEqual(sandbox.__elasticityResults.lowToning.hasElasticityText, true);
+assert.deepStrictEqual(sandbox.__elasticityNormalFalsePositiveResult.presentFalsePositives, []);
+assert.strictEqual(sandbox.__elasticityNormalFalsePositiveResult.status, 'SAFE');
 
 console.log('WWW business scenario test passed');
