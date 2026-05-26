@@ -33,6 +33,10 @@ if (typeof buildWwwRenderState !== 'function') {
     throw new Error('buildWwwRenderState presence check failed');
 }
 
+if (typeof normalizeEndsHistoryForDiagnostic !== 'function') {
+    throw new Error('normalizeEndsHistoryForDiagnostic presence check failed');
+}
+
 function assertIncludes(html, text) {
     assert.ok(html.includes(text), 'Expected HTML to include: ' + text + '\\nHTML:\\n' + html);
 }
@@ -495,7 +499,57 @@ assertIncludes(approvedOutputHtml, 'Довжина');
 assertIncludes(approvedOutputHtml, 'Регламент дій');
 assertNotIncludes(approvedOutputHtml, 'ПРОТОКОЛ ЗАТВЕРДЖЕНО');
 
-const diagnosticOutputHtml = runCalculateProtocolWithValues({
+assert.strictEqual(normalizeEndsHistoryForDiagnostic('натуральні'), 'натуральна');
+assert.strictEqual(normalizeEndsHistoryForDiagnostic('натуральна'), 'натуральна');
+assert.strictEqual(normalizeEndsHistoryForDiagnostic('natural'), 'natural');
+
+function assertSafeRuntimeDiagnosticDisplay(html, id) {
+    const diagnosticBlockHtml = extractFirstDivBlockByHeading(html, 'Діагностика кінців');
+    const massModelBlockHtml = extractFirstDivBlockByHeading(html, 'Маси');
+
+    assertIncludes(html, 'MANUAL_REQUIRED');
+    assertIncludes(diagnosticBlockHtml, 'Діагностика кінців');
+    assertIncludes(diagnosticBlockHtml, 'Попередній перегляд');
+    assertIncludes(diagnosticBlockHtml, 'previewOnly');
+    assertIncludes(diagnosticBlockHtml, 'candidateOnly');
+    assertIncludes(diagnosticBlockHtml, 'notForMixing');
+    assertIncludes(diagnosticBlockHtml, 'Не для змішування');
+    assertIncludes(diagnosticBlockHtml, 'Потрібна ручна перевірка');
+    assertIncludes(diagnosticBlockHtml, 'Не є фінальним рецептом');
+    assertIncludes(diagnosticBlockHtml, 'Не наносити за цим блоком');
+    assertIncludes(massModelBlockHtml, '&quot;mode&quot;: &quot;2-zone&quot;');
+    assertIncludes(massModelBlockHtml, '&quot;endsMass&quot;: null');
+    assertNotIncludes(massModelBlockHtml, '&quot;mode&quot;: &quot;3-zone&quot;');
+    assertNotIncludes(html, '<h3>Кінці</h3>');
+    assertNotIncludes(html, 'endsRec:');
+    assertNotIncludes(html, 'endsFormula:');
+    assertNotIncludes(html, 'endsRecipeReady: true');
+    assertNotIncludes(html, 'productionRecipe');
+    assertNotIncludes(html, 'formula-to-mix');
+    assertNotIncludes(html, 'finalFormula');
+    assertNotIncludes(html, 'dyeMass');
+    assertNotIncludes(html, 'oxidizerMass');
+    diagnosticDisplayRenderContract.forbiddenDisplayFields.forEach((field) => {
+        assertNotIncludes(diagnosticBlockHtml, field);
+    });
+    diagnosticDisplayRenderContract.forbiddenRecipeTexts.forEach((text) => {
+        assertNotIncludes(diagnosticBlockHtml, text);
+    });
+}
+
+const uiReachableDiagnosticOutputHtml = runCalculateProtocolWithValues({
+    root_level: '6',
+    length_level: '6',
+    ends_level: '8',
+    target_level: '6',
+    target_direction: '1',
+    ends_condition: 'здорові',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
+});
+assertSafeRuntimeDiagnosticDisplay(uiReachableDiagnosticOutputHtml, 'UI-REACHABLE-ENDS-HISTORY-NATURAL-PLURAL');
+
+const legacyDiagnosticOutputHtml = runCalculateProtocolWithValues({
     root_level: '6',
     length_level: '6',
     ends_level: '8',
@@ -505,24 +559,7 @@ const diagnosticOutputHtml = runCalculateProtocolWithValues({
     ends_history: 'натуральна',
     ends_base_type: 'натуральна'
 });
-const runtimeDiagnosticBlockHtml = extractFirstDivBlockByHeading(diagnosticOutputHtml, 'Діагностика кінців');
-
-assertIncludes(diagnosticOutputHtml, 'MANUAL_REQUIRED');
-assertIncludes(runtimeDiagnosticBlockHtml, 'Діагностика кінців');
-assertIncludes(runtimeDiagnosticBlockHtml, 'Попередній перегляд');
-assertIncludes(runtimeDiagnosticBlockHtml, 'previewOnly');
-assertIncludes(runtimeDiagnosticBlockHtml, 'candidateOnly');
-assertIncludes(runtimeDiagnosticBlockHtml, 'notForMixing');
-assertIncludes(runtimeDiagnosticBlockHtml, 'Не для змішування');
-assertIncludes(runtimeDiagnosticBlockHtml, 'Потрібна ручна перевірка');
-assertIncludes(runtimeDiagnosticBlockHtml, 'Не є фінальним рецептом');
-assertIncludes(runtimeDiagnosticBlockHtml, 'Не наносити за цим блоком');
-diagnosticDisplayRenderContract.forbiddenDisplayFields.forEach((field) => {
-    assertNotIncludes(runtimeDiagnosticBlockHtml, field);
-});
-diagnosticDisplayRenderContract.forbiddenRecipeTexts.forEach((text) => {
-    assertNotIncludes(runtimeDiagnosticBlockHtml, text);
-});
+assertSafeRuntimeDiagnosticDisplay(legacyDiagnosticOutputHtml, 'LEGACY-ENDS-HISTORY-NATURAL-FEMININE');
 
 const fatalOutputHtml = runCalculateProtocolWithValues({}, { missingIds: ['history'] });
 

@@ -1086,8 +1086,15 @@ const pigmentMap = {
             };
         }
 
+        function normalizeEndsHistoryForDiagnostic(value) {
+            const normalized = String(value || '').trim().toLowerCase();
+            if (normalized === 'натуральні') return 'натуральна';
+            return normalized;
+        }
+
         function classifyThreeZoneActivation(input) {
             const { ends_level, length_level, root_level, ends_condition, ends_history, ends_base_type, target_level } = input;
+            const normalizedEndsHistory = normalizeEndsHistoryForDiagnostic(ends_history);
             
             if (!ends_level || ends_level === length_level) {
                 return {
@@ -1109,7 +1116,7 @@ const pigmentMap = {
             }
 
             const blockedHistory = ['unknown', 'cosmetic', 'темний косметичний пігмент', 'dark cosmetic', 'remover', 'змивка', 'henna_metals', 'хна/метали'];
-            if (blockedHistory.includes(ends_history)) {
+            if (blockedHistory.includes(normalizedEndsHistory)) {
                 return {
                     decision: 'BLOCKED', reason: 'BLOCKED_HISTORY',
                     warnings: [], requiredFields: [], missingFields: [], mode: '3-zone-gate-only'
@@ -1142,7 +1149,7 @@ const pigmentMap = {
             }
 
             if ((ends_condition === 'healthy' || ends_condition === 'normal' || ends_condition === 'здорові' || ends_condition === 'нормальні') && 
-                (ends_history === 'natural' || ends_history === 'clear' || ends_history === 'none' || ends_history === 'натуральна' || ends_history === 'чиста') && 
+                (normalizedEndsHistory === 'natural' || normalizedEndsHistory === 'clear' || normalizedEndsHistory === 'none' || normalizedEndsHistory === 'натуральна' || normalizedEndsHistory === 'чиста') &&
                 (ends_base_type === 'natural' || ends_base_type === 'натуральна')) {
                 return {
                     decision: 'ALLOW_3_ZONE', reason: 'HEALTHY_NATURAL',
