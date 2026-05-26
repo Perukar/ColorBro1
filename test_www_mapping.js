@@ -7,6 +7,7 @@ const code = fs.readFileSync('./www/core.js', 'utf8');
 const fakeValues = {
     history: 'чиста',
     condition: 'нормальні',
+    porosity: 'нормальна пористість',
     thickness: 'середні',
     density: 'середні',
     length: 'середні',
@@ -53,6 +54,7 @@ vm.runInContext(code + `
 const expectedWwwValues = {
     history: 'чиста',
     condition: 'нормальні',
+    porosity: 'нормальна пористість',
     thickness: 'середні',
     density: 'середні',
     length: 'середні',
@@ -76,6 +78,7 @@ const expectedRequestedIds = Object.keys(expectedWwwValues);
 const expectedRawInput = {
     history: 'чиста',
     condition: 'нормальні',
+    porosity: 'нормальна пористість',
     thickness: 'середні',
     density: 'середні',
     length: 'середні',

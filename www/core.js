@@ -50,6 +50,7 @@ const pigmentMap = {
                 return {
                     history: this.getWwwValue('history'),
                     condition: this.getWwwValue('condition'),
+                    porosity: this.getWwwValue('porosity'),
                     thickness: this.getWwwValue('thickness'),
                     density: this.getWwwValue('density'),
                     length: this.getWwwValue('length'),
@@ -83,6 +84,7 @@ const pigmentMap = {
                 return {
                     history: String(wwwValues.history || '').trim(),
                     condition: String(wwwValues.condition || '').trim(),
+                    porosity: String(wwwValues.porosity || '').trim(),
                     thickness: String(wwwValues.thickness || '').trim(),
                     density: String(wwwValues.density || '').trim(),
                     length: String(wwwValues.length || '').trim(),
@@ -1320,6 +1322,8 @@ const pigmentMap = {
             try {
                 let history = document.getElementById('history').value;
                 let condition = document.getElementById('condition').value;
+                const porosityElement = document.getElementById('porosity');
+                const porosity = porosityElement ? String(porosityElement.value || '').trim() : '';
                 let thickness = document.getElementById('thickness').value;
                 let density = document.getElementById('density').value;
                 let length = document.getElementById('length').value;
@@ -1640,6 +1644,30 @@ const pigmentMap = {
                 rootRec.mixtone = calcMixtone(tLevel, tDir, rootRec.process, rootRec.mass, "здоровые");
                 lenRec.mixtone = calcMixtone(tLevel, tDir, lenRec.process, lenRec.mass, condition);
 
+                const porosityText = String(porosity || '').toLowerCase();
+                const neutralPorosityMarkers = ['normal', 'good', 'low', 'medium', 'норм', 'добра', 'добрий', 'низьк', 'низк', 'середн'];
+                const highPorosityMarkers = ['high porosity', 'porous hair', 'porous canvas', 'висока пористість', 'високопорист', 'дуже пористе', 'сильна пористість', 'пористе полотно'];
+                const isNeutralPorosity = neutralPorosityMarkers.some(marker => porosityText.includes(marker));
+                const hasHighPorositySignal = Boolean(porosityText)
+                    && !isNeutralPorosity
+                    && highPorosityMarkers.some(marker => porosityText.includes(marker));
+                const hasSpecialBlondProcess =
+                    (rootRec && String(rootRec.process).includes("Special Blond")) ||
+                    (lenRec && String(lenRec.process).includes("Special Blond"));
+                const specialBlondHighPorosityNeedsConfirmation = hasSpecialBlondProcess && hasHighPorositySignal;
+
+                if (hasHighPorositySignal) {
+                    warnings.push(specialBlondHighPorosityNeedsConfirmation
+                        ? "⚠️ SPECIAL BLOND + ВИСОКА ПОРИСТІСТЬ: Пористе полотно при Special Blond може дати плямистість, провал тону або нестабільний результат. Потрібне ручне рішення та тест-пасмо."
+                        : "⚠️ ВИСОКА ПОРИСТІСТЬ ПОЛОТНА: Хімічний процес потребує ручного контролю, оцінки поглинання та тест-пасма.");
+                    manualDecisions.push({
+                        title: specialBlondHighPorosityNeedsConfirmation ? "Special Blond + висока пористість" : "Висока пористість полотна",
+                        message: specialBlondHighPorosityNeedsConfirmation
+                            ? "Підтвердити доцільність Special Blond на високопористому полотні, оцінити ризик нерівномірного освітлення, перевантаження пігментом і виконати тест-пасмо."
+                            : "Підтвердити стан пористості полотна перед хімічним процесом і виконати тест-пасмо або ручну корекцію рецепта."
+                    });
+                }
+
                 let specialBlondBase6NeedsConfirmation =
                     (rLevel === 6 && rootRec && String(rootRec.process).includes("Special Blond")) ||
                     (lLevel === 6 && lenRec && String(lenRec.process).includes("Special Blond"));
@@ -1653,10 +1681,7 @@ const pigmentMap = {
                 }
 
                 let specialBlondWithGreyNeedsConfirmation =
-                    grey > 0 && (
-                        (rootRec && String(rootRec.process).includes("Special Blond")) ||
-                        (lenRec && String(lenRec.process).includes("Special Blond"))
-                    );
+                    grey > 0 && hasSpecialBlondProcess;
 
                 if (specialBlondWithGreyNeedsConfirmation) {
                     warnings.push("⚠️ SPECIAL BLOND НА СИВИНУ: Special Blond не гарантує щільного покриття сивини. Потрібне рішення майстра.");
@@ -1894,7 +1919,7 @@ const pigmentMap = {
                     // Fail-safe: do not disrupt primary 2-zone calculation paths
                 }
 
-                const reasons = { rootStep: rStep, lengthStep: lStep, endsLevel: eLevel, endsCondition, endsHistory, endsBaseType, hotRoot, grey, specialBlondBase6NeedsConfirmation, significantDarkeningNeedsPrepig, zoneLevelDifference, zoneProcessesDiffer, zoneDecisionNeedsConfirmation, endsLevelProvided, endsDiffersFromRoot, endsDiffersFromLength, endsLevelNeedsConfirmation, endsConditionProvided, riskyEndsCondition, endsLighteningNeeded, endsChemicalInterventionLikely, endsConditionNeedsConfirmation, endsConditionMissingWithDifferentLevel, endsHistoryProvided, endsBaseTypeProvided, riskyEndsHistory, riskyEndsBaseType, endsHistoryNeedsConfirmation, endsBaseTypeNeedsConfirmation, threeZonePreviewEligible, threeZoneGateDecision, threeZoneCandidateMassModel, threeZonePreviewOnly, threeZoneEndsRecipeReady };
+                const reasons = { rootStep: rStep, lengthStep: lStep, endsLevel: eLevel, endsCondition, endsHistory, endsBaseType, hotRoot, grey, porosity, hasHighPorositySignal, specialBlondHighPorosityNeedsConfirmation, specialBlondBase6NeedsConfirmation, significantDarkeningNeedsPrepig, zoneLevelDifference, zoneProcessesDiffer, zoneDecisionNeedsConfirmation, endsLevelProvided, endsDiffersFromRoot, endsDiffersFromLength, endsLevelNeedsConfirmation, endsConditionProvided, riskyEndsCondition, endsLighteningNeeded, endsChemicalInterventionLikely, endsConditionNeedsConfirmation, endsConditionMissingWithDifferentLevel, endsHistoryProvided, endsBaseTypeProvided, riskyEndsHistory, riskyEndsBaseType, endsHistoryNeedsConfirmation, endsBaseTypeNeedsConfirmation, threeZonePreviewEligible, threeZoneGateDecision, threeZoneCandidateMassModel, threeZonePreviewOnly, threeZoneEndsRecipeReady };
                 if (endsRecCandidatePreview) {
                     reasons.endsRecCandidatePreview = endsRecCandidatePreview;
                 }

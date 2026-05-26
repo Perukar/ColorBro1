@@ -10,9 +10,13 @@ if (typeof calculateProtocol !== 'function') {
 }
 
 const neutralElasticityValue = 'нормальна еластичність';
+const neutralPorosityValue = 'нормальна пористість';
 
 function withDefaultScenarioValues(values) {
-    return Object.assign({ elasticity: neutralElasticityValue }, values);
+    return Object.assign({
+        elasticity: neutralElasticityValue,
+        porosity: neutralPorosityValue
+    }, values);
 }
 
 const scenarioValues = withDefaultScenarioValues({
@@ -1653,6 +1657,234 @@ globalThis.__elasticityResults = {
     lowSb: elasticityLowSbResult,
     lowToning: elasticityLowToningResult
 };
+
+// === SPECIAL BLOND + HIGH POROSITY SAFETY CONTRACT ===
+function analyzeSpecialBlondHighPorosityScenario(name, values) {
+    const scenario = runDiagnosticScenario(name, values);
+    assert.ok(scenario.requestedIds.includes('output'), name + ' should access output');
+
+    const html = scenario.html;
+    const htmlText = html.toLowerCase();
+    const hasApproved = html.includes('APPROVED')
+        || html.includes('ПРОТОКОЛ ЗАТВЕРДЖЕНО');
+    const hasApprovedRecipe = html.includes('approved-recipe');
+    const hasManualSignal = html.includes('MANUAL_REQUIRED')
+        || html.includes('Потрібне ручне рішення')
+        || html.includes('needs_confirmation');
+    const hasPorosityText = htmlText.includes('порист')
+        || htmlText.includes('porosity')
+        || htmlText.includes('porous')
+        || htmlText.includes('нерівномір')
+        || htmlText.includes('плямист')
+        || htmlText.includes('тест-пасм');
+
+    assert.ok(!scenario.error, name + ' should not throw');
+    assert.ok(!hasApproved, name + ' should not be automatic APPROVED');
+    assert.ok(!hasApprovedRecipe, name + ' should not render approved recipe blocks');
+    assert.ok(hasManualSignal, name + ' should require manual decision');
+    assert.ok(hasPorosityText, name + ' should mention porosity or test strand risk');
+
+    return {
+        status: 'SAFE',
+        hasApproved,
+        hasApprovedRecipe,
+        hasManualSignal,
+        hasPorosityText
+    };
+}
+
+const specialBlondHighPorosityResult = analyzeSpecialBlondHighPorosityScenario('SPECIAL-BLOND-HIGH-POROSITY-NO-APPROVED', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    porosity: 'висока пористість',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '10',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
+});
+console.log('SPECIAL-BLOND-HIGH-POROSITY-NO-APPROVED safe behavior observed.');
+
+const specialBlondPorousLengthResult = analyzeSpecialBlondHighPorosityScenario('SPECIAL-BLOND-POROUS-LENGTH-NO-APPROVED', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    porosity: 'пористе полотно',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '8',
+    ends_level: '',
+    ends_condition: '',
+    base_type: 'Натуральна',
+    target_level: '10',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
+});
+console.log('SPECIAL-BLOND-POROUS-LENGTH-NO-APPROVED safe behavior observed.');
+
+(function() {
+    const scenario = runDiagnosticScenario('SPECIAL-BLOND-NORMAL-POROSITY-NO-FALSE-POSITIVE', {
+        history: 'натуральні',
+        condition: 'здоровые',
+        porosity: 'нормальна пористість',
+        elasticity: 'нормальна еластичність',
+        thickness: 'средние',
+        density: 'средние',
+        length: 'средние',
+        grey_percent: '0',
+        grey_type: 'мягкая',
+        root_level: '7',
+        root_length: '1',
+        length_level: '7',
+        ends_level: '7',
+        ends_condition: 'здорові',
+        base_type: 'Натуральна',
+        target_level: '10',
+        target_direction: '1',
+        ends_history: 'натуральні',
+        ends_base_type: 'натуральна'
+    });
+    assert.ok(!scenario.error, 'SPECIAL-BLOND-NORMAL-POROSITY-NO-FALSE-POSITIVE should not throw');
+    const htmlText = scenario.html.toLowerCase();
+    const forbiddenHighPorositySignals = [
+        'special blond + висока пористість',
+        'висока пористість полотна',
+        'дуже пористе полотно',
+        'ризик нерівномірного освітлення',
+        'перевантаження пігментом'
+    ];
+    const presentForbiddenSignals = forbiddenHighPorositySignals.filter(s => htmlText.includes(s));
+    assert.deepStrictEqual(
+        presentForbiddenSignals,
+        [],
+        'SPECIAL-BLOND-NORMAL-POROSITY-NO-FALSE-POSITIVE should not render high-porosity warning for normal porosity'
+    );
+    globalThis.__specialBlondNormalPorosityResult = { status: 'SAFE', presentForbiddenSignals };
+    console.log('SPECIAL-BLOND-NORMAL-POROSITY-NO-FALSE-POSITIVE safe behavior observed.');
+})();
+
+(function() {
+    const scenario = runDiagnosticScenario('SPECIAL-BLOND-BARE-POROSITY-NO-FALSE-POSITIVE', {
+        history: 'натуральні',
+        condition: 'здоровые',
+        porosity: 'porosity',
+        elasticity: 'нормальна еластичність',
+        thickness: 'средние',
+        density: 'средние',
+        length: 'средние',
+        grey_percent: '0',
+        grey_type: 'мягкая',
+        root_level: '7',
+        root_length: '1',
+        length_level: '7',
+        ends_level: '7',
+        ends_condition: 'здорові',
+        base_type: 'Натуральна',
+        target_level: '10',
+        target_direction: '1',
+        ends_history: 'натуральні',
+        ends_base_type: 'натуральна'
+    });
+    assert.ok(!scenario.error, 'SPECIAL-BLOND-BARE-POROSITY-NO-FALSE-POSITIVE should not throw');
+    const htmlText = scenario.html.toLowerCase();
+    const forbiddenHighPorositySignals = [
+        'висока пористість',
+        'high porosity',
+        'special blond + висока пористість'
+    ];
+    const presentForbiddenSignals = forbiddenHighPorositySignals.filter(s => htmlText.includes(s));
+    assert.deepStrictEqual(
+        presentForbiddenSignals,
+        [],
+        'SPECIAL-BLOND-BARE-POROSITY-NO-FALSE-POSITIVE should not render high-porosity warning for bare porosity label'
+    );
+    globalThis.__specialBlondBarePorosityResult = { status: 'SAFE', presentForbiddenSignals };
+    console.log('SPECIAL-BLOND-BARE-POROSITY-NO-FALSE-POSITIVE safe behavior observed.');
+})();
+
+(function() {
+    const scenario = runDiagnosticScenario('SPECIAL-BLOND-BARE-UKR-POROSITY-NO-FALSE-POSITIVE', {
+        history: 'натуральні',
+        condition: 'здоровые',
+        porosity: 'пористість',
+        elasticity: 'нормальна еластичність',
+        thickness: 'средние',
+        density: 'средние',
+        length: 'средние',
+        grey_percent: '0',
+        grey_type: 'мягкая',
+        root_level: '7',
+        root_length: '1',
+        length_level: '7',
+        ends_level: '7',
+        ends_condition: 'здорові',
+        base_type: 'Натуральна',
+        target_level: '10',
+        target_direction: '1',
+        ends_history: 'натуральні',
+        ends_base_type: 'натуральна'
+    });
+    assert.ok(!scenario.error, 'SPECIAL-BLOND-BARE-UKR-POROSITY-NO-FALSE-POSITIVE should not throw');
+    const htmlText = scenario.html.toLowerCase();
+    const forbiddenHighPorositySignals = [
+        'висока пористість',
+        'special blond + висока пористість'
+    ];
+    const presentForbiddenSignals = forbiddenHighPorositySignals.filter(s => htmlText.includes(s));
+    assert.deepStrictEqual(
+        presentForbiddenSignals,
+        [],
+        'SPECIAL-BLOND-BARE-UKR-POROSITY-NO-FALSE-POSITIVE should not render high-porosity warning for bare porosity label'
+    );
+    globalThis.__specialBlondBareUkrPorosityResult = { status: 'SAFE', presentForbiddenSignals };
+    console.log('SPECIAL-BLOND-BARE-UKR-POROSITY-NO-FALSE-POSITIVE safe behavior observed.');
+})();
+
+const nonSpecialBlondHighPorosityResult = analyzeSpecialBlondHighPorosityScenario('NON-SPECIAL-BLOND-HIGH-POROSITY-MANUAL-CONSISTENCY', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    porosity: 'висока пористість',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '6',
+    root_length: '1',
+    length_level: '6',
+    ends_level: '6',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '7',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
+});
+console.log('NON-SPECIAL-BLOND-HIGH-POROSITY-MANUAL-CONSISTENCY safe behavior observed.');
+
+globalThis.__specialBlondPorosityResults = {
+    highPorosity: specialBlondHighPorosityResult,
+    porousLength: specialBlondPorousLengthResult,
+    nonSpecialBlond: nonSpecialBlondHighPorosityResult
+};
 `;
 
 const sandbox = {
@@ -1757,5 +1989,24 @@ assert.strictEqual(sandbox.__elasticityResults.lowToning.hasManualSignal, true);
 assert.strictEqual(sandbox.__elasticityResults.lowToning.hasElasticityText, true);
 assert.deepStrictEqual(Array.from(sandbox.__elasticityNormalFalsePositiveResult.presentFalsePositives), []);
 assert.strictEqual(sandbox.__elasticityNormalFalsePositiveResult.status, 'SAFE');
+assert.strictEqual(sandbox.__specialBlondPorosityResults.highPorosity.status, 'SAFE');
+assert.strictEqual(sandbox.__specialBlondPorosityResults.highPorosity.hasApproved, false);
+assert.strictEqual(sandbox.__specialBlondPorosityResults.highPorosity.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__specialBlondPorosityResults.highPorosity.hasManualSignal, true);
+assert.strictEqual(sandbox.__specialBlondPorosityResults.highPorosity.hasPorosityText, true);
+assert.strictEqual(sandbox.__specialBlondPorosityResults.porousLength.status, 'SAFE');
+assert.strictEqual(sandbox.__specialBlondPorosityResults.porousLength.hasApproved, false);
+assert.strictEqual(sandbox.__specialBlondPorosityResults.porousLength.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__specialBlondPorosityResults.porousLength.hasManualSignal, true);
+assert.strictEqual(sandbox.__specialBlondPorosityResults.porousLength.hasPorosityText, true);
+assert.deepStrictEqual(Array.from(sandbox.__specialBlondNormalPorosityResult.presentForbiddenSignals), []);
+assert.strictEqual(sandbox.__specialBlondNormalPorosityResult.status, 'SAFE');
+assert.deepStrictEqual(Array.from(sandbox.__specialBlondBarePorosityResult.presentForbiddenSignals), []);
+assert.strictEqual(sandbox.__specialBlondBarePorosityResult.status, 'SAFE');
+assert.deepStrictEqual(Array.from(sandbox.__specialBlondBareUkrPorosityResult.presentForbiddenSignals), []);
+assert.strictEqual(sandbox.__specialBlondBareUkrPorosityResult.status, 'SAFE');
+assert.strictEqual(sandbox.__specialBlondPorosityResults.nonSpecialBlond.status, 'SAFE');
+assert.strictEqual(sandbox.__specialBlondPorosityResults.nonSpecialBlond.hasManualSignal, true);
+assert.strictEqual(sandbox.__specialBlondPorosityResults.nonSpecialBlond.hasPorosityText, true);
 
 console.log('WWW business scenario test passed');
