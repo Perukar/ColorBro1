@@ -143,3 +143,99 @@ Acceptance criteria для майбутніх змін:
 * real UI smoke має підтвердити reachability;
 * tests мають підтвердити compatibility;
 * production recipe safety invariants мають залишатися PASS.
+
+---
+
+## 11. Diagnostic Display Implementation Status
+Статус після реалізації: diagnostic display block реалізований, перевірений через real UI smoke і закріплений regression tests. Ця секція фіксує фактичну поведінку після наступних commits:
+* `b8a830e` - Implement diagnostic display block;
+* `73fad44` - Align diagnostic display UI input values;
+* `9781af7` - Add diagnostic UI value reachability tests.
+
+Реалізовано display-only блок для джерела:
+`state.endsRecDiagnosticWiringCandidate`
+
+Поточна поведінка:
+* блок відокремлений від `rootRec` / `lenRec` production output;
+* блок показує warning/info status;
+* блок не є production recipe;
+* блок не виглядає як готова третя production-зона;
+* existing root/length recipe output залишається стабільним.
+
+Rendered labels, які мають залишатися присутніми:
+* `Діагностика кінців`;
+* `Preview only` або `Попередній перегляд`;
+* `Не для змішування`;
+* `Потрібна ручна перевірка`;
+* `Не є фінальним рецептом`;
+* `Не наносити за цим блоком`.
+
+Заборонені rendered fields і recipe-signals:
+* `grams`;
+* `dyeMass`;
+* `oxidizerMass`;
+* `exactGrams`;
+* `finalFormula`;
+* `productionRecipe`;
+* `formula-to-mix`;
+* mixing instruction;
+* готовий рецепт для кінців;
+* CTA типу `готовий рецепт`.
+
+UI reachability fix:
+* initial smoke показав, що direct render-state відображає блок, але real form не може його створити;
+* mismatch був між real UI value `натуральні` та diagnostic/test value `натуральна`;
+* fix виконано через normalization alias `натуральні` -> `натуральна`;
+* option value у `www/index.html` не змінювався;
+* legacy value `натуральна` лишається підтриманим.
+
+Verified QA:
+* local app opened at `http://127.0.0.1:8080` in Microsoft Edge;
+* real form candidate path verified;
+* diagnostic block visible via real form;
+* diagnostic block hidden when candidate absent;
+* no grams / `dyeMass` / `oxidizerMass` / `finalFormula` / `productionRecipe` / `formula-to-mix`;
+* no mixing instruction;
+* no third-zone production impression;
+* existing root output stable;
+* existing length output stable;
+* browser console errors: none;
+* layout readable;
+* buttons/forms not broken.
+
+Regression coverage:
+* UI value `натуральні` tested;
+* legacy value `натуральна` tested;
+* empty/unknown mismatch regression tested;
+* diagnostic display reachable via UI-compatible value;
+* no grams / `dyeMass` / `oxidizerMass` / `finalFormula` / `productionRecipe` / `formula-to-mix` tested;
+* no 3-zone activation tested;
+* no `massModel.endsMass` number tested;
+* no `endsRecipeReady === true` tested;
+* existing 2-zone output stable.
+
+Production safety boundary:
+* no production `endsRec`;
+* no `massModel.mode = "3-zone"`;
+* no `massModel.endsMass` number;
+* no `dyeMass` / `oxidizerMass` runtime;
+* no exact grams runtime;
+* no final `endsFormula`;
+* no `endsRecipeReady === true`;
+* no preview mass promotion;
+* no `calcMixtone` change;
+* no oxidizer logic change.
+
+Future rules:
+* будь-яке нове UI option value, яке впливає на diagnostic path, має мати test coverage;
+* не можна додавати UI option без reachability test;
+* не можна змінювати diagnostic labels без render/runtime tests;
+* не можна перетворювати diagnostic block у recipe card;
+* production activation має бути окремою фазою з окремим contract і safety tests.
+
+Explicit non-goals:
+* diagnostic display не є рецептом;
+* diagnostic display не дозволяє змішування;
+* diagnostic display не є third-zone production;
+* diagnostic display не рахує grams;
+* diagnostic display не змінює root/length recipe.
