@@ -156,6 +156,15 @@ For ПЕРУКАР specifically:
 - `test_www_render_runtime.js`
 - `test_www_mapping.js`
 
+## Правило BLACK-EXIT / темної косметичної бази
+
+- темна косметична root/length база рівня 1-4 при переході у світлішу ціль не має давати automatic `APPROVED`;
+- manual path має спрацьовувати не тільки по словах чорн/черн/black/темн, а й по косметичній / ненатуральній історії полотна;
+- натуральна темна база не має отримувати false-positive `BLACK-EXIT` тільки через рівень;
+- root/length dark cosmetic base covered guard/tests;
+- ends/third-zone production path не вмикати без окремого контракту, бо третя зона лишається diagnostic-only;
+- тести `BLACK-EXIT-1`, `BLACK-EXIT-COSMETIC-DARK-BASE-NO-MARKER`, `BLACK-EXIT-DARK-COSMETIC-LENGTH` і `BLACK-EXIT-NATURAL-DARK-BASE-NO-FALSE-POSITIVE` мають залишатися захистом контракту.
+
 ## Правило Special Blond для бази 6
 
 - Special Blond для base/root level 6 не має ставати автоматичним APPROVED-рецептом;
