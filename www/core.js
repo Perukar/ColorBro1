@@ -1619,9 +1619,14 @@ const pigmentMap = {
                     });
                 }
 
+                const endsLevelProvidedForPrepig = Number.isFinite(eLevel);
+                const lengthNeedsPrepigHistory = historyText !== 'натуральні';
+                const endsHistoryTextForPrepig = String(endsHistory || '').toLowerCase();
+                const endsNeedsPrepigHistory = endsHistoryTextForPrepig !== '' && endsHistoryTextForPrepig !== 'натуральні';
+
                 let significantDarkeningNeedsPrepig =
-                    (rLevel >= 9 && (rLevel - tLevel) >= 3) ||
-                    (lLevel >= 9 && (lLevel - tLevel) >= 3);
+                    (lengthNeedsPrepigHistory && (lLevel - tLevel) >= 3) ||
+                    (endsLevelProvidedForPrepig && endsNeedsPrepigHistory && (eLevel - tLevel) >= 3);
 
                 if (significantDarkeningNeedsPrepig) {
                     warnings.push("⚠️ ЗНАЧНЕ ЗАТЕМНЕННЯ ЗІ СВІТЛОЇ БАЗИ: Потрібне ручне рішення щодо передпігментації або заповнення пігменту перед виконанням рецепта.");

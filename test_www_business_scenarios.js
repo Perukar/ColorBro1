@@ -217,8 +217,8 @@ console.log('GREY-30-GLASSY-SPECIAL-BLOND-MANUAL-REQUIRED safe behavior observed
 const grey30PermSoftValues = {
     history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
     grey_percent: '30', grey_type: 'мягкая',
-    root_level: '5', root_length: '1', length_level: '5', ends_level: '5', ends_condition: 'здорові',
-    base_type: 'Натуральна', target_level: '6', target_direction: '1', ends_history: 'натуральні', ends_base_type: 'натуральна'
+    root_level: '6', root_length: '1', length_level: '6', ends_level: '6', ends_condition: 'здорові',
+    base_type: 'Натуральна', target_level: '6', target_direction: '0', ends_history: 'натуральні', ends_base_type: 'натуральна'
 };
 const grey30PermSoftOutput = { innerHTML: '' };
 document.getElementById = (id) => id === 'output' ? grey30PermSoftOutput : { value: grey30PermSoftValues[id] };
@@ -233,8 +233,8 @@ console.log('GREY-30-PERMANENT-SOFT-WARNING safe behavior observed.');
 const grey30PermGlassyValues = {
     history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
     grey_percent: '30', grey_type: 'стекловидная',
-    root_level: '5', root_length: '1', length_level: '5', ends_level: '5', ends_condition: 'здорові',
-    base_type: 'Натуральна', target_level: '6', target_direction: '1', ends_history: 'натуральні', ends_base_type: 'натуральна'
+    root_level: '6', root_length: '1', length_level: '6', ends_level: '6', ends_condition: 'здорові',
+    base_type: 'Натуральна', target_level: '6', target_direction: '0', ends_history: 'натуральні', ends_base_type: 'натуральна'
 };
 const grey30PermGlassyOutput = { innerHTML: '' };
 document.getElementById = (id) => id === 'output' ? grey30PermGlassyOutput : { value: grey30PermGlassyValues[id] };
@@ -279,6 +279,38 @@ if (prepigUnsafeUnconditionalApproved) {
     assert.ok(!prepigHasApproved, 'PREPIG-10-6 should not remain APPROVED after repair');
     console.log('PREPIG-10-6 safe behavior observed.');
 }
+
+// === PREPIG-8-4 ===
+const prepig84Values = {
+    history: 'освітлені', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
+    grey_percent: '0',
+    root_level: '4', root_length: '1', length_level: '8', ends_level: '8', ends_condition: 'здорові',
+    base_type: 'Косметична', target_level: '4', target_direction: '1', ends_history: 'освітлені', ends_base_type: 'косметична'
+};
+const prepig84Output = { innerHTML: '' };
+document.getElementById = (id) => id === 'output' ? prepig84Output : { value: prepig84Values[id] };
+calculateProtocol();
+const prepig84Html = prepig84Output.innerHTML;
+assert.ok(!prepig84Html.includes('APPROVED'), 'PREPIG-8-4 should NOT be unconditional APPROVED');
+assert.ok(prepig84Html.includes('MANUAL_REQUIRED') || prepig84Html.includes('Ручне рішення'), 'PREPIG-8-4 should require manual decision');
+assert.ok(prepig84Html.includes('ЗАТЕМНЕННЯ') || prepig84Html.includes('затемненні'), 'PREPIG-8-4 should have warning about darkening');
+assert.ok(prepig84Html.includes('передпігментац') || prepig84Html.includes('репігментац') || prepig84Html.includes('заповнення пігменту'), 'PREPIG-8-4 should mention prepigmentation or pigment filling');
+console.log('PREPIG-8-4 safe behavior observed.');
+
+// === ROOT-7-4-NATURAL-NO-PREPIG-FALSE-POSITIVE ===
+const root74Values = {
+    history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
+    grey_percent: '0',
+    root_level: '7', root_length: '1', length_level: '7', ends_level: '7', ends_condition: 'здорові',
+    base_type: 'Натуральна', target_level: '4', target_direction: '1', ends_history: 'натуральні', ends_base_type: 'натуральна'
+};
+const root74Output = { innerHTML: '' };
+document.getElementById = (id) => id === 'output' ? root74Output : { value: root74Values[id] };
+calculateProtocol();
+const root74Html = root74Output.innerHTML;
+assert.ok(!root74Html.includes('ЗНАЧНЕ ЗАТЕМНЕННЯ ЗІ СВІТЛОЇ БАЗИ'), 'ROOT-7-4-NATURAL-NO-PREPIG-FALSE-POSITIVE should NOT have darkening warning from root');
+assert.ok(!root74Html.includes('Передпігментація / заповнення пігменту:'), 'ROOT-7-4-NATURAL-NO-PREPIG-FALSE-POSITIVE should NOT require prepig decision');
+console.log('ROOT-7-4-NATURAL-NO-PREPIG-FALSE-POSITIVE safe behavior observed.');
 
 globalThis.__prepigResult = {
     status: prepigUnsafeUnconditionalApproved ? 'UNSAFE' : 'SAFE',
