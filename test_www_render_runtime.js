@@ -638,29 +638,145 @@ function assertSafeRuntimeDiagnosticDisplay(html, id) {
     });
 }
 
-const uiReachableDiagnosticOutputHtml = runCalculateProtocolWithValues({
-    root_level: '6',
-    length_level: '6',
-    ends_level: '8',
-    target_level: '6',
-    target_direction: '1',
-    ends_condition: 'здорові',
-    ends_history: realUiNaturalEndsHistoryValue,
-    ends_base_type: 'натуральна'
-});
-assertSafeRuntimeDiagnosticDisplay(uiReachableDiagnosticOutputHtml, 'UI-REACHABLE-ENDS-HISTORY-NATURAL-PLURAL');
+function assertNoProductionEndsSignals(html, id) {
+    assertNotIncludes(html, '<h3>Кінці</h3>');
+    assertNotIncludes(html, '<h3>Ends</h3>');
+    assertNotIncludes(html, 'endsRec:');
+    assertNotIncludes(html, 'endsFormula:');
+    assertNotIncludes(html, 'endsRecipeReady: true');
+    assertNotIncludes(html, 'productionRecipe');
+    assertNotIncludes(html, 'formula-to-mix');
+    assertNotIncludes(html, 'finalFormula');
+    assertNotIncludes(html, 'dyeMass');
+    assertNotIncludes(html, 'oxidizerMass');
+    assertNotIncludes(html, 'exactGrams');
+    assertNotIncludes(html, 'grams');
+    assertNotIncludes(html, '&quot;mode&quot;: &quot;3-zone&quot;');
+    assertNotIncludes(html, 'third-zone production');
+    assertNotIncludes(html, 'готовий рецепт для кінців');
+    assertNotIncludes(html, 'готовий рецепт');
+    assertNotIncludes(html, 'змішати');
+    assertNotIncludes(html, 'пропорції нанесення');
 
-const legacyDiagnosticOutputHtml = runCalculateProtocolWithValues({
-    root_level: '6',
-    length_level: '6',
-    ends_level: '8',
-    target_level: '6',
-    target_direction: '1',
-    ends_condition: 'здорові',
-    ends_history: legacyNaturalEndsHistoryValue,
-    ends_base_type: 'натуральна'
+    if (html.includes('<h3>Маси</h3>')) {
+        const massModelBlockHtml = extractFirstDivBlockByHeading(html, 'Маси');
+        assertIncludes(massModelBlockHtml, '&quot;mode&quot;: &quot;2-zone&quot;');
+        assertIncludes(massModelBlockHtml, '&quot;endsMass&quot;: null');
+        assertNotIncludes(massModelBlockHtml, '&quot;mode&quot;: &quot;3-zone&quot;');
+    }
+}
+
+function assertDiagnosticHidden(html, id) {
+    assertNotIncludes(html, 'Діагностика кінців');
+    assertNoProductionEndsSignals(html, id);
+}
+
+function assertApprovedTwoZoneOutputStable(html, baselineHtml, id) {
+    assertIncludes(html, 'APPROVED');
+    assertIncludes(html, 'approved-recipe');
+    assert.strictEqual(
+        extractFirstDivBlockByHeading(html, 'Корінь'),
+        extractFirstDivBlockByHeading(baselineHtml, 'Корінь'),
+        id + ': root output must stay stable'
+    );
+    assert.strictEqual(
+        extractFirstDivBlockByHeading(html, 'Довжина'),
+        extractFirstDivBlockByHeading(baselineHtml, 'Довжина'),
+        id + ': length output must stay stable'
+    );
+}
+
+const diagnosticDisplayCaseMatrix = [
+    {
+        id: 'MATRIX-POSITIVE-UI-COMPATIBLE-NATURAL-PLURAL',
+        overrides: {
+            root_level: '6',
+            length_level: '6',
+            ends_level: '8',
+            target_level: '6',
+            target_direction: '1',
+            ends_condition: 'здорові',
+            ends_history: realUiNaturalEndsHistoryValue,
+            ends_base_type: 'натуральна'
+        },
+        expectDiagnostic: true
+    },
+    {
+        id: 'MATRIX-POSITIVE-LEGACY-NATURAL-FEMININE',
+        overrides: {
+            root_level: '6',
+            length_level: '6',
+            ends_level: '8',
+            target_level: '6',
+            target_direction: '1',
+            ends_condition: 'здорові',
+            ends_history: legacyNaturalEndsHistoryValue,
+            ends_base_type: 'натуральна'
+        },
+        expectDiagnostic: true
+    },
+    {
+        id: 'MATRIX-NEGATIVE-CANDIDATE-ABSENT-SAME-ENDS',
+        overrides: {},
+        expectDiagnostic: false,
+        expectApprovedTwoZoneStable: true
+    },
+    {
+        id: 'MATRIX-NEGATIVE-EMPTY-ENDS-HISTORY',
+        overrides: {
+            root_level: '6',
+            length_level: '6',
+            ends_level: '8',
+            target_level: '6',
+            target_direction: '1',
+            ends_condition: 'здорові',
+            ends_history: '',
+            ends_base_type: 'натуральна'
+        },
+        expectDiagnostic: false,
+        expectedStatus: 'MANUAL_REQUIRED'
+    },
+    {
+        id: 'MATRIX-NEGATIVE-UNKNOWN-ENDS-HISTORY',
+        overrides: {
+            root_level: '6',
+            length_level: '6',
+            ends_level: '8',
+            target_level: '6',
+            target_direction: '1',
+            ends_condition: 'здорові',
+            ends_history: 'невідома історія',
+            ends_base_type: 'натуральна'
+        },
+        expectDiagnostic: false,
+        expectedStatus: 'MANUAL_REQUIRED'
+    },
+    {
+        id: 'MATRIX-NEGATIVE-NO-ENDS-SPECIFIC-DATA',
+        overrides: {
+            ends_level: '',
+            ends_condition: '',
+            ends_history: '',
+            ends_base_type: ''
+        },
+        expectDiagnostic: false,
+        expectApprovedTwoZoneStable: true
+    }
+];
+
+diagnosticDisplayCaseMatrix.forEach((testCase) => {
+    const html = runCalculateProtocolWithValues(testCase.overrides);
+    if (testCase.expectedStatus) assertIncludes(html, testCase.expectedStatus);
+    assertNoProductionEndsSignals(html, testCase.id);
+    if (testCase.expectDiagnostic) {
+        assertSafeRuntimeDiagnosticDisplay(html, testCase.id);
+    } else {
+        assertDiagnosticHidden(html, testCase.id);
+    }
+    if (testCase.expectApprovedTwoZoneStable) {
+        assertApprovedTwoZoneOutputStable(html, approvedOutputHtml, testCase.id);
+    }
 });
-assertSafeRuntimeDiagnosticDisplay(legacyDiagnosticOutputHtml, 'LEGACY-ENDS-HISTORY-NATURAL-FEMININE');
 
 const fatalOutputHtml = runCalculateProtocolWithValues({}, { missingIds: ['history'] });
 
