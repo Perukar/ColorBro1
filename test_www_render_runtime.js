@@ -3,6 +3,7 @@ const vm = require('vm');
 const assert = require('assert');
 
 const code = fs.readFileSync('./www/core.js', 'utf8');
+const indexHtml = fs.readFileSync('./www/index.html', 'utf8');
 
 let documentAccessed = false;
 const forbiddenDocument = new Proxy({}, {
@@ -62,6 +63,19 @@ function extractFirstDivBlockByHeading(html, heading) {
     const start = html.lastIndexOf('<div', markerIndex);
     const next = html.indexOf('<div', markerIndex + marker.length);
     return html.slice(start, next === -1 ? html.length : next);
+}
+
+function extractSelectOptionValues(html, selectId) {
+    const selectPattern = new RegExp('<select\\\\s+id="' + selectId + '"[\\\\s\\\\S]*?<\\\\/select>');
+    const selectMatch = html.match(selectPattern);
+    assert.ok(selectMatch, 'Missing select in www/index.html: ' + selectId);
+    const values = [];
+    const optionPattern = /<option\\s+value="([^"]*)"/g;
+    let optionMatch;
+    while ((optionMatch = optionPattern.exec(selectMatch[0])) !== null) {
+        values.push(optionMatch[1]);
+    }
+    return values;
 }
 
 const approvedHtml = PerucarWwwRenderV1.renderStateToHtml({
@@ -498,10 +512,60 @@ assertIncludes(approvedOutputHtml, 'Корінь');
 assertIncludes(approvedOutputHtml, 'Довжина');
 assertIncludes(approvedOutputHtml, 'Регламент дій');
 assertNotIncludes(approvedOutputHtml, 'ПРОТОКОЛ ЗАТВЕРДЖЕНО');
+assertNotIncludes(approvedOutputHtml, 'Діагностика кінців');
 
-assert.strictEqual(normalizeEndsHistoryForDiagnostic('натуральні'), 'натуральна');
-assert.strictEqual(normalizeEndsHistoryForDiagnostic('натуральна'), 'натуральна');
+const realUiEndsHistoryValues = extractSelectOptionValues(uiIndexHtml, 'ends_history');
+const realUiNaturalEndsHistoryValue = 'натуральні';
+const legacyNaturalEndsHistoryValue = 'натуральна';
+assert.ok(realUiEndsHistoryValues.includes(realUiNaturalEndsHistoryValue), 'www/index.html ends_history select must expose the UI-reachable value: ' + realUiNaturalEndsHistoryValue);
+assert.strictEqual(normalizeEndsHistoryForDiagnostic(realUiNaturalEndsHistoryValue), legacyNaturalEndsHistoryValue);
+assert.strictEqual(normalizeEndsHistoryForDiagnostic(legacyNaturalEndsHistoryValue), legacyNaturalEndsHistoryValue);
 assert.strictEqual(normalizeEndsHistoryForDiagnostic('natural'), 'natural');
+assert.notStrictEqual(normalizeEndsHistoryForDiagnostic(realUiNaturalEndsHistoryValue), '', 'real UI ends_history value must not normalize to empty');
+assert.notStrictEqual(normalizeEndsHistoryForDiagnostic(realUiNaturalEndsHistoryValue), 'unknown', 'real UI ends_history value must not normalize to unknown');
+
+const uiValueGate = classifyThreeZoneActivation({
+    root_level: 6,
+    length_level: 6,
+    ends_level: 8,
+    target_level: 6,
+    ends_condition: 'здорові',
+    ends_history: realUiNaturalEndsHistoryValue,
+    ends_base_type: 'натуральна'
+});
+assert.strictEqual(uiValueGate.decision, 'ALLOW_3_ZONE');
+assert.strictEqual(uiValueGate.reason, 'HEALTHY_NATURAL');
+assert.strictEqual(uiValueGate.mode, '3-zone-gate-only');
+assert.deepStrictEqual(uiValueGate.missingFields, []);
+assert.strictEqual(Object.prototype.hasOwnProperty.call(uiValueGate, 'massModel'), false);
+assert.strictEqual(Object.prototype.hasOwnProperty.call(uiValueGate, 'endsRec'), false);
+assert.strictEqual(Object.prototype.hasOwnProperty.call(uiValueGate, 'endsRecipeReady'), false);
+
+const legacyValueGate = classifyThreeZoneActivation({
+    root_level: 6,
+    length_level: 6,
+    ends_level: 8,
+    target_level: 6,
+    ends_condition: 'здорові',
+    ends_history: legacyNaturalEndsHistoryValue,
+    ends_base_type: 'натуральна'
+});
+assert.strictEqual(legacyValueGate.decision, 'ALLOW_3_ZONE');
+assert.strictEqual(legacyValueGate.reason, 'HEALTHY_NATURAL');
+assert.strictEqual(legacyValueGate.mode, '3-zone-gate-only');
+
+const emptyHistoryGate = classifyThreeZoneActivation({
+    root_level: 6,
+    length_level: 6,
+    ends_level: 8,
+    target_level: 6,
+    ends_condition: 'здорові',
+    ends_history: '',
+    ends_base_type: 'натуральна'
+});
+assert.strictEqual(emptyHistoryGate.decision, 'MANUAL_REQUIRED');
+assert.strictEqual(emptyHistoryGate.reason, 'MISSING_FIELDS');
+assert.ok(emptyHistoryGate.missingFields.includes('ends_history'));
 
 function assertSafeRuntimeDiagnosticDisplay(html, id) {
     const diagnosticBlockHtml = extractFirstDivBlockByHeading(html, 'Діагностика кінців');
@@ -544,7 +608,7 @@ const uiReachableDiagnosticOutputHtml = runCalculateProtocolWithValues({
     target_level: '6',
     target_direction: '1',
     ends_condition: 'здорові',
-    ends_history: 'натуральні',
+    ends_history: realUiNaturalEndsHistoryValue,
     ends_base_type: 'натуральна'
 });
 assertSafeRuntimeDiagnosticDisplay(uiReachableDiagnosticOutputHtml, 'UI-REACHABLE-ENDS-HISTORY-NATURAL-PLURAL');
@@ -556,7 +620,7 @@ const legacyDiagnosticOutputHtml = runCalculateProtocolWithValues({
     target_level: '6',
     target_direction: '1',
     ends_condition: 'здорові',
-    ends_history: 'натуральна',
+    ends_history: legacyNaturalEndsHistoryValue,
     ends_base_type: 'натуральна'
 });
 assertSafeRuntimeDiagnosticDisplay(legacyDiagnosticOutputHtml, 'LEGACY-ENDS-HISTORY-NATURAL-FEMININE');
@@ -577,7 +641,8 @@ console.log('WWW render runtime test passed');
 const sandbox = {
     assert,
     console,
-    document: forbiddenDocument
+    document: forbiddenDocument,
+    uiIndexHtml: indexHtml
 };
 
 vm.createContext(sandbox);
