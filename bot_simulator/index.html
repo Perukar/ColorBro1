@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ПЕРУКАР bot simulator</title>
+  <link rel="stylesheet" href="bot_simulator.css">
+</head>
+<body>
+  <main class="app-shell" aria-labelledby="appTitle">
+    <header class="app-header">
+      <div>
+        <h1 id="appTitle">ПЕРУКАР bot simulator</h1>
+        <p>Локальний кнопковий сценарій для перевірки алгоритму ризик-контролю.</p>
+      </div>
+      <div class="header-actions">
+        <button type="button" id="resetButton" class="secondary-button">Скинути</button>
+        <button type="button" id="toggleStateButton" class="secondary-button">Показати state</button>
+      </div>
+    </header>
+
+    <section class="workspace" aria-label="Симулятор бота">
+      <section class="chat-panel" aria-label="Повідомлення">
+        <div id="chatLog" class="chat-log" aria-live="polite"></div>
+      </section>
+
+      <aside class="control-panel" aria-label="Кнопки сценарію">
+        <h2>Варіанти відповіді</h2>
+        <div id="optionButtons" class="option-buttons"></div>
+      </aside>
+    </section>
+
+    <section id="statePanel" class="state-panel" hidden>
+      <h2>Debug state</h2>
+      <pre id="stateDump">{}</pre>
+    </section>
+  </main>
+
+  <script src="bot_simulator.js" defer></script>
+</body>
+</html>
