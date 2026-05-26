@@ -92,3 +92,54 @@
 1. **Окремий запит (prompt):** Тільки після затвердження цього плану.
 2. **Окремий набір тестів:** Для перевірки, що рендерер не виводить заборонених полів для змішування, і що 2-зонні рецепти не зазнали змін.
 3. **Обмежений перелік дозволених файлів:** Дозвіл буде надано тільки на файли рендерера/інтерфейсу (наприклад, `www/core.js` у частині `PerucarWwwRenderV1`, `www/index.html` тощо).
+
+---
+
+## 10. Diagnostic UI Input Normalization
+Після реалізації діагностичного display-блоку було підтверджено окремий ризик доступності: сам блок проходив direct render-state smoke, але реальна UI-форма не могла створити `state.endsRecDiagnosticWiringCandidate`.
+
+Причина була не у production-розрахунку і не у render-блоці, а у mismatch між значенням реального select у формі та значенням, яке використовував diagnostic/test path:
+* real UI value: `натуральні`;
+* diagnostic/test value: `натуральна`.
+
+Додаткова перевірка показала, що встановлення `натуральна` у реальний select давало empty value, а доступні UI combinations не створювали `.ends-diagnostic`. Отже, функція була технічно реалізована, але недосяжна через форму.
+
+Fix виконано через normalization alias:
+* `натуральні` -> `натуральна`;
+* option value у `www/index.html` не змінювався;
+* legacy/test value `натуральна` лишається підтриманим.
+
+Цей alias призначений тільки для diagnostic path / input alignment. Він **НЕ**:
+* активує production `endsRec`;
+* створює third-zone recipe;
+* додає grams;
+* додає `dyeMass` чи `oxidizerMass`;
+* додає final formula;
+* переводить `endsRecipeReady` у `true`;
+* переводить `massModel.mode` у `"3-zone"`;
+* змінює `calcMixtone`;
+* змінює oxidizer logic.
+
+QA result для цієї normalization:
+* real form candidate path verified with `ends_history = "натуральні"`;
+* diagnostic block visible via real form;
+* diagnostic block hidden when candidate absent;
+* no grams / `dyeMass` / `oxidizerMass` / `finalFormula` / `productionRecipe` / `formula-to-mix`;
+* no mixing instruction;
+* no third-zone production impression;
+* existing root/length output stable;
+* browser console errors: none;
+* layout readable;
+* buttons/forms not broken.
+
+Future rule:
+* Якщо додаються нові UI option values, вони мають або прямо відповідати diagnostic/runtime contract, або мати explicit normalization alias.
+* Заборонено "виправляти" це простим перейменуванням тестів без перевірки real UI form.
+* Заборонено змінювати option values без UI smoke test.
+* Заборонено робити diagnostic block залежним від значення, якого немає в реальній формі.
+
+Acceptance criteria для майбутніх змін:
+* test path і real UI path мають використовувати сумісні значення;
+* real UI smoke має підтвердити reachability;
+* tests мають підтвердити compatibility;
+* production recipe safety invariants мають залишатися PASS.
