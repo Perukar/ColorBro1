@@ -156,6 +156,14 @@ For ПЕРУКАР specifically:
 - `test_www_render_runtime.js`
 - `test_www_mapping.js`
 
+## Правило Special Blond для бази 6
+
+- Special Blond для base/root level 6 не має ставати автоматичним APPROVED-рецептом;
+- якщо система формує Special Blond як кандидата для lift >= 2, base 6 має вимагати MANUAL_REQUIRED;
+- Special Blond + 9% для бази 6 дозволений тільки після manual review / brand-specific confirmation / рішення майстра;
+- майбутнім агентам заборонено прибирати guard specialBlondBase6NeedsConfirmation без окремого затвердженого рішення;
+- тест SB-6-83 у test_www_business_scenarios.js має залишатися захистом цього контракту.
+
 ## Правило виконання малих дозволених задач
 
 Якщо користувач дає конкретну задачу або промпт для малої контрольованої дії, агент має виконувати її одразу без повторного питання "Дозволяю виконати?", якщо виконуються всі умови:
