@@ -4089,4 +4089,413 @@ function runGuardedDiagnosticWiringSpecLocal(context, readiness, builderResult, 
     console.log(id + ' safe.');
 })();
 
+// ============================================================================
+// PRODUCTION THIRD-ZONE READINESS CONTRACT TESTS (TEST-ONLY PHASE)
+// ============================================================================
+// These tests lock down the contract for future production third-zone readiness.
+// No runtime activation. Only contract definitions and safety markers.
+// ============================================================================
+
+// SPEC CONTRACT 1: Production third-zone readiness marker (NOT diagnostic display)
+function validateProductionThirdZoneReadinessContract(input) {
+    return {
+        readinessMarker: 'PRODUCTION_THIRD_ZONE_READINESS',
+        isProductionReadiness: true,
+        isDiagnosticDisplay: false,
+        blocked: true,
+        reason: 'Production third-zone readiness is contract-only; not activated in this phase'
+    };
+}
+
+(function testProductionThirdZoneReadinessMarker() {
+    const id = 'PRODUCTION-THIRD-ZONE-READINESS-MARKER-NOT-DIAGNOSTIC';
+    const contract = validateProductionThirdZoneReadinessContract({});
+    
+    assert.strictEqual(contract.readinessMarker, 'PRODUCTION_THIRD_ZONE_READINESS', id + ': must be marked as production readiness');
+    assert.strictEqual(contract.isProductionReadiness, true, id + ': must be identified as production readiness');
+    assert.strictEqual(contract.isDiagnosticDisplay, false, id + ': must NOT be diagnostic display');
+    assert.strictEqual(contract.blocked, true, id + ': production third-zone must be blocked in this phase');
+    
+    console.log(id + ' safe.');
+})();
+
+// SPEC CONTRACT 2: Production readiness requires all critical inputs present
+function validateCriticalInputsForProductionThirdZone(context) {
+    const input = context || {};
+    const criticalFields = [
+        'root_level', 'length_level', 'ends_level', 'target_level', 'target_direction',
+        'ends_history', 'porosity', 'damage_sensitivity', 'chemical_history',
+        'brand_constraints', 'oxidizer_constraints', 'application_zone_logic', 'manual_verification_flags'
+    ];
+    
+    const missing = [];
+    for (const field of criticalFields) {
+        if (input[field] === undefined || input[field] === null || input[field] === '') {
+            missing.push(field);
+        }
+    }
+    
+    return {
+        allPresent: missing.length === 0,
+        missingFields: missing,
+        canProceedWithReadiness: missing.length === 0
+    };
+}
+
+(function testProductionThirdZoneRequiresCriticalInputs() {
+    const id = 'PRODUCTION-THIRD-ZONE-READINESS-REQUIRES-CRITICAL-INPUTS';
+    
+    // Case 1: All critical inputs present
+    const complete = {
+        root_level: 6, length_level: 7, ends_level: 8, target_level: 8, target_direction: '1',
+        ends_history: 'натуральна', porosity: 'normal', damage_sensitivity: 'low',
+        chemical_history: 'none', brand_constraints: 'generic-safe', oxidizer_constraints: 'low',
+        application_zone_logic: 'root-length-ends', manual_verification_flags: false
+    };
+    
+    const resultComplete = validateCriticalInputsForProductionThirdZone(complete);
+    assert.strictEqual(resultComplete.allPresent, true, id + ': all inputs present');
+    assert.strictEqual(resultComplete.canProceedWithReadiness, true, id + ': can proceed');
+    assert.strictEqual(resultComplete.missingFields.length, 0, id + ': no missing fields');
+    
+    // Case 2: Missing critical inputs blocks readiness
+    const incomplete = {
+        root_level: 6, length_level: 7, ends_level: 8, target_level: 8, target_direction: '1',
+        ends_history: '', // Missing
+        porosity: 'normal', damage_sensitivity: 'low',
+        chemical_history: 'none', brand_constraints: 'generic-safe', oxidizer_constraints: 'low'
+    };
+    
+    const resultIncomplete = validateCriticalInputsForProductionThirdZone(incomplete);
+    assert.strictEqual(resultIncomplete.allPresent, false, id + ': incomplete inputs');
+    assert.strictEqual(resultIncomplete.canProceedWithReadiness, false, id + ': cannot proceed');
+    assert.ok(resultIncomplete.missingFields.includes('ends_history'), id + ': ends_history marked missing');
+    
+    console.log(id + ' safe.');
+})();
+
+// SPEC CONTRACT 3: Missing critical inputs BLOCK production readiness
+function classifyProductionThirdZoneReadinessStatus(context) {
+    const input = context || {};
+    
+    const criticalFields = {
+        ends_level: input.ends_level,
+        ends_history: input.ends_history,
+        target_level: input.target_level,
+        target_direction: input.target_direction,
+        porosity: input.porosity,
+        damage_sensitivity: input.damage_sensitivity,
+        chemical_history: input.chemical_history
+    };
+    
+    const missing = [];
+    for (const [key, value] of Object.entries(criticalFields)) {
+        if (value === undefined || value === null || value === '') {
+            missing.push(key);
+        }
+    }
+    
+    if (missing.length > 0) {
+        return {
+            status: 'BLOCKED',
+            reason: 'MISSING_CRITICAL_INPUTS',
+            blockingFields: missing,
+            productionReady: false
+        };
+    }
+    
+    return {
+        status: 'CANDIDATE_READY',
+        reason: 'CRITICAL_INPUTS_PRESENT',
+        blockingFields: [],
+        productionReady: false  // Still false; readiness != activation
+    };
+}
+
+(function testMissingCriticalInputsBlockReadiness() {
+    const id = 'MISSING-CRITICAL-INPUTS-BLOCK-PRODUCTION-THIRD-ZONE-READINESS';
+    
+    const scenarios = [
+        {
+            name: 'missing ends_level',
+            data: { ends_level: '', ends_history: 'натуральна', target_level: 8, target_direction: '1', porosity: 'normal', damage_sensitivity: 'low', chemical_history: 'none' }
+        },
+        {
+            name: 'missing ends_history',
+            data: { ends_level: 8, ends_history: '', target_level: 8, target_direction: '1', porosity: 'normal', damage_sensitivity: 'low', chemical_history: 'none' }
+        },
+        {
+            name: 'missing target_level',
+            data: { ends_level: 8, ends_history: 'натуральна', target_level: '', target_direction: '1', porosity: 'normal', damage_sensitivity: 'low', chemical_history: 'none' }
+        },
+        {
+            name: 'missing target_direction',
+            data: { ends_level: 8, ends_history: 'натуральна', target_level: 8, target_direction: '', porosity: 'normal', damage_sensitivity: 'low', chemical_history: 'none' }
+        },
+        {
+            name: 'missing porosity',
+            data: { ends_level: 8, ends_history: 'натуральна', target_level: 8, target_direction: '1', porosity: '', damage_sensitivity: 'low', chemical_history: 'none' }
+        },
+        {
+            name: 'missing damage_sensitivity',
+            data: { ends_level: 8, ends_history: 'натуральна', target_level: 8, target_direction: '1', porosity: 'normal', damage_sensitivity: '', chemical_history: 'none' }
+        },
+        {
+            name: 'missing chemical_history',
+            data: { ends_level: 8, ends_history: 'натуральна', target_level: 8, target_direction: '1', porosity: 'normal', damage_sensitivity: 'low', chemical_history: '' }
+        }
+    ];
+    
+    for (const scenario of scenarios) {
+        const result = classifyProductionThirdZoneReadinessStatus(scenario.data);
+        assert.strictEqual(result.status, 'BLOCKED', id + ': ' + scenario.name);
+        assert.strictEqual(result.reason, 'MISSING_CRITICAL_INPUTS', id + ': ' + scenario.name);
+        assert.strictEqual(result.productionReady, false, id + ': ' + scenario.name);
+    }
+    
+    console.log(id + ' safe.');
+})();
+
+// SPEC CONTRACT 4: Manual review blockers prevent automatic activation
+function classifyManualReviewBlockers(context) {
+    const input = context || {};
+    
+    const blockers = [];
+    
+    if (input.damage_sensitivity === 'high' || input.damage_sensitivity === 'critical') {
+        blockers.push('HIGH_DAMAGE_SENSITIVITY');
+    }
+    
+    if (input.chemical_history === 'unknown' || input.chemical_history === '') {
+        blockers.push('UNKNOWN_CHEMICAL_HISTORY');
+    }
+    
+    if (input.ends_history === 'henna' || input.ends_history === 'henna_metals' || input.ends_history === 'unknown') {
+        blockers.push('BLOCKED_HISTORY');
+    }
+    
+    if (input.reason_codes && input.reason_codes.includes('manual-required')) {
+        blockers.push('MANUAL_REQUIRED_REASON_CODE');
+    }
+    
+    if (input.notForMixing === true) {
+        blockers.push('NOT_FOR_MIXING_FLAG');
+    }
+    
+    const hasBlockers = blockers.length > 0;
+    
+    return {
+        hasManualReviewBlockers: hasBlockers,
+        blockerReasons: blockers,
+        productionReady: false,
+        status: hasBlockers ? 'MANUAL_REQUIRED' : 'CANDIDATE'
+    };
+}
+
+(function testManualReviewBlockersPreventActivation() {
+    const id = 'MANUAL-REVIEW-BLOCKERS-PREVENT-PRODUCTION-THIRD-ZONE-ACTIVATION';
+    
+    const scenarios = [
+        { name: 'high damage', data: { damage_sensitivity: 'high' } },
+        { name: 'unknown chemical history', data: { chemical_history: 'unknown' } },
+        { name: 'henna history', data: { ends_history: 'henna' } },
+        { name: 'manual-required reason code', data: { reason_codes: ['manual-required'] } },
+        { name: 'notForMixing flag', data: { notForMixing: true } }
+    ];
+    
+    for (const scenario of scenarios) {
+        const result = classifyManualReviewBlockers(scenario.data);
+        assert.strictEqual(result.hasManualReviewBlockers, true, id + ': ' + scenario.name);
+        assert.ok(result.blockerReasons.length > 0, id + ': ' + scenario.name);
+        assert.strictEqual(result.status, 'MANUAL_REQUIRED', id + ': ' + scenario.name);
+    }
+    
+    console.log(id + ' safe.');
+})();
+
+// SPEC CONTRACT 5: Diagnostic candidate MUST NOT directly become production source
+function validateDiagnosticCandidateIsolation(context) {
+    const input = context || {};
+    const diagnosticCandidate = input.endsRecDiagnosticWiringCandidate || null;
+    
+    if (!diagnosticCandidate) {
+        return {
+            isolated: true,
+            violations: []
+        };
+    }
+    
+    const violations = [];
+    
+    // Diagnostic candidate must not have productionReady = true
+    if (diagnosticCandidate.productionReady === true) {
+        violations.push('CANDIDATE_PRODUCTIONREADY_TRUE');
+    }
+    
+    // Diagnostic candidate must not directly set massModel.mode to '3-zone'
+    if (diagnosticCandidate.massModel && diagnosticCandidate.massModel.mode === '3-zone') {
+        violations.push('CANDIDATE_SET_MASSMODEL_3ZONE');
+    }
+    
+    // Diagnostic candidate must not set massModel.endsMass as number
+    if (diagnosticCandidate.massModel && typeof diagnosticCandidate.massModel.endsMass === 'number') {
+        violations.push('CANDIDATE_SET_ENDSMASS_NUMBER');
+    }
+    
+    // Diagnostic candidate must not contain production grams
+    if (diagnosticCandidate.dyeMass !== undefined || diagnosticCandidate.oxidizerMass !== undefined) {
+        violations.push('CANDIDATE_CONTAINS_PRODUCTION_GRAMS');
+    }
+    
+    // Diagnostic candidate must not contain endsFormula
+    if (diagnosticCandidate.endsFormula !== undefined) {
+        violations.push('CANDIDATE_CONTAINS_PRODUCTION_FORMULA');
+    }
+    
+    // Diagnostic candidate must not have endsRecipeReady = true
+    if (diagnosticCandidate.endsRecipeReady === true) {
+        violations.push('CANDIDATE_ENDSRECIPE_READY_TRUE');
+    }
+    
+    return {
+        isolated: violations.length === 0,
+        violations
+    };
+}
+
+(function testDiagnosticCandidateNotProductionSource() {
+    const id = 'DIAGNOSTIC-CANDIDATE-NOT-PRODUCTION-SOURCE-ISOLATION';
+    
+    // Case 1: Properly isolated diagnostic candidate
+    const isolated = {
+        endsRecDiagnosticWiringCandidate: {
+            candidateOnly: true,
+            previewOnly: true,
+            notForMixing: true,
+            productionReady: false,
+            endsRecipeReady: false
+        }
+    };
+    
+    const resultIsolated = validateDiagnosticCandidateIsolation(isolated);
+    assert.strictEqual(resultIsolated.isolated, true, id + ': must be isolated');
+    assert.strictEqual(resultIsolated.violations.length, 0, id + ': no violations');
+    
+    // Case 2: Candidate with productionReady = true (violation)
+    const violation1 = {
+        endsRecDiagnosticWiringCandidate: {
+            productionReady: true
+        }
+    };
+    
+    const resultViolation1 = validateDiagnosticCandidateIsolation(violation1);
+    assert.strictEqual(resultViolation1.isolated, false, id + ': not isolated');
+    assert.ok(resultViolation1.violations.includes('CANDIDATE_PRODUCTIONREADY_TRUE'), id + ': violation detected');
+    
+    // Case 3: Candidate with production 3-zone mode
+    const violation2 = {
+        endsRecDiagnosticWiringCandidate: {
+            massModel: { mode: '3-zone', endsMass: null }
+        }
+    };
+    
+    const resultViolation2 = validateDiagnosticCandidateIsolation(violation2);
+    assert.strictEqual(resultViolation2.isolated, false, id + ': not isolated');
+    assert.ok(resultViolation2.violations.includes('CANDIDATE_SET_MASSMODEL_3ZONE'), id + ': violation detected');
+    
+    console.log(id + ' safe.');
+})();
+
+// SPEC CONTRACT 6: Production activation forbidden; massModel and endsRec must remain untouched
+function validateProductionActivationRemainsForbidden(context) {
+    const input = context || {};
+    
+    const violations = [];
+    
+    // No production endsRec created
+    if (input.endsRec !== undefined) {
+        violations.push('PRODUCTION_ENDSREC_CREATED');
+    }
+    
+    // massModel.mode must stay '2-zone'
+    if (input.massModel && input.massModel.mode === '3-zone') {
+        violations.push('MASSMODEL_MODE_3ZONE');
+    }
+    
+    // massModel.endsMass must stay null
+    if (input.massModel && typeof input.massModel.endsMass === 'number') {
+        violations.push('MASSMODEL_ENDSMASS_NUMBER');
+    }
+    
+    // No production dyeMass, oxidizerMass
+    if (input.dyeMass !== undefined || input.oxidizerMass !== undefined) {
+        violations.push('PRODUCTION_GRAMS_CREATED');
+    }
+    
+    // No exact grams
+    if (input.exactGrams !== undefined || input.grams !== undefined) {
+        violations.push('PRODUCTION_EXACT_GRAMS');
+    }
+    
+    // No final endsFormula
+    if (input.finalEndsFormula !== undefined || (input.endsFormula && input.endsFormula !== 'diagnostic-preview-only')) {
+        violations.push('PRODUCTION_FINAL_FORMULA');
+    }
+    
+    // No endsRecipeReady = true
+    if (input.endsRecipeReady === true) {
+        violations.push('ENDSRECIPE_READY_TRUE');
+    }
+    
+    // No formula-to-mix
+    if (input.formulaToMix !== undefined) {
+        violations.push('FORMULA_TO_MIX_CREATED');
+    }
+    
+    // No application instruction for ends
+    if (input.applicationInstructionForEnds !== undefined) {
+        violations.push('APPLICATION_INSTRUCTION_CREATED');
+    }
+    
+    return {
+        activationForbidden: violations.length === 0,
+        violations,
+        productionReady: false
+    };
+}
+
+(function testProductionActivationForbidden() {
+    const id = 'PRODUCTION-THIRD-ZONE-ACTIVATION-FORBIDDEN';
+    
+    // Safe state: nothing created
+    const safe = {
+        massModel: { mode: '2-zone', endsMass: null },
+        endsRecipeReady: false
+    };
+    
+    const resultSafe = validateProductionActivationRemainsForbidden(safe);
+    assert.strictEqual(resultSafe.activationForbidden, true, id + ': production activation forbidden');
+    assert.strictEqual(resultSafe.violations.length, 0, id + ': no violations');
+    assert.strictEqual(resultSafe.productionReady, false, id + ': productionReady false');
+    
+    // Violations: production endsRec created
+    const violation1 = {
+        endsRec: { zone: 'ends', productionReady: true },
+        massModel: { mode: '3-zone', endsMass: 12 },
+        dyeMass: 5,
+        oxidizerMass: 7,
+        exactGrams: 12,
+        endsRecipeReady: true
+    };
+    
+    const resultViolation1 = validateProductionActivationRemainsForbidden(violation1);
+    assert.strictEqual(resultViolation1.activationForbidden, false, id + ': not forbidden');
+    assert.ok(resultViolation1.violations.length > 0, id + ': violations detected');
+    assert.ok(resultViolation1.violations.includes('PRODUCTION_ENDSREC_CREATED'), id + ': endsRec violation');
+    assert.ok(resultViolation1.violations.includes('MASSMODEL_MODE_3ZONE'), id + ': 3-zone violation');
+    assert.ok(resultViolation1.violations.includes('MASSMODEL_ENDSMASS_NUMBER'), id + ': endsMass violation');
+    
+    console.log(id + ' safe.');
+})();
+
 console.log('Production endsRec guarded wiring contract tests PASSED');
