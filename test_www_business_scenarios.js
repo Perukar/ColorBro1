@@ -133,6 +133,55 @@ const prepigHtml = prepigOutput.innerHTML;
 assert.ok(prepigHtml, 'PREPIG-10-6 should render a non-empty result');
 assert.ok(prepigRequestedIds.includes('output'), 'PREPIG-10-6 should write to output');
 
+// === GREY-50-SPECIAL-BLOND-BLOCK ===
+const greySbScenarioValues = {
+    history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
+    grey_percent: '50', grey_type: 'мягкая',
+    root_level: '6', root_length: '1', length_level: '6', ends_level: '6', ends_condition: 'здорові',
+    base_type: 'Натуральна', target_level: '8', target_direction: '3', ends_history: 'натуральні', ends_base_type: 'натуральна'
+};
+const greySbOutput = { innerHTML: '' };
+document.getElementById = (id) => id === 'output' ? greySbOutput : { value: greySbScenarioValues[id] };
+calculateProtocol();
+const greySbHtml = greySbOutput.innerHTML;
+const greySbHasBlockedSpecialBlond = greySbHtml.includes('ЗАБОРОНА SPECIAL BLOND: Сивина &gt;= 50%');
+const greySbHasPermanent = greySbHtml.includes('Перманент');
+assert.ok(greySbHasBlockedSpecialBlond, 'GREY-50-SPECIAL-BLOND-BLOCK should block Special Blond');
+assert.ok(greySbHasPermanent, 'GREY-50-SPECIAL-BLOND-BLOCK should fallback to Permanent');
+console.log('GREY-50-SPECIAL-BLOND-BLOCK safe behavior observed.');
+
+// === GREY-50-ADDS-00-BASE ===
+const greyBaseScenarioValues = {
+    history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
+    grey_percent: '70', grey_type: 'мягкая',
+    root_level: '6', root_length: '1', length_level: '6', ends_level: '6', ends_condition: 'здорові',
+    base_type: 'Натуральна', target_level: '7', target_direction: '1', ends_history: 'натуральні', ends_base_type: 'натуральна'
+};
+const greyBaseOutput = { innerHTML: '' };
+document.getElementById = (id) => id === 'output' ? greyBaseOutput : { value: greyBaseScenarioValues[id] };
+calculateProtocol();
+const greyBaseHtml = greyBaseOutput.innerHTML;
+const greyBaseHasBase = greyBaseHtml.includes('База 6.00');
+const greyBaseHasPermanent = greyBaseHtml.includes('Перманент');
+assert.ok(greyBaseHasBase, 'GREY-50-ADDS-00-BASE should add .00 base to recipe');
+assert.ok(greyBaseHasPermanent, 'GREY-50-ADDS-00-BASE should use Permanent');
+console.log('GREY-50-ADDS-00-BASE safe behavior observed.');
+
+// === GREY-GLASSY-MORDONSAGE ===
+const greyGlassyScenarioValues = {
+    history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
+    grey_percent: '30', grey_type: 'стекловидная',
+    root_level: '6', root_length: '1', length_level: '6', ends_level: '6', ends_condition: 'здорові',
+    base_type: 'Натуральна', target_level: '6', target_direction: '1', ends_history: 'натуральні', ends_base_type: 'натуральна'
+};
+const greyGlassyOutput = { innerHTML: '' };
+document.getElementById = (id) => id === 'output' ? greyGlassyOutput : { value: greyGlassyScenarioValues[id] };
+calculateProtocol();
+const greyGlassyHtml = greyGlassyOutput.innerHTML;
+const greyGlassyHasMordonsage = greyGlassyHtml.includes('Скловидна сивина. Потрібен мордонсаж');
+assert.ok(greyGlassyHasMordonsage, 'GREY-GLASSY-MORDONSAGE should suggest mordonsage');
+console.log('GREY-GLASSY-MORDONSAGE safe behavior observed.');
+
 const prepigHasApproved = prepigHtml.includes('APPROVED')
     || prepigHtml.includes('ПРОТОКОЛ ЗАТВЕРДЖЕНО');
 const prepigHasRecipe = prepigHtml.includes('КОРІНЬ')
