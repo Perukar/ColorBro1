@@ -1202,6 +1202,125 @@ const pigmentMap = {
             };
         }
 
+        /**
+         * validateProductionThirdZoneReadiness(input)
+         *
+         * INACTIVE HELPER — production third-zone readiness skeleton.
+         * Pure function. Not called from calculateProtocol().
+         * Not wired to UI/render.
+         * Does NOT activate production third-zone.
+         *
+         * @param {object} input - context/state-like object with critical fields.
+         * @returns {object} readiness contract (see below).
+         */
+        function validateProductionThirdZoneReadiness(input) {
+            const ctx = input || {};
+
+            // --- Critical inputs check ---
+            const criticalInputs = [
+                { key: 'root_level', label: 'root level' },
+                { key: 'length_level', label: 'length level' },
+                { key: 'ends_level', label: 'ends level' },
+                { key: 'target_level', label: 'target level' },
+                { key: 'target_direction', label: 'target direction' },
+                { key: 'ends_history', label: 'ends history' },
+                { key: 'porosity', label: 'porosity' },
+                { key: 'damage', label: 'damage/sensitivity' },
+                { key: 'previous_chemical_history', label: 'previous chemical history' },
+                { key: 'brand_or_system', label: 'brand/system constraints' },
+                { key: 'oxidizer_constraints', label: 'oxidizer constraints' },
+                { key: 'application_zone_logic', label: 'application-zone logic' },
+                { key: 'manual_verification_flags', label: 'manual verification flags' }
+            ];
+            const missingCriticalInputs = [];
+            for (const ci of criticalInputs) {
+                const val = ctx[ci.key];
+                if (val === undefined || val === null || val === '' || (typeof val === 'number' && !Number.isFinite(val))) {
+                    missingCriticalInputs.push(ci.label);
+                }
+            }
+
+            // --- Helper: determinant helper for safety flags ---
+            const endsHistory = String(ctx.ends_history || '').toLowerCase();
+            const damage = String(ctx.damage || ctx.damage_sensitivity || '').toLowerCase();
+            const porosity = String(ctx.porosity || '').toLowerCase();
+            const prevChem = String(ctx.previous_chemical_history || '').toLowerCase();
+            const hasDiagnosticOnly = Boolean(ctx.endsRecDiagnosticWiringCandidate) && !ctx.root_level && !ctx.length_level;
+
+            const safetyReasonCodes = [];
+            const manualRequiredReasonCodes = [];
+            let blocked = false;
+            let manualRequired = false;
+
+            // --- Blocking checks ---
+            const isHighDamage = damage.includes('high') || damage.includes('critical') || damage.includes('сильно') || damage.includes('критично');
+            const isUnknownChem = prevChem === '' || prevChem === 'unknown' || prevChem === 'невідома';
+            const isUncertainEndsHist = endsHistory === '' || endsHistory === 'unknown' || endsHistory === 'невідома';
+            const isIncompatibleEndsHist = endsHistory.includes('henna') || endsHistory.includes('хна') || endsHistory.includes('metal') || endsHistory.includes('метал');
+            const isPorousEnds = porosity.includes('high') || porosity.includes('porous') || porosity.includes('висока') || porosity.includes('порист');
+
+            if (hasDiagnosticOnly) {
+                blocked = true;
+                safetyReasonCodes.push('DIAGNOSTIC_CANDIDATE_ONLY');
+            }
+            if (isHighDamage) {
+                manualRequired = true;
+                manualRequiredReasonCodes.push('HIGH_DAMAGE_SENSITIVITY');
+                safetyReasonCodes.push('HIGH_DAMAGE_SENSITIVITY');
+            }
+            if (isUnknownChem) {
+                manualRequired = true;
+                manualRequiredReasonCodes.push('UNKNOWN_CHEMICAL_HISTORY');
+                safetyReasonCodes.push('UNKNOWN_CHEMICAL_HISTORY');
+            }
+            if (isUncertainEndsHist) {
+                manualRequired = true;
+                manualRequiredReasonCodes.push('UNCERTAIN_ENDS_HISTORY');
+                safetyReasonCodes.push('UNCERTAIN_ENDS_HISTORY');
+            }
+            if (isIncompatibleEndsHist) {
+                blocked = true;
+                safetyReasonCodes.push('INCOMPATIBLE_ENDS_HISTORY');
+            }
+            if (isPorousEnds) {
+                manualRequired = true;
+                manualRequiredReasonCodes.push('POROUS_ENDS');
+                safetyReasonCodes.push('POROUS_ENDS');
+            }
+
+            // --- Determine blocked / ready status ---
+            const hasMissing = missingCriticalInputs.length > 0;
+            const hasManual = manualRequiredReasonCodes.length > 0;
+            const hasBlockers = safetyReasonCodes.length > 0;
+
+            const ready = !hasMissing && !hasBlockers && !hasManual && !blocked && !manualRequired;
+
+            // --- Build result contract ---
+            const contract = {
+                contractType: "productionThirdZoneReadiness",
+                previewOnly: true,
+                candidateOnly: true,
+                notForMixing: true,
+                productionReady: false,
+                endsRecipeReady: false,
+                ready: ready,
+                blocked: hasMissing || blocked || hasBlockers,
+                manualRequired: hasManual || manualRequired,
+                missingCriticalInputs: missingCriticalInputs,
+                manualRequiredReasonCodes: manualRequiredReasonCodes,
+                safetyReasonCodes: safetyReasonCodes,
+                sourceRefs: {
+                    endsLevel: ctx.ends_level || null,
+                    targetLevel: ctx.target_level || null,
+                    endsHistory: ctx.ends_history || null,
+                    damage: ctx.damage || ctx.damage_sensitivity || null,
+                    porosity: ctx.porosity || null
+                }
+            };
+
+            return contract;
+        }
+
         function calculateProtocol() {
             try {
                 let history = document.getElementById('history').value;
