@@ -213,6 +213,12 @@ For ПЕРУКАР specifically:
 ## Правило DAMAGE / POROSITY / ELASTICITY
 
 - high damage / сильне пошкодження / критичне пошкодження не має давати automatic APPROVED для lift, powder, Special Blond або високого оксиду;
+- high porosity / висока пористість тепер має реальне UI-поле `#porosity`;
+- Special Blond + high porosity не має давати automatic APPROVED;
+- approved-recipe заборонений для Special Blond + high porosity;
+- мінімальна поведінка для Special Blond + high porosity: MANUAL_REQUIRED;
+- bare `porosity` / `пористість` не має трактуватись як high porosity без явного high-risk маркера;
+- `normal` / `good` / `low` / `medium` / `нормальна пористість` / `низька пористість` / `середня пористість` не мають давати false-positive;
 - high porosity / пористе полотно має мінімум MANUAL_REQUIRED при хімічному процесі;
 - brittle / ламкі кінці або критично пошкоджені кінці мають блокувати або вимагати ручного рішення для освітлення;
 - low elasticity / низька еластичність тепер має реальне UI-поле `#elasticity`;
@@ -220,6 +226,7 @@ For ПЕРУКАР specifically:
 - `normal` / `good` / `нормальна еластичність` не має давати false-positive;
 - automatic APPROVED і approved-recipe заборонені для low elasticity сценаріїв;
 - warning-only не достатній для high-risk lift-сценаріїв;
+- тести `SPECIAL-BLOND-HIGH-POROSITY-NO-APPROVED`, `SPECIAL-BLOND-POROUS-LENGTH-NO-APPROVED`, `SPECIAL-BLOND-NORMAL-POROSITY-NO-FALSE-POSITIVE`, `SPECIAL-BLOND-BARE-POROSITY-NO-FALSE-POSITIVE`, `SPECIAL-BLOND-BARE-UKR-POROSITY-NO-FALSE-POSITIVE`, `NON-SPECIAL-BLOND-HIGH-POROSITY-MANUAL-CONSISTENCY` мають залишатися захистом контракту;
 - тести `ELASTICITY-LOW-LIFT-NO-APPROVED`, `ELASTICITY-LOW-SPECIAL-BLOND-NO-APPROVED`, `ELASTICITY-LOW-TONING-MANUAL-MINIMUM`, `ELASTICITY-NORMAL-LIFT-NO-FALSE-POSITIVE` мають залишатися захистом контракту;
 - тести ENDS-DAMAGED-LIFT, ENDS-CONDITION-POROUS-LIFT, ENDS-CONDITION-BRITTLE-HIGH-LIFT, ENDS-CONDITION-DAMAGED-CHEMISTRY мають залишатися захистом контракту;
 - Примітка: загальний damage matrix ще не повністю покритий, існують gaps.
