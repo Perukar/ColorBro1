@@ -164,6 +164,51 @@ const pigmentMap = {
                 return this.renderList('Діагностика та причини', items, 'diagnostics');
             },
 
+            renderEndsDiagnosticDisplay(candidate) {
+                if (!candidate) return '';
+                const forbiddenFields = new Set([
+                    'dyeMass',
+                    'oxidizerMass',
+                    'grams',
+                    'exactGrams',
+                    'finalFormula',
+                    'endsFormula',
+                    'productionRecipe',
+                    'formula-to-mix'
+                ]);
+                const hasForbiddenField = Object.keys(candidate).some((key) => forbiddenFields.has(key));
+                const safeSourceRefs = {};
+                if (candidate.sourceRefs && typeof candidate.sourceRefs === 'object') {
+                    Object.entries(candidate.sourceRefs).forEach(([key, value]) => {
+                        if (!forbiddenFields.has(key)) safeSourceRefs[key] = value;
+                    });
+                }
+                const items = [
+                    { title: 'Статус', message: 'Попередній перегляд' },
+                    { title: 'previewOnly / Preview only', message: candidate.previewOnly === true ? 'true' : 'false' },
+                    { title: 'candidateOnly', message: candidate.candidateOnly === true ? 'true' : 'false' },
+                    { title: 'notForMixing', message: candidate.notForMixing === true ? 'true — Не для змішування' : 'false' },
+                    { title: 'productionReady', message: candidate.productionReady === true ? 'true' : 'false' },
+                    { title: 'endsRecipeReady', message: candidate.endsRecipeReady === true ? 'true' : 'false' },
+                    'Потрібна ручна перевірка',
+                    'Не є фінальним рецептом',
+                    'Не наносити за цим блоком'
+                ];
+                if (Object.keys(safeSourceRefs).length > 0) {
+                    items.push({ title: 'sourceRefs', message: JSON.stringify(safeSourceRefs) });
+                }
+                if (Array.isArray(candidate.safetyReasonCodes) && candidate.safetyReasonCodes.length > 0) {
+                    items.push({ title: 'safetyReasonCodes', message: JSON.stringify(candidate.safetyReasonCodes) });
+                }
+                if (Array.isArray(candidate.manualRequiredReasonCodes) && candidate.manualRequiredReasonCodes.length > 0) {
+                    items.push({ title: 'manualRequiredReasonCodes', message: JSON.stringify(candidate.manualRequiredReasonCodes) });
+                }
+                if (hasForbiddenField) {
+                    items.push('Небезпечні технічні поля приховано');
+                }
+                return this.renderList('Діагностика кінців', items, 'ends-diagnostic warning');
+            },
+
             renderRecipe(title, recipe, options = {}) {
                 if (!recipe) return '';
                 const className = options.approved === true ? 'recipe approved-recipe' : 'recipe non-final-recipe';
@@ -247,6 +292,7 @@ const pigmentMap = {
                     this.renderWarnings(state.warnings),
                     this.renderStatusHeader(state),
                     this.renderRecipes(state),
+                    this.renderEndsDiagnosticDisplay(state.endsRecDiagnosticWiringCandidate),
                     hasPhases ? this.renderPhases(state.phases) : this.renderProtocolText(state.protocolText),
                     this.renderMixtoneInfo(state.mixtoneInfo),
                     this.renderMassModel(state.massModel),

@@ -174,10 +174,10 @@ assertIncludes(reasonsHtml, 'mass');
 assertIncludes(reasonsHtml, 'source');
 assertIncludes(reasonsHtml, 'density');
 
-// Contract marker for the future diagnostic display. This test must not activate production ends rendering.
+// Diagnostic display must stay informational only and must not activate production ends rendering.
 const diagnosticDisplayRenderContract = Object.freeze({
     id: 'DIAGNOSTIC-DISPLAY-RENDER-CONTRACT',
-    status: 'PENDING_IMPLEMENTATION',
+    status: 'IMPLEMENTED_DISPLAY_ONLY',
     blockRole: 'informational-warning-only',
     separatedFromProductionRecipes: true,
     existingTwoZoneRenderMustStayStable: true,
@@ -250,16 +250,28 @@ const diagnosticDisplayCandidate = Object.freeze({
     notForMixing: true,
     productionReady: false,
     endsRecipeReady: false,
-    purpose: diagnosticDisplayRenderContract.blockRole
+    purpose: diagnosticDisplayRenderContract.blockRole,
+    sourceRefs: {
+        readinessReasonCode: 'READY_LOW_RISK_TONING_CANDIDATE',
+        builderStatus: 'CREATED',
+        formulaType: 'preview-only',
+        massStatus: 'READY'
+    },
+    safetyReasonCodes: ['READY_LOW_RISK_TONING_CANDIDATE'],
+    manualRequiredReasonCodes: [],
+    dyeMass: 20,
+    oxidizerMass: 20,
+    grams: 40,
+    exactGrams: { dye: 20, oxidizer: 20 },
+    finalFormula: 'Forbidden formula',
+    endsFormula: 'Forbidden ends formula',
+    productionRecipe: 'Forbidden production recipe',
+    'formula-to-mix': 'Forbidden formula-to-mix'
 });
 
 assert.strictEqual(diagnosticDisplayCandidate.notForMixing, true, diagnosticDisplayRenderContract.id);
 assert.strictEqual(diagnosticDisplayCandidate.productionReady, false, diagnosticDisplayRenderContract.id);
 assert.strictEqual(diagnosticDisplayCandidate.endsRecipeReady, false, diagnosticDisplayRenderContract.id);
-diagnosticDisplayRenderContract.forbiddenDisplayFields.forEach((field) => {
-    assert.strictEqual(Object.prototype.hasOwnProperty.call(diagnosticDisplayCandidate, field), false,
-        diagnosticDisplayRenderContract.id + ' candidate must not carry production field: ' + field);
-});
 
 const twoZoneContractState = {
     status: 'APPROVED',
@@ -282,9 +294,11 @@ const twoZoneContractState = {
 const twoZoneBaselineHtml = PerucarWwwRenderV1.renderStateToHtml(twoZoneContractState);
 const diagnosticDisplayHtml = PerucarWwwRenderV1.renderStateToHtml({
     ...twoZoneContractState,
-    endsRecDiagnosticDisplayCandidate: diagnosticDisplayCandidate
+    endsRecDiagnosticWiringCandidate: diagnosticDisplayCandidate
 });
+const diagnosticDisplayBlockHtml = extractFirstDivBlockByHeading(diagnosticDisplayHtml, 'Діагностика кінців');
 
+assertNotIncludes(twoZoneBaselineHtml, 'Діагностика кінців');
 assert.strictEqual(
     extractFirstDivBlockByHeading(diagnosticDisplayHtml, 'Корінь'),
     extractFirstDivBlockByHeading(twoZoneBaselineHtml, 'Корінь'),
@@ -295,18 +309,37 @@ assert.strictEqual(
     extractFirstDivBlockByHeading(twoZoneBaselineHtml, 'Довжина'),
     diagnosticDisplayRenderContract.id + ' must not mix diagnostic data into lenRec'
 );
+assertIncludes(diagnosticDisplayBlockHtml, 'Діагностика кінців');
+assertIncludes(diagnosticDisplayBlockHtml, 'Попередній перегляд');
+assertIncludes(diagnosticDisplayBlockHtml, 'Preview only');
+assertIncludes(diagnosticDisplayBlockHtml, 'previewOnly');
+assertIncludes(diagnosticDisplayBlockHtml, 'candidateOnly');
+assertIncludes(diagnosticDisplayBlockHtml, 'notForMixing');
+assertIncludes(diagnosticDisplayBlockHtml, 'Не для змішування');
+assertIncludes(diagnosticDisplayBlockHtml, 'Потрібна ручна перевірка');
+assertIncludes(diagnosticDisplayBlockHtml, 'Не є фінальним рецептом');
+assertIncludes(diagnosticDisplayBlockHtml, 'Не наносити за цим блоком');
+assertIncludes(diagnosticDisplayBlockHtml, 'productionReady');
+assertIncludes(diagnosticDisplayBlockHtml, 'endsRecipeReady');
+assertIncludes(diagnosticDisplayBlockHtml, 'false');
+assertIncludes(diagnosticDisplayBlockHtml, 'sourceRefs');
+assertIncludes(diagnosticDisplayBlockHtml, 'READY_LOW_RISK_TONING_CANDIDATE');
 diagnosticDisplayRenderContract.forbiddenProductionHeadings.forEach((heading) => {
     assertNotIncludes(diagnosticDisplayHtml, heading);
 });
 diagnosticDisplayRenderContract.forbiddenDisplayFields.forEach((field) => {
-    assertNotIncludes(diagnosticDisplayHtml, field);
+    assertNotIncludes(diagnosticDisplayBlockHtml, field);
 });
 diagnosticDisplayRenderContract.forbiddenRecipeTexts.forEach((text) => {
-    assertNotIncludes(diagnosticDisplayHtml, text);
+    assertNotIncludes(diagnosticDisplayBlockHtml, text);
 });
-assertNotIncludes(diagnosticDisplayHtml, 'third-zone production');
-assertNotIncludes(diagnosticDisplayHtml, 'readyForMixing');
-assertNotIncludes(diagnosticDisplayHtml, 'mixingReady');
+assertNotIncludes(diagnosticDisplayBlockHtml, 'Forbidden formula');
+assertNotIncludes(diagnosticDisplayBlockHtml, 'Forbidden ends formula');
+assertNotIncludes(diagnosticDisplayBlockHtml, 'Forbidden production recipe');
+assertNotIncludes(diagnosticDisplayBlockHtml, 'Forbidden formula-to-mix');
+assertNotIncludes(diagnosticDisplayBlockHtml, 'third-zone production');
+assertNotIncludes(diagnosticDisplayBlockHtml, 'readyForMixing');
+assertNotIncludes(diagnosticDisplayBlockHtml, 'mixingReady');
 
 const structuredPhasesHtml = PerucarWwwRenderV1.renderPhases([
     {
@@ -461,6 +494,35 @@ assertIncludes(approvedOutputHtml, 'Корінь');
 assertIncludes(approvedOutputHtml, 'Довжина');
 assertIncludes(approvedOutputHtml, 'Регламент дій');
 assertNotIncludes(approvedOutputHtml, 'ПРОТОКОЛ ЗАТВЕРДЖЕНО');
+
+const diagnosticOutputHtml = runCalculateProtocolWithValues({
+    root_level: '6',
+    length_level: '6',
+    ends_level: '8',
+    target_level: '6',
+    target_direction: '1',
+    ends_condition: 'здорові',
+    ends_history: 'натуральна',
+    ends_base_type: 'натуральна'
+});
+const runtimeDiagnosticBlockHtml = extractFirstDivBlockByHeading(diagnosticOutputHtml, 'Діагностика кінців');
+
+assertIncludes(diagnosticOutputHtml, 'MANUAL_REQUIRED');
+assertIncludes(runtimeDiagnosticBlockHtml, 'Діагностика кінців');
+assertIncludes(runtimeDiagnosticBlockHtml, 'Попередній перегляд');
+assertIncludes(runtimeDiagnosticBlockHtml, 'previewOnly');
+assertIncludes(runtimeDiagnosticBlockHtml, 'candidateOnly');
+assertIncludes(runtimeDiagnosticBlockHtml, 'notForMixing');
+assertIncludes(runtimeDiagnosticBlockHtml, 'Не для змішування');
+assertIncludes(runtimeDiagnosticBlockHtml, 'Потрібна ручна перевірка');
+assertIncludes(runtimeDiagnosticBlockHtml, 'Не є фінальним рецептом');
+assertIncludes(runtimeDiagnosticBlockHtml, 'Не наносити за цим блоком');
+diagnosticDisplayRenderContract.forbiddenDisplayFields.forEach((field) => {
+    assertNotIncludes(runtimeDiagnosticBlockHtml, field);
+});
+diagnosticDisplayRenderContract.forbiddenRecipeTexts.forEach((text) => {
+    assertNotIncludes(runtimeDiagnosticBlockHtml, text);
+});
 
 const fatalOutputHtml = runCalculateProtocolWithValues({}, { missingIds: ['history'] });
 
