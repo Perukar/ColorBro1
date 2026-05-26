@@ -202,6 +202,14 @@ For ПЕРУКАР specifically:
 - guard `significantDarkeningNeedsPrepig` не можна спрощувати до простої перевірки `(level - target) >= 3` без історії полотна;
 - тести `PREPIG-10-6`, `ENDS-10-6-PREPIG`, `PREPIG-8-4` і `ROOT-7-4-NATURAL-NO-PREPIG-FALSE-POSITIVE` мають залишатися захистом контракту.
 
+## Правило HENNA / METALS
+
+- history з хною / henna / металом / metal / metallic / salts / солями не має давати automatic APPROVED;
+- для lift, Special Blond, окисних процесів і тонування мінімум MANUAL_REQUIRED або BLOCKED;
+- approved-recipe не має рендеритись без ручного рішення;
+- ends/third-zone production path не вмикати без окремого контракту;
+- тести HENNA-METALS-ROOT-LIFT-NO-APPROVED, HENNA-METALS-SPECIAL-BLOND-NO-APPROVED, HENNA-METALS-TONING-MANUAL-MINIMUM мають залишатися захистом контракту.
+
 ## Правило виконання малих дозволених задач
 
 Якщо користувач дає конкретну задачу або промпт для малої контрольованої дії, агент має виконувати її одразу без повторного питання "Дозволяю виконати?", якщо виконуються всі умови:

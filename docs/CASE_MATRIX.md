@@ -107,6 +107,7 @@
 - Grey 30 permanent safety: знайдено. 30% soft grey + Permanent може бути `APPROVED` з warning; 30% glassy grey + Permanent має бути `MANUAL_REQUIRED`; automatic `.00` для 30% заборонено без окремого бізнес-рішення.
 - Prepigmentation safety contract: знайдено. Передпігментація при 3+ рівнях затемнення залежить від косметичної/освітленої/ненатуральної історії довжини або кінців; натуральний root не має сам активувати guard.
 - BLACK-EXIT / темна косметична база: знайдено. Темна косметична root/length база рівня 1-4 при переході у світлішу ціль не має давати automatic `APPROVED`; natural dark base має negative-test проти false-positive.
+- Правило HENNA / METALS: знайдено. history з хною / металом / солями не має давати automatic APPROVED; approved-recipe не має рендеритись без ручного рішення; ends/third-zone production path diagnostic-only.
 - Grey >=50 загальний coverage contract в AGENTS.md: окремим контрактом не знайдено; згадується тільки як логіка, яку не можна змішувати з контрактом 30%.
 - Mapping adapter contract в AGENTS.md: не знайдено.
 - Render/runtime state-shape contract в AGENTS.md: не знайдено як окремий business contract; third-zone diagnostic display частково покритий third-zone rule.
@@ -118,7 +119,7 @@ BLACK-EXIT coverage status:
 - Root/length dark cosmetic base: covered by guard/tests. `BLACK-EXIT-1`, `BLACK-EXIT-COSMETIC-DARK-BASE-NO-MARKER`, `BLACK-EXIT-DARK-COSMETIC-LENGTH` мають вимагати manual path, а `BLACK-EXIT-NATURAL-DARK-BASE-NO-FALSE-POSITIVE` захищає натуральну темну базу від false-positive.
 - Ends/third-zone production dark cosmetic base: still known gap / diagnostic-only. Production ends-level guard не вмикати без окремого контракту третьої зони.
 
-- Хна / металеві солі: частково покрито alert/ends-history scenarios (`ENDS-HISTORY-HENNA-METALS`, third-zone blockers), але немає повного business contract для всіх процесів, зон і станів волосся.
+- Хна / металеві солі: HENNA/METALS root/length general history covered by guard/tests. Ends/third-zone production path diagnostic-only / known gap.
 - Дуже пошкоджене / низька еластичність: є ends-condition scenarios і third-zone manual blockers, але не знайдено повної matrix для elasticity / damage across all process choices.
 - Несумісність брендів: окремого production guard і тестової matrix не знайдено.
 - Brand-specific palette constraints: є manual review для Special Blond, але немає brand palette engine або brand-specific rule matrix.
@@ -134,12 +135,11 @@ BLACK-EXIT coverage status:
 
 | Порядок | Блок | Чому це ризик | Мінімальний тест | Production guard потрібен | AGENTS.md contract потрібен |
 |---|---|---|---|---|---|
-| 1 | Хна / металеві солі | Ризик небезпечної реакції з окисниками або освітленням | Matrix: root/length/ends history contains henna/metals -> `BLOCKED` або strict manual path | Так | Так |
-| 2 | Пошкоджене волосся / еластичність / пористість | Ризик обламування, нерівномірного результату і неправильного process choice | High damage / low elasticity + lift / powder / high oxidizer -> `BLOCKED` або `MANUAL_REQUIRED` | Так | Так |
-| 3 | Brand-specific constraints | Special Blond, `.00`, oxidizers і palette rules можуть відрізнятися між брендами | Brand/system input + forbidden process/palette combinations | Так | Так |
-| 4 | Різнозонне полотно / довгі історії фарбування | Різні зони можуть мати різну косметичну історію, пористість і реакцію | Multi-zone history 3-5 years + different porosity -> no automatic approved unified recipe | Так | Так |
-| 5 | UI/browser smoke | Node tests не бачать реального layout, кликів, select values і visual regressions | Manual/browser smoke для current form values, diagnostic block, warning/manual blocks | Не завжди | Так, як QA contract |
-| 6 | Android/Capacitor build smoke | Android wrapper може мати окремі runtime/build проблеми навіть при green Node tests | Build/sync smoke для Capacitor webDir і Android asset path | Не завжди | Так, як release/readiness contract |
+| 1 | Пошкоджене волосся / еластичність / пористість / damage | Ризик обламування, нерівномірного результату і неправильного process choice | High damage / low elasticity + lift / powder / high oxidizer -> `BLOCKED` або `MANUAL_REQUIRED` | Так | Так |
+| 2 | Brand-specific constraints | Special Blond, `.00`, oxidizers і palette rules можуть відрізнятися між брендами | Brand/system input + forbidden process/palette combinations | Так | Так |
+| 3 | Різнозонне полотно / довгі історії фарбування | Різні зони можуть мати різну косметичну історію, пористість і реакцію | Multi-zone history 3-5 years + different porosity -> no automatic approved unified recipe | Так | Так |
+| 4 | UI/browser smoke | Node tests не бачать реального layout, кликів, select values і visual regressions | Manual/browser smoke для current form values, diagnostic block, warning/manual blocks | Не завжди | Так, як QA contract |
+| 5 | Android/Capacitor build smoke | Android wrapper може мати окремі runtime/build проблеми навіть при green Node tests | Build/sync smoke для Capacitor webDir і Android asset path | Не завжди | Так, як release/readiness contract |
 
 ## 7. Правила підтримки CASE_MATRIX.md
 
