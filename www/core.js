@@ -1589,6 +1589,20 @@ const pigmentMap = {
                     });
                 }
 
+                let specialBlondWithGreyNeedsConfirmation =
+                    grey > 0 && (
+                        (rootRec && String(rootRec.process).includes("Special Blond")) ||
+                        (lenRec && String(lenRec.process).includes("Special Blond"))
+                    );
+
+                if (specialBlondWithGreyNeedsConfirmation) {
+                    warnings.push("⚠️ SPECIAL BLOND НА СИВИНУ: Special Blond не гарантує щільного покриття сивини. Потрібне рішення майстра.");
+                    manualDecisions.push({
+                        title: "Special Blond на сивину",
+                        message: "Підтвердити використання Special Blond при наявності сивини (можливе прозоре або недостатнє покриття)."
+                    });
+                }
+
                 let significantDarkeningNeedsPrepig =
                     (rLevel >= 9 && (rLevel - tLevel) >= 3) ||
                     (lLevel >= 9 && (lLevel - tLevel) >= 3);

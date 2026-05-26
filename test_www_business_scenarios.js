@@ -182,6 +182,37 @@ const greyGlassyHasMordonsage = greyGlassyHtml.includes('Скловидна си
 assert.ok(greyGlassyHasMordonsage, 'GREY-GLASSY-MORDONSAGE should suggest mordonsage');
 console.log('GREY-GLASSY-MORDONSAGE safe behavior observed.');
 
+// === GREY-30-SPECIAL-BLOND-MANUAL-REQUIRED ===
+const grey30SbScenarioValues = {
+    history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
+    grey_percent: '30', grey_type: 'мягкая',
+    root_level: '7', root_length: '1', length_level: '7', ends_level: '7', ends_condition: 'здорові',
+    base_type: 'Натуральна', target_level: '9', target_direction: '3', ends_history: 'натуральні', ends_base_type: 'натуральна'
+};
+const grey30SbOutput = { innerHTML: '' };
+document.getElementById = (id) => id === 'output' ? grey30SbOutput : { value: grey30SbScenarioValues[id] };
+calculateProtocol();
+const grey30SbHtml = grey30SbOutput.innerHTML;
+assert.strictEqual(grey30SbHtml.includes('APPROVED'), false, 'GREY-30-SPECIAL-BLOND-MANUAL-REQUIRED should NOT be APPROVED');
+assert.ok(grey30SbHtml.includes('MANUAL_REQUIRED') || grey30SbHtml.includes('Ручне рішення'), 'GREY-30-SPECIAL-BLOND-MANUAL-REQUIRED should require manual decision');
+console.log('GREY-30-SPECIAL-BLOND-MANUAL-REQUIRED safe behavior observed.');
+
+// === GREY-30-GLASSY-SPECIAL-BLOND-MANUAL-REQUIRED ===
+const grey30GlassySbScenarioValues = {
+    history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
+    grey_percent: '30', grey_type: 'стекловидная',
+    root_level: '7', root_length: '1', length_level: '7', ends_level: '7', ends_condition: 'здорові',
+    base_type: 'Натуральна', target_level: '9', target_direction: '3', ends_history: 'натуральні', ends_base_type: 'натуральна'
+};
+const grey30GlassySbOutput = { innerHTML: '' };
+document.getElementById = (id) => id === 'output' ? grey30GlassySbOutput : { value: grey30GlassySbScenarioValues[id] };
+calculateProtocol();
+const grey30GlassySbHtml = grey30GlassySbOutput.innerHTML;
+assert.ok(grey30GlassySbHtml.includes('мордонсаж'), 'GREY-30-GLASSY-SPECIAL-BLOND-MANUAL-REQUIRED should suggest mordonsage');
+assert.strictEqual(grey30GlassySbHtml.includes('APPROVED'), false, 'GREY-30-GLASSY-SPECIAL-BLOND-MANUAL-REQUIRED should NOT be APPROVED');
+assert.ok(grey30GlassySbHtml.includes('MANUAL_REQUIRED') || grey30GlassySbHtml.includes('Ручне рішення'), 'GREY-30-GLASSY-SPECIAL-BLOND-MANUAL-REQUIRED should require manual decision');
+console.log('GREY-30-GLASSY-SPECIAL-BLOND-MANUAL-REQUIRED safe behavior observed.');
+
 const prepigHasApproved = prepigHtml.includes('APPROVED')
     || prepigHtml.includes('ПРОТОКОЛ ЗАТВЕРДЖЕНО');
 const prepigHasRecipe = prepigHtml.includes('КОРІНЬ')
