@@ -1397,6 +1397,8 @@ const pigmentMap = {
                 const historyText = String(history || '').toLowerCase();
                 const blackExitEndsHistoryText = String(endsHistory || '').toLowerCase();
                 const baseTypeText = String(bType || '').toLowerCase();
+                const hennaMetalsHistoryMarkers = ['хна', 'henna', 'металл', 'метал', 'metal', 'metallic', 'salts', 'солі', 'соли'];
+                const hasHennaMetalsHistory = hennaMetalsHistoryMarkers.some(marker => historyText.includes(marker));
                 const blackOrDarkHistory = historyText.includes('чорн')
                     || historyText.includes('черн')
                     || historyText.includes('black')
@@ -1428,6 +1430,14 @@ const pigmentMap = {
                     manualDecisions.push({
                         title: "Вихід з чорного / темної косметичної бази або довжини",
                         message: "Уточнити кількість косметичних нашарувань, кислотні або лужні змивки, поточний фон освітлення, стан полотна та результат тест-пасма перед виконанням рецепта."
+                    });
+                }
+
+                if (hasHennaMetalsHistory) {
+                    warnings.push("⚠️ ХНА / МЕТАЛЕВІ СОЛІ: можливі непередбачувані реакції з окисниками або освітленням. Потрібна діагностика історії полотна та тест-пасмо перед будь-яким хімічним процесом.");
+                    manualDecisions.push({
+                        title: "Хна / металеві солі",
+                        message: "Не вважати рецепт автоматично затвердженим. Потрібне ручне рішення майстра після уточнення складу попереднього фарбування, металевих солей і результату тест-пасма."
                     });
                 }
 

@@ -417,6 +417,54 @@ function analyzeBlackExitNegativeScenario(name, values) {
     };
 }
 
+function analyzeHennaMetalsSafetyContractScenario(name, values) {
+    const scenario = runDiagnosticScenario(name, values);
+    assert.ok(scenario.requestedIds.includes('output'), name + ' should access output');
+
+    const html = scenario.html;
+    const htmlText = html.toLowerCase();
+    const hasApproved = html.includes('APPROVED')
+        || html.includes('ПРОТОКОЛ ЗАТВЕРДЖЕНО');
+    const hasApprovedRecipe = html.includes('approved-recipe');
+    const hasManualOrBlockSignal = html.includes('MANUAL_REQUIRED')
+        || html.includes('BLOCKED')
+        || html.includes('Потрібне ручне рішення')
+        || html.includes('Блокування')
+        || htmlText.includes('ручн')
+        || htmlText.includes('заборонено');
+    const hasHennaMetalsText = (
+        htmlText.includes('хна')
+        || htmlText.includes('henna')
+        || htmlText.includes('метал')
+        || htmlText.includes('metal')
+        || htmlText.includes('salts')
+        || htmlText.includes('солі')
+        || htmlText.includes('соли')
+    ) && (
+        htmlText.includes('непередбачуван')
+        || htmlText.includes('реакц')
+        || htmlText.includes('тест-пасм')
+        || htmlText.includes('діагност')
+        || htmlText.includes('diagnostic')
+        || htmlText.includes('test strand')
+    );
+
+    assert.ok(!scenario.error, name + ' should not throw');
+    assert.ok(!hasApproved, name + ' should not be automatic APPROVED');
+    assert.ok(!hasApprovedRecipe, name + ' should not render approved recipe blocks');
+    assert.ok(hasManualOrBlockSignal, name + ' should require manual/block signal');
+    assert.ok(hasHennaMetalsText, name + ' should explain henna/metals diagnostic risk');
+
+    return {
+        status: 'SAFE',
+        hasApproved,
+        hasApprovedRecipe,
+        hasManualOrBlockSignal,
+        hasHennaMetalsText,
+        hasError: Boolean(scenario.error)
+    };
+}
+
 const blackExitScenario = analyzeBlackExitContractScenario('BLACK-EXIT-1', {
     history: 'чорний косметичний пігмент',
     condition: 'середньо пористе',
@@ -496,6 +544,75 @@ const blackExitNaturalDarkBaseNoFalsePositiveScenario = analyzeBlackExitNegative
     target_level: '7',
     target_direction: '1'
 });
+
+const hennaMetalsRootLiftScenario = analyzeHennaMetalsSafetyContractScenario('HENNA-METALS-ROOT-LIFT-NO-APPROVED', {
+    history: 'хна / металл',
+    condition: 'здоровые',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '6',
+    root_length: '1',
+    length_level: '6',
+    ends_level: '6',
+    ends_condition: 'здорові',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна',
+    base_type: 'Натуральна',
+    target_level: '8',
+    target_direction: '1'
+});
+
+const hennaMetalsSpecialBlondScenario = analyzeHennaMetalsSafetyContractScenario('HENNA-METALS-SPECIAL-BLOND-NO-APPROVED', {
+    history: 'хна / металл',
+    condition: 'здоровые',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'здорові',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна',
+    base_type: 'Натуральна',
+    target_level: '10',
+    target_direction: '1'
+});
+
+const hennaMetalsToningScenario = analyzeHennaMetalsSafetyContractScenario('HENNA-METALS-TONING-MANUAL-MINIMUM', {
+    history: 'хна / металл',
+    condition: 'здоровые',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '8',
+    root_length: '1',
+    length_level: '8',
+    ends_level: '8',
+    ends_condition: 'здорові',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна',
+    base_type: 'Натуральна',
+    target_level: '8',
+    target_direction: '1'
+});
+
+console.log('HENNA/METALS safety contract observed.');
+
+globalThis.__hennaMetalsResult = {
+    status: 'SAFE',
+    rootLift: hennaMetalsRootLiftScenario,
+    specialBlond: hennaMetalsSpecialBlondScenario,
+    toning: hennaMetalsToningScenario
+};
 
 console.log('BLACK-EXIT safety contract observed.');
 
@@ -1409,6 +1526,19 @@ assert.strictEqual(sandbox.__blackExitResult.darkCosmeticLength.hasApproved, fal
 assert.strictEqual(sandbox.__blackExitResult.darkCosmeticLength.hasApprovedRecipe, false);
 assert.strictEqual(sandbox.__blackExitResult.naturalDarkBaseNoFalsePositive.status, 'SAFE');
 assert.strictEqual(sandbox.__blackExitResult.naturalDarkBaseNoFalsePositive.presentForbiddenSignals.length, 0);
+assert.strictEqual(sandbox.__hennaMetalsResult.status, 'SAFE');
+assert.strictEqual(sandbox.__hennaMetalsResult.rootLift.hasApproved, false);
+assert.strictEqual(sandbox.__hennaMetalsResult.rootLift.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__hennaMetalsResult.rootLift.hasManualOrBlockSignal, true);
+assert.strictEqual(sandbox.__hennaMetalsResult.rootLift.hasHennaMetalsText, true);
+assert.strictEqual(sandbox.__hennaMetalsResult.specialBlond.hasApproved, false);
+assert.strictEqual(sandbox.__hennaMetalsResult.specialBlond.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__hennaMetalsResult.specialBlond.hasManualOrBlockSignal, true);
+assert.strictEqual(sandbox.__hennaMetalsResult.specialBlond.hasHennaMetalsText, true);
+assert.strictEqual(sandbox.__hennaMetalsResult.toning.hasApproved, false);
+assert.strictEqual(sandbox.__hennaMetalsResult.toning.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__hennaMetalsResult.toning.hasManualOrBlockSignal, true);
+assert.strictEqual(sandbox.__hennaMetalsResult.toning.hasHennaMetalsText, true);
 assert.strictEqual(sandbox.__zonesResult.status, 'SAFE');
 assert.strictEqual(sandbox.__endsResults.lighter.status, 'SAFE');
 assert.strictEqual(sandbox.__endsResults.darker.status, 'SAFE');
