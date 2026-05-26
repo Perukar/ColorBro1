@@ -323,3 +323,119 @@ Future rules:
 * не можна через labels активувати third-zone recipe;
 * не можна показувати reason label як інструкцію до нанесення;
 * не можна прибирати warning labels при додаванні нових labels.
+
+---
+
+## 13. Diagnostic Display Case Matrix Coverage
+
+Статус після commit `4f826ef` — Add diagnostic display case matrix tests.
+
+### 13.1 Призначення матриці
+
+Мета matrix tests — не розширення функціональності, а **системна верифікація сценаріїв видимості та прихованості** diagnostic display block. Матриця захищає від:
+* випадкової появи diagnostic block як production third-zone recipe;
+* регресії "тести зелені, UI-block недосяжний";
+* несподіваної зміни visibility rules при додаванні нових UI-значень або reason codes.
+
+### 13.2 Реалізований набір тестів (commit 4f826ef)
+
+Тести знаходяться у файлі `test_www_render_runtime.js`.
+
+#### 13.2.1 Positive cases (diagnostic block повинен з'являтися)
+
+| Сценарій | UI значення | Очікуваний результат |
+|---|---|---|
+| UI-compatible value | `ends_history = "натуральні"` | diagnostic block rendered / reachable |
+| Legacy/test value | `ends_history = "натуральна"` | diagnostic block rendered / compatible |
+
+Для кожного positive case підтверджено:
+* warning labels присутні (`Діагностика кінців`, `Не для змішування`, `Потрібна ручна перевірка`, `Не є фінальним рецептом`, `Не наносити за цим блоком`);
+* reason labels rendered (safetyReasonCodes, manualRequiredReasonCodes);
+* `grams` відсутні;
+* `dyeMass` / `oxidizerMass` відсутні;
+* `finalFormula` / `productionRecipe` / `formula-to-mix` відсутні;
+* mixing instruction відсутня;
+* existing root/length output стабільний.
+
+#### 13.2.2 Negative cases (diagnostic block повинен бути прихований)
+
+| Сценарій | Умова | Очікуваний результат |
+|---|---|---|
+| Candidate absent | `endsRecDiagnosticWiringCandidate = null` | block hidden, render не падає |
+| Candidate null | значення явно `null` | block hidden, render не падає |
+| Unknown/empty ends history | нерозпізнане значення або порожній рядок | block hidden або safe no-production state |
+| No ends-specific data | `ends_history` відсутній або не у formData | block hidden |
+
+Для кожного negative case підтверджено:
+* render не падає;
+* жодного production impression (не з'являється recipe card для кінців);
+* existing root output стабільний;
+* existing length output стабільний.
+
+### 13.3 Safety assertions (захищено тестами для кожного case)
+
+Наступні інваріанти перевіряються у кожному relevant matrix case:
+
+| Інваріант | Тест assertion |
+|---|---|
+| `massModel.mode !== "3-zone"` | no 3-zone activation |
+| `massModel.endsMass` не є числом | no endsMass number |
+| production `endsRec` відсутній | no production endsRec |
+| `dyeMass` / `oxidizerMass` відсутні у runtime | no dyeMass/oxidizerMass |
+| exact grams відсутні | no grams |
+| `finalFormula` / `endsFormula` відсутні | no finalFormula |
+| `productionRecipe` відсутній | no productionRecipe |
+| `formula-to-mix` відсутня | no formula-to-mix |
+| mixing instruction відсутня | no mixing instruction |
+| `endsRecipeReady !== true` | no endsRecipeReady true |
+| preview mass promotion відсутнє | no preview mass promotion |
+
+### 13.4 Стабільність існуючого 2-zone виводу
+
+Matrix tests підтверджують:
+* root output стабільний при наявності та відсутності candidate;
+* length output стабільний при наявності та відсутності candidate;
+* існуючі render runtime tests проходять з `STATUS: PASS`.
+
+### 13.5 Семантика diagnostic display (закріплена matrix)
+
+Matrix tests закріплюють practical meaning:
+* diagnostic display є **warning/info block** — не recipe card;
+* diagnostic display є **preview тільки для майстра** — не для змішування;
+* diagnostic display є **diagnostic third-zone container** — не production third-zone;
+* diagnostic display **не дає інструкцій** для змішування або нанесення.
+
+### 13.6 Правила для майбутніх агентів (Future Rules)
+
+1. **Нове UI/select значення, що впливає на diagnostic path** → обов'язково додати у matrix tests (і positive, і negative case).
+2. **Новий reason code** → або label у `DIAGNOSTIC_DISPLAY_CONTRACT_PLAN`, або явно перевірений fallback у matrix tests.
+3. **Нове правило появи/приховування** → mandatory positive test + mandatory negative test.
+4. **Розширення diagnostic display** → спочатку перевірити всі hidden cases, лише потім розширювати.
+5. **Production activation** → окрема фаза, окремий contract, окремий набір safety tests. Не вбудовувати у diagnostic display path.
+6. **Перейменування UI values або option values** → реалізувати або оновлений normalization alias, або новий matrix case; заборонено "виправляти" перейменуванням тестів без перевірки real UI form.
+
+### 13.7 Non-Goals (матриця не виконує)
+
+* matrix tests **не активують** production recipe;
+* matrix tests **не дозволяють** grams;
+* matrix tests **не рахують** третю зону;
+* matrix tests **не змінюють** calculation logic;
+* matrix tests **не є** production readiness signal;
+* matrix tests **не змінюють** `massModel`;
+* matrix tests **не змінюють** render/UI logic;
+* matrix tests **не змінюють** AGENTS.md або package files.
+
+### 13.8 Результати тестів після commit 4f826ef
+
+```
+render runtime : PASS
+mass model     : PASS
+business scenarios : PASS
+mapping        : PASS
+git diff --check   : PASS
+```
+
+Staged files: тільки `test_www_render_runtime.js`.
+Runtime diff: порожній.
+UI diff: порожній.
+AGENTS.md diff: порожній.
