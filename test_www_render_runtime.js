@@ -499,7 +499,8 @@ const defaultDomValues = {
     ends_base_type: 'натуральна',
     base_type: 'Натуральна',
     target_level: '9',
-    target_direction: '1'
+    target_direction: '1',
+    elasticity: 'нормальна еластичність'
 };
 
 function runCalculateProtocolWithValues(overrides = {}, options = {}) {

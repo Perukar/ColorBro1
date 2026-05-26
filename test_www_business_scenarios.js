@@ -9,7 +9,13 @@ if (typeof calculateProtocol !== 'function') {
     throw new Error('calculateProtocol presence check failed');
 }
 
-const scenarioValues = {
+const neutralElasticityValue = 'нормальна еластичність';
+
+function withDefaultScenarioValues(values) {
+    return Object.assign({ elasticity: neutralElasticityValue }, values);
+}
+
+const scenarioValues = withDefaultScenarioValues({
     history: 'натуральні',
     condition: 'здоровые',
     thickness: 'средние',
@@ -27,7 +33,7 @@ const scenarioValues = {
     target_direction: '3',
     ends_history: 'натуральні',
     ends_base_type: 'натуральна'
-};
+});
 
 const output = { innerHTML: '' };
 const requestedIds = [];
@@ -93,7 +99,7 @@ globalThis.__testResult = {
     hasBaseSixWarning
 };
 
-const prepigScenarioValues = {
+const prepigScenarioValues = withDefaultScenarioValues({
     history: 'натуральні',
     condition: 'здоровые',
     thickness: 'средние',
@@ -111,7 +117,7 @@ const prepigScenarioValues = {
     target_direction: '1',
     ends_history: 'натуральні',
     ends_base_type: 'натуральна'
-};
+});
 
 const prepigOutput = { innerHTML: '' };
 const prepigRequestedIds = [];
@@ -321,6 +327,7 @@ globalThis.__prepigResult = {
 };
 
 function runDiagnosticScenario(name, values) {
+    const scenarioValues = withDefaultScenarioValues(values);
     const scenarioOutput = { innerHTML: '' };
     const scenarioRequestedIds = [];
 
@@ -328,10 +335,10 @@ function runDiagnosticScenario(name, values) {
         getElementById(id) {
             scenarioRequestedIds.push(id);
             if (id === 'output') return scenarioOutput;
-            if (!Object.prototype.hasOwnProperty.call(values, id)) {
+            if (!Object.prototype.hasOwnProperty.call(scenarioValues, id)) {
                 throw new Error('Missing ' + name + ' fake DOM value for ' + id);
             }
-            return { value: values[id] };
+            return { value: scenarioValues[id] };
         }
     };
 
@@ -1748,7 +1755,7 @@ assert.strictEqual(sandbox.__elasticityResults.lowToning.hasApproved, false);
 assert.strictEqual(sandbox.__elasticityResults.lowToning.hasApprovedRecipe, false);
 assert.strictEqual(sandbox.__elasticityResults.lowToning.hasManualSignal, true);
 assert.strictEqual(sandbox.__elasticityResults.lowToning.hasElasticityText, true);
-assert.deepStrictEqual(sandbox.__elasticityNormalFalsePositiveResult.presentFalsePositives, []);
+assert.deepStrictEqual(Array.from(sandbox.__elasticityNormalFalsePositiveResult.presentFalsePositives), []);
 assert.strictEqual(sandbox.__elasticityNormalFalsePositiveResult.status, 'SAFE');
 
 console.log('WWW business scenario test passed');
