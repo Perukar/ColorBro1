@@ -275,6 +275,22 @@ For ПЕРУКАР specifically:
 - не можна додавати brand database, palette engine або hardcoded brand rules для Wella / Matrix / Londa / Loreal / Igora чи інших брендів без окремої задачі;
 - тести `BRAND-MISSING-SPECIAL-BLOND-NO-APPROVED`, `BRAND-MISSING-GREY-00-NO-APPROVED`, `BRAND-MISSING-HIGH-OXIDIZER-NO-APPROVED`, `BRAND-MISSING-POWDER-NO-APPROVED`, `BRAND-MISSING-TONING-LINE-NO-APPROVED`, `BRAND-NORMAL-SAME-LEVEL-NO-FALSE-POSITIVE`, `BRAND-GENERIC-PERMANENT-6-NO-BRAND-GATE-IF-NOT-SENSITIVE` мають залишатися захистом контракту.
 
+## Правило MULTI-ZONE / ENDS CONFLICT
+
+- multi-zone / ends conflict не має давати automatic `APPROVED` для unified root/length recipe;
+- мінімальна поведінка для multi-zone / ends conflict: `MANUAL_REQUIRED`;
+- approved-recipe заборонений для multi-zone / ends conflict;
+- BLOCKED не вводиться цим multi-zone / ends conflict guard;
+- production endsRec не створюється;
+- production grams/formula для кінців не створюються;
+- `massModel` 3-zone не активується;
+- third-zone diagnostic candidate лишається виключно diagnostic-only;
+- same-level освітлені / змішані / косметичні / ризикові кінці не можуть проходити як unified approved root/length recipe;
+- healthy / natural / normal same-level ends не мають ловити multi-zone false-positive;
+- risky/conflicting ends markers включають damaged / brittle / porous / пошкод / повреж / ламк / порист / критич / сух / пересуш / розшар / січ / облам, освітлен / осветл / lightened / bleached / bleach / decolor, космет / фарб / окраш / colored / dyed, хна / henna / метал / salts, dark cosmetic / темна космет / black / чорн, накопич / unknown / невідом, змішан / смешан / mixed / uneven / нерівном / пятн / плям;
+- не можна активувати full 3-zone production, production endsRec, ends grams/formula або `massModel` 3-zone без окремої задачі, окремого AGENTS contract update і окремих тестів;
+- тести `MULTI-ZONE-ENDS-BRITTLE-LIFT-NO-APPROVED`, `MULTI-ZONE-ENDS-DAMAGED-LENGTH-LIFT-NO-APPROVED`, `MULTI-ZONE-ENDS-LIGHTENED-SAME-LEVEL-NO-UNIFIED-APPROVED`, `MULTI-ZONE-ENDS-MIXED-BASE-SAME-LEVEL-NO-APPROVED`, `MULTI-ZONE-ENDS-HENNA-METALS-NO-APPROVED`, `MULTI-ZONE-ENDS-DARK-COSMETIC-CONFLICT-NO-APPROVED`, `MULTI-ZONE-LENGTH-HEALTHY-ENDS-DAMAGED-NO-PRODUCTION-ENDSREC`, `MULTI-ZONE-NORMAL-ENDS-NO-FALSE-POSITIVE`, `MULTI-ZONE-DIAGNOSTIC-NOT-PRODUCTION-SOURCE` мають залишатися захистом контракту.
+
 ## Правило виконання малих дозволених задач
 
 Якщо користувач дає конкретну задачу або промпт для малої контрольованої дії, агент має виконувати її одразу без повторного питання "Дозволяю виконати?", якщо виконуються всі умови:

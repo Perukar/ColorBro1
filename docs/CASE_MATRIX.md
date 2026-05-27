@@ -105,6 +105,17 @@
 | Brand-specific constraints | Ordinary Permanent 6% без brand-sensitive factors | Не має ловити brand gate тільки через відсутність brand rule matrix | False-positive guard: brand gate вмикається тільки через brand-sensitive factors | `BRAND-GENERIC-PERMANENT-6-NO-BRAND-GATE-IF-NOT-SENSITIVE` | `AGENTS.md` | Covered | Не підтверджує brand-specific правила Permanent; тільки не дає total manual |
 | Brand-specific constraints | Normal same-level без brand-sensitive factors | Не має ловити brand warning/manual text | False-positive guard для same-level neutral scenario | `BRAND-NORMAL-SAME-LEVEL-NO-FALSE-POSITIVE` | `AGENTS.md` | Covered | Не замінює майбутній brand/system input або palette matrix |
 
+### 3.10 Multi-zone / ends conflict
+
+| Блок | Сценарій | Очікувана поведінка | Production guard / логіка | Тест | Документація | Статус | Ризик / gap |
+|---|---|---|---|---|---|---|---|
+| Multi-zone / ends conflict | `ends_level !== length_level` | Unified root/length recipe не має давати automatic `APPROVED`; потрібен manual gate | `endsLevelDiffers` -> warning + `manualDecisions`; production лишається 2-zone | Existing ends-level tests plus `MULTI-ZONE-*` coverage | `AGENTS.md` | Covered by manual gate + tests | Full production third-zone не covered |
+| Multi-zone / ends conflict | Risky `ends_condition` | Damaged / brittle / porous / пошкод / ламк / сух / січені кінці не мають проходити як approved root/length recipe | Risky ends condition markers -> `MANUAL_REQUIRED`; no production endsRec | `MULTI-ZONE-ENDS-BRITTLE-LIFT-NO-APPROVED`, `MULTI-ZONE-ENDS-DAMAGED-LENGTH-LIFT-NO-APPROVED`, `MULTI-ZONE-LENGTH-HEALTHY-ENDS-DAMAGED-NO-PRODUCTION-ENDSREC` | `AGENTS.md` | Covered by manual gate + tests | Separate `ends_elasticity` / full damage matrix still gap |
+| Multi-zone / ends conflict | Risky / non-natural `ends_history` | Освітлені, косметичні, хна/метали, темні, unknown кінці не мають проходити як unified approved recipe | Risky history markers -> warning + `manualDecisions`; no `BLOCKED` from this guard | `MULTI-ZONE-ENDS-LIGHTENED-SAME-LEVEL-NO-UNIFIED-APPROVED`, `MULTI-ZONE-ENDS-HENNA-METALS-NO-APPROVED`, `MULTI-ZONE-ENDS-DARK-COSMETIC-CONFLICT-NO-APPROVED` | `AGENTS.md` | Covered by manual gate + tests | Full 3-5 year timeline/history-depth model still gap |
+| Multi-zone / ends conflict | Risky / conflicting `ends_base_type` | Освітлена, косметична, змішана, нерівномірна або темна база кінців не має давати automatic approved root/length recipe | Risky base markers -> `MANUAL_REQUIRED`; no production formula/grams for ends | `MULTI-ZONE-ENDS-MIXED-BASE-SAME-LEVEL-NO-APPROVED`, `MULTI-ZONE-ENDS-LIGHTENED-SAME-LEVEL-NO-UNIFIED-APPROVED` | `AGENTS.md` | Covered by manual gate + tests | Full production endsRec remains gap |
+| Multi-zone / ends conflict | Normal same-level ends false-positive | Healthy/natural/normal same-level ends не мають ловити multi-zone warning/manual text | False-positive test for neutral same-level values | `MULTI-ZONE-NORMAL-ENDS-NO-FALSE-POSITIVE` | `AGENTS.md` | Covered | Не означає, що full 3-zone model ready |
+| Multi-zone / ends conflict | Diagnostic-not-production invariant | Conflict guard не має створювати production `<h3>Кінці</h3>`, `endsRecipeReady: true`, grams/formula або 3-zone massModel | No production endsRec / no production ends grams / no `massModel` 3-zone activation | `MULTI-ZONE-DIAGNOSTIC-NOT-PRODUCTION-SOURCE`; render/mass third-zone contracts | `AGENTS.md` | Covered by manual gate + tests | Production third-zone activation must remain separate future task |
+
 ## 4. Контракти, зафіксовані в AGENTS.md
 
 Знайдені documented contracts:
@@ -118,6 +129,7 @@
 - Правило HENNA / METALS: знайдено. history з хною / металом / солями не має давати automatic APPROVED; approved-recipe не має рендеритись без ручного рішення; ends/third-zone production path diagnostic-only.
 - Правило DAMAGE / POROSITY / ELASTICITY: знайдено. high damage/porosity не має давати automatic APPROVED; root damaged + root lift/powder/Special Blond covered by UI field + guard + tests; length damaged / brittle + length lift/powder/Special Blond covered by guard + tests; Special Blond + high porosity covered by UI field + guard + tests; damaged/risky hair + high oxidizer covered by guard + tests; brittle блокує освітлення; warning-only не достатній для high-risk lift.
 - Правило BRAND-SPECIFIC CONSTRAINTS: знайдено. ПЕРУКАР не має full brand rule matrix; brand-sensitive recipes без brand rule matrix covered by manual gate + tests; `hasBrandRuleMatrix = false` не є brand engine; UI-поля brand/system немає.
+- Правило MULTI-ZONE / ENDS CONFLICT: знайдено. Ризикові або конфліктні ends fields covered by manual gate + tests; automatic approved unified root/length recipe заборонений; production endsRec, ends grams/formula і `massModel` 3-zone не активуються.
 - Grey >=50 загальний coverage contract в AGENTS.md: окремим контрактом не знайдено; згадується тільки як логіка, яку не можна змішувати з контрактом 30%.
 - Mapping adapter contract в AGENTS.md: не знайдено.
 - Render/runtime state-shape contract в AGENTS.md: не знайдено як окремий business contract; third-zone diagnostic display частково покритий third-zone rule.
@@ -127,17 +139,19 @@
 BLACK-EXIT coverage status:
 
 - Root/length dark cosmetic base: covered by guard/tests. `BLACK-EXIT-1`, `BLACK-EXIT-COSMETIC-DARK-BASE-NO-MARKER`, `BLACK-EXIT-DARK-COSMETIC-LENGTH` мають вимагати manual path, а `BLACK-EXIT-NATURAL-DARK-BASE-NO-FALSE-POSITIVE` захищає натуральну темну базу від false-positive.
-- Ends/third-zone production dark cosmetic base: still known gap / diagnostic-only. Production ends-level guard не вмикати без окремого контракту третьої зони.
+- Ends/third-zone dark cosmetic conflict: covered by manual gate + tests for no automatic unified root/length approved recipe. Full production third-zone / production endsRec remains gap.
 
 - Хна / металеві солі: HENNA/METALS root/length general history covered by guard/tests. Ends/third-zone production path diagnostic-only / known gap.
-- Пошкоджене волосся / еластичність / пористість: DAMAGE / POROSITY / ELASTICITY is partially covered by existing guards/tests. Root damaged + root lift/powder/Special Blond covered by UI field + guard + tests. Length damaged / brittle + length lift/powder/Special Blond covered by guard + tests. Low elasticity covered by UI field + guard + tests. Special Blond + high porosity covered by UI field + guard + tests. High oxidizer + damaged/risky hair covered by guard + tests. Gap: немає повної матриці по root/length/ends, powder для інших damage-сценаріїв, toning/darkening повних окремих алгоритмів, multi-zone damage conflict.
+- Multi-zone damage conflict / різнозонне полотно: covered by manual gate + tests for `ends_level`, `ends_condition`, `ends_history`, `ends_base_type`, same-level lightened/mixed ends, false-positive normal ends, and diagnostic-not-production invariant. Це не full 3-zone production.
+- Пошкоджене волосся / еластичність / пористість: DAMAGE / POROSITY / ELASTICITY is partially covered by existing guards/tests. Root damaged + root lift/powder/Special Blond covered by UI field + guard + tests. Length damaged / brittle + length lift/powder/Special Blond covered by guard + tests. Low elasticity covered by UI field + guard + tests. Special Blond + high porosity covered by UI field + guard + tests. High oxidizer + damaged/risky hair covered by guard + tests. Gap: немає повної матриці по root/length/ends, powder для інших damage-сценаріїв, toning/darkening повних окремих алгоритмів.
 - Brand-specific constraints: covered by manual gate + tests для Special Blond, `.00` / `/00`, high oxidizer `>= 9%`, powder і toning без brand rule matrix. Це не full brand engine.
 - Real brand engine / palette rule matrix: все ще gap. Немає brand database, palette mapping, oxidizer compatibility matrix, brand-specific mixing ratio matrix або правил Wella / Matrix / Londa / Loreal / Igora чи інших брендів.
 - Ручний browser/UI smoke: у `docs/` є попередні browser QA документи, але в цій задачі browser не використовувався і актуальний ручний UI smoke не запускався.
 - Android/Capacitor build: поточна задача не запускала Android/Capacitor build smoke; окремого green build evidence у цій matrix немає.
 - Довге волосся з історією 3-5 років: окремого сценарію не знайдено.
-- Різні зони полотна з різною пористістю: частково є ends condition/history checks, але немає повної multi-zone porosity matrix.
-- Точні gram/mass edge cases: 2-zone sums і майбутня rounding math покриті, але exact grams для production ends заборонені до окремого contract; powder surcharge per zone лишається known limitation.
+- Різні зони полотна з різною пористістю: частково є ends condition/history checks, але немає separate `ends_porosity` / `ends_elasticity` і немає повної multi-zone porosity/elasticity matrix.
+- Full production third-zone / endsRec: still future gap. Production `<h3>Кінці</h3>`, `endsRecipeReady: true`, ends grams/formula і production endsRec заборонені до окремого contract.
+- Ends grams / ends mass / full 3-zone mass model: 2-zone sums і майбутня rounding math покриті, але exact grams для production ends і `massModel.mode = "3-zone"` заборонені до окремого contract; powder surcharge per zone лишається known limitation.
 - Випадки, де warning є, але немає `MANUAL_REQUIRED`: `GREY-30-PERMANENT-SOFT-WARNING` є intentional approved-with-warning; `GREY-GLASSY-MORDONSAGE` перевіряє warning, але не сам по собі повний manual contract для всіх glassy cases.
 - Випадки, де є тест, але немає AGENTS.md contract: missing critical data, mapping adapter, render XSS/state-shape, ends history/base type scenarios, частина production endsRec helper contracts.
 
@@ -145,11 +159,12 @@ BLACK-EXIT coverage status:
 
 | Порядок | Блок | Чому це ризик | Мінімальний тест | Production guard потрібен | AGENTS.md contract потрібен |
 |---|---|---|---|---|---|
-| 1 | multi-zone damage conflict / різнозонне полотно | Різні зони можуть мати різну косметичну історію, пористість і реакцію | Multi-zone history 3-5 years + different porosity -> no automatic approved unified recipe | Так | Так |
-| 2 | UI/browser smoke | Node tests не бачать реального layout, кликів, select values і visual regressions | Manual/browser smoke для current form values, diagnostic block, warning/manual blocks | Не завжди | Так, як QA contract |
-| 3 | Android/Capacitor build smoke | Android wrapper може мати окремі runtime/build проблеми навіть при green Node tests | Build/sync smoke для Capacitor webDir і Android asset path | Не завжди | Так, як release/readiness contract |
-| 4 | real brand engine / palette rule matrix | Manual gate не знає реальних правил брендів, лінійок, пропорцій і сумісності окисників | Brand/system input + palette/line/ration compatibility matrix | Так | Так |
-| 5 | toning/darkening full algorithms | Toning/darkening зараз не мають повної окремої алгоритмічної матриці | Dedicated toning/darkening scenarios with product line and hair history | Так | Так |
+| 1 | UI/browser smoke | Node tests не бачать реального layout, кликів, select values і visual regressions | Manual/browser smoke для current form values, diagnostic block, warning/manual blocks | Не завжди | Так, як QA contract |
+| 2 | Android/Capacitor build smoke | Android wrapper може мати окремі runtime/build проблеми навіть при green Node tests | Build/sync smoke для Capacitor webDir і Android asset path | Не завжди | Так, як release/readiness contract |
+| 3 | real brand engine / palette rule matrix | Manual gate не знає реальних правил брендів, лінійок, пропорцій і сумісності окисників | Brand/system input + palette/line/ratio compatibility matrix | Так | Так |
+| 4 | toning/darkening full algorithms | Toning/darkening зараз не мають повної окремої алгоритмічної матриці | Dedicated toning/darkening scenarios with product line and hair history | Так | Так |
+| 5 | full production third-zone / endsRec model | Manual gate не створює production recipe для кінців | Окремий contract для production `<h3>Кінці</h3>`, `endsRecipeReady`, formula, grams, massModel | Так | Так |
+| 6 | separate ends_porosity / ends_elasticity | Поточний guard має ends condition/history/base, але не окрему пористість/еластичність кінців | UI/mapping/runtime tests для нових ends fields без false-positive | Так | Так |
 
 ## 7. Правила підтримки CASE_MATRIX.md
 
