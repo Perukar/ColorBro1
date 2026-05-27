@@ -221,7 +221,13 @@ For ПЕРУКАР specifically:
 - BLOCKED не вводиться цим root damaged guard;
 - bare `damage` / `root_condition damage label` не має трактуватись як root damage без явного root damage marker;
 - healthy / normal / здоровий / нормальний корінь не має давати false-positive;
-- length_condition поки не має окремого production guard;
+- length damaged / brittle + length lift / powder / Special Blond не має давати automatic APPROVED;
+- approved-recipe заборонений для length damaged / brittle + length lift / powder / Special Blond;
+- мінімальна поведінка для length damaged / brittle + length lift / powder / Special Blond: MANUAL_REQUIRED;
+- BLOCKED не вводиться цим length damaged guard;
+- bare `damage` / `length_condition damage label` не має трактуватись як length damage без явного length damage marker;
+- healthy / normal / здорове / нормальне полотно не має давати false-positive;
+- same-level target без length lift не має створювати length lift warning;
 - high porosity / висока пористість тепер має реальне UI-поле `#porosity`;
 - Special Blond + high porosity не має давати automatic APPROVED;
 - approved-recipe заборонений для Special Blond + high porosity;
@@ -236,6 +242,7 @@ For ПЕРУКАР specifically:
 - automatic APPROVED і approved-recipe заборонені для low elasticity сценаріїв;
 - warning-only не достатній для high-risk lift-сценаріїв;
 - тести `ROOT-DAMAGED-POWDER-NO-APPROVED`, `ROOT-DAMAGED-SPECIAL-BLOND-NO-APPROVED`, `ROOT-HEALTHY-LENGTH-DAMAGED-NO-ROOT-FALSE-POSITIVE`, `ROOT-CONDITION-BARE-DAMAGE-LABEL-NO-FALSE-POSITIVE`, `ROOT-CONDITION-BARE-DAMAGE-LABEL-TEXT-NO-FALSE-POSITIVE`, `ROOT-DAMAGED-NO-ROOT-LIFT-NO-BLOCKED` мають залишатися захистом контракту;
+- тести `LENGTH-DAMAGED-LIFT-NO-APPROVED`, `LENGTH-BRITTLE-LIFT-NO-APPROVED`, `LENGTH-DAMAGED-SPECIAL-BLOND-NO-APPROVED`, `LENGTH-HEALTHY-ROOT-DAMAGED-NO-LENGTH-FALSE-POSITIVE`, `LENGTH-CONDITION-BARE-DAMAGE-LABEL-NO-FALSE-POSITIVE`, `LENGTH-DAMAGED-NO-LENGTH-LIFT-NO-BLOCKED` мають залишатися захистом контракту;
 - тести `SPECIAL-BLOND-HIGH-POROSITY-NO-APPROVED`, `SPECIAL-BLOND-POROUS-LENGTH-NO-APPROVED`, `SPECIAL-BLOND-NORMAL-POROSITY-NO-FALSE-POSITIVE`, `SPECIAL-BLOND-BARE-POROSITY-NO-FALSE-POSITIVE`, `SPECIAL-BLOND-BARE-UKR-POROSITY-NO-FALSE-POSITIVE`, `NON-SPECIAL-BLOND-HIGH-POROSITY-MANUAL-CONSISTENCY` мають залишатися захистом контракту;
 - тести `ELASTICITY-LOW-LIFT-NO-APPROVED`, `ELASTICITY-LOW-SPECIAL-BLOND-NO-APPROVED`, `ELASTICITY-LOW-TONING-MANUAL-MINIMUM`, `ELASTICITY-NORMAL-LIFT-NO-FALSE-POSITIVE` мають залишатися захистом контракту;
 - тести ENDS-DAMAGED-LIFT, ENDS-CONDITION-POROUS-LIFT, ENDS-CONDITION-BRITTLE-HIGH-LIFT, ENDS-CONDITION-DAMAGED-CHEMISTRY мають залишатися захистом контракту;
