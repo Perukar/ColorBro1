@@ -213,6 +213,15 @@ For ПЕРУКАР specifically:
 ## Правило DAMAGE / POROSITY / ELASTICITY
 
 - high damage / сильне пошкодження / критичне пошкодження не має давати automatic APPROVED для lift, powder, Special Blond або високого оксиду;
+- high oxidizer означає `ox >= 9%`;
+- high oxidizer визначається з `rootRec.ox` / `lenRec.ox`, а не з окремого UI-поля oxidizer/developer;
+- `1.9%` / `1,9%` не має трактуватись як high oxidizer;
+- damaged/risky hair + high oxidizer не має давати automatic APPROVED;
+- approved-recipe заборонений для damaged/risky hair + high oxidizer;
+- мінімальна поведінка для damaged/risky hair + high oxidizer: MANUAL_REQUIRED;
+- BLOCKED не вводиться цим high oxidizer guard;
+- normal/healthy hair + 9% не має давати damaged-hair high oxidizer false-positive;
+- powder має окремі risk guards і не має автоматично трактуватись як high oxidizer без `ox >= 9%`;
 - root_condition має реальне UI-поле `#root_condition`;
 - length_condition має реальне UI-поле `#length_condition`;
 - root damaged + root lift / powder / Special Blond не має давати automatic APPROVED;
@@ -245,6 +254,7 @@ For ПЕРУКАР specifically:
 - тести `LENGTH-DAMAGED-LIFT-NO-APPROVED`, `LENGTH-BRITTLE-LIFT-NO-APPROVED`, `LENGTH-DAMAGED-SPECIAL-BLOND-NO-APPROVED`, `LENGTH-HEALTHY-ROOT-DAMAGED-NO-LENGTH-FALSE-POSITIVE`, `LENGTH-CONDITION-BARE-DAMAGE-LABEL-NO-FALSE-POSITIVE`, `LENGTH-DAMAGED-NO-LENGTH-LIFT-NO-BLOCKED` мають залишатися захистом контракту;
 - тести `SPECIAL-BLOND-HIGH-POROSITY-NO-APPROVED`, `SPECIAL-BLOND-POROUS-LENGTH-NO-APPROVED`, `SPECIAL-BLOND-NORMAL-POROSITY-NO-FALSE-POSITIVE`, `SPECIAL-BLOND-BARE-POROSITY-NO-FALSE-POSITIVE`, `SPECIAL-BLOND-BARE-UKR-POROSITY-NO-FALSE-POSITIVE`, `NON-SPECIAL-BLOND-HIGH-POROSITY-MANUAL-CONSISTENCY` мають залишатися захистом контракту;
 - тести `ELASTICITY-LOW-LIFT-NO-APPROVED`, `ELASTICITY-LOW-SPECIAL-BLOND-NO-APPROVED`, `ELASTICITY-LOW-TONING-MANUAL-MINIMUM`, `ELASTICITY-NORMAL-LIFT-NO-FALSE-POSITIVE` мають залишатися захистом контракту;
+- тести `HIGH-OXIDIZER-ROOT-DAMAGED-9-NO-APPROVED`, `HIGH-OXIDIZER-LENGTH-DAMAGED-9-NO-APPROVED`, `HIGH-OXIDIZER-LEGACY-STRONGLY-DAMAGED-NO-APPROVED`, `HIGH-OXIDIZER-HIGH-POROSITY-NO-APPROVED`, `HIGH-OXIDIZER-LOW-ELASTICITY-NO-APPROVED`, `HIGH-OXIDIZER-NORMAL-HAIR-NO-FALSE-POSITIVE`, `HIGH-OXIDIZER-PARSE-DECIMAL-NO-FALSE-POSITIVE` мають залишатися захистом контракту;
 - тести ENDS-DAMAGED-LIFT, ENDS-CONDITION-POROUS-LIFT, ENDS-CONDITION-BRITTLE-HIGH-LIFT, ENDS-CONDITION-DAMAGED-CHEMISTRY мають залишатися захистом контракту;
 - Примітка: загальний damage matrix ще не повністю покритий, існують gaps.
 
