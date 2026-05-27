@@ -38,7 +38,7 @@
 | Special Blond | Base/root level 6 Special Blond | Не має автоматично ставати `APPROVED`; потрібне ручне підтвердження | `specialBlondBase6NeedsConfirmation` додає warning і `manualDecisions` | `test_www_business_scenarios.js`: `SB-6-83` | `AGENTS.md`; `docs/MANUAL_TEST_SB_6_83_2026-05-12.md` | Covered | Brand-specific confirmation лишається людським рішенням |
 | Special Blond | Special Blond при `grey_percent > 0` | Не має ставати автоматичним `APPROVED`; потрібен manual review | `specialBlondWithGreyNeedsConfirmation` додає warning і manual decision | `GREY-30-SPECIAL-BLOND-MANUAL-REQUIRED`, `GREY-30-GLASSY-SPECIAL-BLOND-MANUAL-REQUIRED` | `AGENTS.md` | Covered | Немає brand-specific palette matrix для кожного бренду |
 | Special Blond | 30% grey + glassy + Special Blond | Має бути `MANUAL_REQUIRED` і містити mordonsage signal | Grey glassy diagnostic + Special Blond grey guard | `GREY-30-GLASSY-SPECIAL-BLOND-MANUAL-REQUIRED` | `AGENTS.md` | Covered | Не перевіряє фізичний результат покриття сивини |
-| Special Blond | Brand-specific confirmation | Система має зупинити автоматичне approved-рішення, але не може сама підтвердити технологію бренду | Manual decision, не formula-level brand engine | `SB-6-83`; grey Special Blond tests | `AGENTS.md` | Partial | Потрібен окремий brand-specific constraints block |
+| Special Blond | Brand-specific confirmation | Система має зупинити автоматичне approved-рішення, але не може сама підтвердити технологію бренду | Brand-specific manual gate; не formula-level brand engine | `BRAND-MISSING-SPECIAL-BLOND-NO-APPROVED`; `SB-6-83`; grey Special Blond tests | `AGENTS.md` | Covered by manual gate + tests | Real brand engine / palette rule matrix лишається future gap |
 
 ### 3.3 Grey coverage
 
@@ -97,6 +97,14 @@
 | Mass model | EndsRec readiness / builder / formula / mass / assembly / wiring | Helpers мають бути pure, no production grams, no final formula, no massModel mutation unless explicit future contract | Readiness/builder/formula/mass/assembly/wiring contract helpers | `READINESS-*`, `BUILDER-CONTRACT-*`, `FORMULA-CONTRACT-*`, `MASS-CONTRACT-*`, `ASSEMBLY-CONTRACT-*`, `WIRING-CONTRACT-*`, `GUARDED-WIRING-*` | Multiple production endsRec helper docs | Covered as contract helpers | Це не означає, що production third-zone recipe готовий |
 | Mass model | Third-zone diagnostic isolation | Diagnostic candidate не стає production source | Explicit forbidden activation checks | `DIAGNOSTIC-CANDIDATE-NOT-PRODUCTION-SOURCE-ISOLATION`, `PRODUCTION-THIRD-ZONE-ACTIVATION-FORBIDDEN`, `PRODUCTION-THIRD-ZONE-READINESS-DIAGNOSTIC-ISOLATION` | `AGENTS.md`; third-zone docs | Covered | Будь-яке future activation потребує окремого AGENTS contract update |
 
+### 3.9 Brand-specific constraints
+
+| Блок | Сценарій | Очікувана поведінка | Production guard / логіка | Тест | Документація | Статус | Ризик / gap |
+|---|---|---|---|---|---|---|---|
+| Brand-specific constraints | Brand-sensitive recipe без brand rule matrix | `Special Blond`, `.00` / `/00`, high oxidizer `>= 9%`, powder або toning не мають давати automatic `APPROVED` без brand rule matrix | `hasBrandRuleMatrix = false`; detection з `rootRec` / `lenRec`; warning + `manualDecisions`; не brand engine | `BRAND-MISSING-SPECIAL-BLOND-NO-APPROVED`, `BRAND-MISSING-GREY-00-NO-APPROVED`, `BRAND-MISSING-HIGH-OXIDIZER-NO-APPROVED`, `BRAND-MISSING-POWDER-NO-APPROVED`, `BRAND-MISSING-TONING-LINE-NO-APPROVED` | `AGENTS.md` | Covered by manual gate + tests | Це НЕ full brand engine, НЕ brand database і НЕ palette mapping |
+| Brand-specific constraints | Ordinary Permanent 6% без brand-sensitive factors | Не має ловити brand gate тільки через відсутність brand rule matrix | False-positive guard: brand gate вмикається тільки через brand-sensitive factors | `BRAND-GENERIC-PERMANENT-6-NO-BRAND-GATE-IF-NOT-SENSITIVE` | `AGENTS.md` | Covered | Не підтверджує brand-specific правила Permanent; тільки не дає total manual |
+| Brand-specific constraints | Normal same-level без brand-sensitive factors | Не має ловити brand warning/manual text | False-positive guard для same-level neutral scenario | `BRAND-NORMAL-SAME-LEVEL-NO-FALSE-POSITIVE` | `AGENTS.md` | Covered | Не замінює майбутній brand/system input або palette matrix |
+
 ## 4. Контракти, зафіксовані в AGENTS.md
 
 Знайдені documented contracts:
@@ -109,6 +117,7 @@
 - BLACK-EXIT / темна косметична база: знайдено. Темна косметична root/length база рівня 1-4 при переході у світлішу ціль не має давати automatic `APPROVED`; natural dark base має negative-test проти false-positive.
 - Правило HENNA / METALS: знайдено. history з хною / металом / солями не має давати automatic APPROVED; approved-recipe не має рендеритись без ручного рішення; ends/third-zone production path diagnostic-only.
 - Правило DAMAGE / POROSITY / ELASTICITY: знайдено. high damage/porosity не має давати automatic APPROVED; root damaged + root lift/powder/Special Blond covered by UI field + guard + tests; length damaged / brittle + length lift/powder/Special Blond covered by guard + tests; Special Blond + high porosity covered by UI field + guard + tests; damaged/risky hair + high oxidizer covered by guard + tests; brittle блокує освітлення; warning-only не достатній для high-risk lift.
+- Правило BRAND-SPECIFIC CONSTRAINTS: знайдено. ПЕРУКАР не має full brand rule matrix; brand-sensitive recipes без brand rule matrix covered by manual gate + tests; `hasBrandRuleMatrix = false` не є brand engine; UI-поля brand/system немає.
 - Grey >=50 загальний coverage contract в AGENTS.md: окремим контрактом не знайдено; згадується тільки як логіка, яку не можна змішувати з контрактом 30%.
 - Mapping adapter contract в AGENTS.md: не знайдено.
 - Render/runtime state-shape contract в AGENTS.md: не знайдено як окремий business contract; third-zone diagnostic display частково покритий third-zone rule.
@@ -121,9 +130,9 @@ BLACK-EXIT coverage status:
 - Ends/third-zone production dark cosmetic base: still known gap / diagnostic-only. Production ends-level guard не вмикати без окремого контракту третьої зони.
 
 - Хна / металеві солі: HENNA/METALS root/length general history covered by guard/tests. Ends/third-zone production path diagnostic-only / known gap.
-- Пошкоджене волосся / еластичність / пористість: DAMAGE / POROSITY / ELASTICITY is partially covered by existing guards/tests. Root damaged + root lift/powder/Special Blond covered by UI field + guard + tests. Length damaged / brittle + length lift/powder/Special Blond covered by guard + tests. Low elasticity covered by UI field + guard + tests. Special Blond + high porosity covered by UI field + guard + tests. High oxidizer + damaged/risky hair covered by guard + tests. Gap: немає повної матриці по root/length/ends, powder для інших damage-сценаріїв, toning, darkening, multi-zone damage conflict, brand-specific constraints.
-- Несумісність брендів: окремого production guard і тестової matrix не знайдено.
-- Brand-specific palette constraints: є manual review для Special Blond, але немає brand palette engine або brand-specific rule matrix.
+- Пошкоджене волосся / еластичність / пористість: DAMAGE / POROSITY / ELASTICITY is partially covered by existing guards/tests. Root damaged + root lift/powder/Special Blond covered by UI field + guard + tests. Length damaged / brittle + length lift/powder/Special Blond covered by guard + tests. Low elasticity covered by UI field + guard + tests. Special Blond + high porosity covered by UI field + guard + tests. High oxidizer + damaged/risky hair covered by guard + tests. Gap: немає повної матриці по root/length/ends, powder для інших damage-сценаріїв, toning/darkening повних окремих алгоритмів, multi-zone damage conflict.
+- Brand-specific constraints: covered by manual gate + tests для Special Blond, `.00` / `/00`, high oxidizer `>= 9%`, powder і toning без brand rule matrix. Це не full brand engine.
+- Real brand engine / palette rule matrix: все ще gap. Немає brand database, palette mapping, oxidizer compatibility matrix, brand-specific mixing ratio matrix або правил Wella / Matrix / Londa / Loreal / Igora чи інших брендів.
 - Ручний browser/UI smoke: у `docs/` є попередні browser QA документи, але в цій задачі browser не використовувався і актуальний ручний UI smoke не запускався.
 - Android/Capacitor build: поточна задача не запускала Android/Capacitor build smoke; окремого green build evidence у цій matrix немає.
 - Довге волосся з історією 3-5 років: окремого сценарію не знайдено.
@@ -136,10 +145,11 @@ BLACK-EXIT coverage status:
 
 | Порядок | Блок | Чому це ризик | Мінімальний тест | Production guard потрібен | AGENTS.md contract потрібен |
 |---|---|---|---|---|---|
-| 1 | Brand-specific constraints | Special Blond, `.00`, oxidizers і palette rules можуть відрізнятися між брендами | Brand/system input + forbidden process/palette combinations | Так | Так |
-| 2 | multi-zone damage conflict / різнозонне полотно | Різні зони можуть мати різну косметичну історію, пористість і реакцію | Multi-zone history 3-5 years + different porosity -> no automatic approved unified recipe | Так | Так |
-| 3 | UI/browser smoke | Node tests не бачать реального layout, кликів, select values і visual regressions | Manual/browser smoke для current form values, diagnostic block, warning/manual blocks | Не завжди | Так, як QA contract |
-| 4 | Android/Capacitor build smoke | Android wrapper може мати окремі runtime/build проблеми навіть при green Node tests | Build/sync smoke для Capacitor webDir і Android asset path | Не завжди | Так, як release/readiness contract |
+| 1 | multi-zone damage conflict / різнозонне полотно | Різні зони можуть мати різну косметичну історію, пористість і реакцію | Multi-zone history 3-5 years + different porosity -> no automatic approved unified recipe | Так | Так |
+| 2 | UI/browser smoke | Node tests не бачать реального layout, кликів, select values і visual regressions | Manual/browser smoke для current form values, diagnostic block, warning/manual blocks | Не завжди | Так, як QA contract |
+| 3 | Android/Capacitor build smoke | Android wrapper може мати окремі runtime/build проблеми навіть при green Node tests | Build/sync smoke для Capacitor webDir і Android asset path | Не завжди | Так, як release/readiness contract |
+| 4 | real brand engine / palette rule matrix | Manual gate не знає реальних правил брендів, лінійок, пропорцій і сумісності окисників | Brand/system input + palette/line/ration compatibility matrix | Так | Так |
+| 5 | toning/darkening full algorithms | Toning/darkening зараз не мають повної окремої алгоритмічної матриці | Dedicated toning/darkening scenarios with product line and hair history | Так | Так |
 
 ## 7. Правила підтримки CASE_MATRIX.md
 

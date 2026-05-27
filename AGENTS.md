@@ -258,6 +258,23 @@ For ПЕРУКАР specifically:
 - тести ENDS-DAMAGED-LIFT, ENDS-CONDITION-POROUS-LIFT, ENDS-CONDITION-BRITTLE-HIGH-LIFT, ENDS-CONDITION-DAMAGED-CHEMISTRY мають залишатися захистом контракту;
 - Примітка: загальний damage matrix ще не повністю покритий, існують gaps.
 
+## Правило BRAND-SPECIFIC CONSTRAINTS
+
+- ПЕРУКАР наразі не має повноцінної brand rule matrix;
+- `hasBrandRuleMatrix = false` не має трактуватись як брендова система, brand database, palette engine або підтвердження правил конкретних брендів;
+- UI-поле brand/system наразі не існує, не читається з DOM і не має вигадуватись у документації або тестових звітах;
+- brand-sensitive recipe не має давати automatic `APPROVED` без brand rule matrix;
+- мінімальна поведінка для brand-sensitive recipe без brand rule matrix: `MANUAL_REQUIRED`;
+- approved-recipe заборонений для brand-sensitive recipe без brand rule matrix;
+- BLOCKED не вводиться цим brand-specific guard;
+- brand-sensitive factors: Special Blond, `.00` / `/00` grey coverage, high oxidizer `ox >= 9%`, powder / порошок, toning / `Перманент / Тонування`;
+- powder не є автоматично high oxidizer, але powder є brand-sensitive process;
+- toning / product line є brand-sensitive через відсутність підтвердженої лінійки, пропорції, сумісності окисника та інструкції виробника;
+- ordinary Permanent 6% без Special Blond, `.00` / `/00`, high oxidizer, powder або toning не має ловити brand gate;
+- normal same-level без brand-sensitive factors не має ловити brand gate;
+- не можна додавати brand database, palette engine або hardcoded brand rules для Wella / Matrix / Londa / Loreal / Igora чи інших брендів без окремої задачі;
+- тести `BRAND-MISSING-SPECIAL-BLOND-NO-APPROVED`, `BRAND-MISSING-GREY-00-NO-APPROVED`, `BRAND-MISSING-HIGH-OXIDIZER-NO-APPROVED`, `BRAND-MISSING-POWDER-NO-APPROVED`, `BRAND-MISSING-TONING-LINE-NO-APPROVED`, `BRAND-NORMAL-SAME-LEVEL-NO-FALSE-POSITIVE`, `BRAND-GENERIC-PERMANENT-6-NO-BRAND-GATE-IF-NOT-SENSITIVE` мають залишатися захистом контракту.
+
 ## Правило виконання малих дозволених задач
 
 Якщо користувач дає конкретну задачу або промпт для малої контрольованої дії, агент має виконувати її одразу без повторного питання "Дозволяю виконати?", якщо виконуються всі умови:
