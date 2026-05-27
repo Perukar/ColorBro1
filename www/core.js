@@ -50,6 +50,8 @@ const pigmentMap = {
                 return {
                     history: this.getWwwValue('history'),
                     condition: this.getWwwValue('condition'),
+                    root_condition: this.getWwwValue('root_condition'),
+                    length_condition: this.getWwwValue('length_condition'),
                     porosity: this.getWwwValue('porosity'),
                     thickness: this.getWwwValue('thickness'),
                     density: this.getWwwValue('density'),
@@ -84,6 +86,8 @@ const pigmentMap = {
                 return {
                     history: String(wwwValues.history || '').trim(),
                     condition: String(wwwValues.condition || '').trim(),
+                    rootCondition: String(wwwValues.root_condition || '').trim(),
+                    lengthCondition: String(wwwValues.length_condition || '').trim(),
                     porosity: String(wwwValues.porosity || '').trim(),
                     thickness: String(wwwValues.thickness || '').trim(),
                     density: String(wwwValues.density || '').trim(),
@@ -1322,6 +1326,10 @@ const pigmentMap = {
             try {
                 let history = document.getElementById('history').value;
                 let condition = document.getElementById('condition').value;
+                const rootConditionElement = document.getElementById('root_condition');
+                const rootCondition = rootConditionElement ? String(rootConditionElement.value || '').trim() : '';
+                const lengthConditionElement = document.getElementById('length_condition');
+                const lengthCondition = lengthConditionElement ? String(lengthConditionElement.value || '').trim() : '';
                 const porosityElement = document.getElementById('porosity');
                 const porosity = porosityElement ? String(porosityElement.value || '').trim() : '';
                 let thickness = document.getElementById('thickness').value;
@@ -1644,6 +1652,27 @@ const pigmentMap = {
                 rootRec.mixtone = calcMixtone(tLevel, tDir, rootRec.process, rootRec.mass, "здоровые");
                 lenRec.mixtone = calcMixtone(tLevel, tDir, lenRec.process, lenRec.mass, condition);
 
+                const rootConditionText = String(rootCondition || '').toLowerCase();
+                const rootDamageNeutralMarkers = ['healthy', 'normal', 'здоров', 'норм'];
+                const rootDamageMarkers = ['strongly damaged', 'root damage', 'сильно пошкод', 'сильно повреж', 'damaged', 'пошкод', 'повреж', 'brittle', 'ламк'];
+                const isRootDamageNeutral = rootDamageNeutralMarkers.some(marker => rootConditionText.includes(marker));
+                const rootDamagedDetected = Boolean(rootConditionText)
+                    && !isRootDamageNeutral
+                    && rootDamageMarkers.some(marker => rootConditionText.includes(marker));
+                const rootProcessText = rootRec ? String(rootRec.process || '').toLowerCase() : '';
+                const rootLiftProcessMarkers = ['lift', 'lightening', 'powder', 'special blond', 'порош', 'освіт', 'освет'];
+                const rootLiftOrHighRiskProcess = Boolean(rootRec)
+                    && (rStep > 0 || rootLiftProcessMarkers.some(marker => rootProcessText.includes(marker)));
+                const rootDamagedLiftNeedsConfirmation = rootDamagedDetected && rootLiftOrHighRiskProcess;
+
+                if (rootDamagedLiftNeedsConfirmation) {
+                    warnings.push("⚠️ ПОШКОДЖЕНИЙ КОРІНЬ + ОСВІТЛЕННЯ: root_condition вказує на пошкоджений або ламкий корінь. Підняття рівня, порошок або Special Blond потребують ручного рішення та тест-пасма.");
+                    manualDecisions.push({
+                        title: "Пошкоджений корінь / root damage",
+                        message: `Підтвердити стан кореня перед root lift. root_condition: ${rootCondition}. Процес кореня: ${rootRec ? rootRec.process : 'не визначено'}. Automatic approved recipe заборонений без ручного рішення.`
+                    });
+                }
+
                 const porosityText = String(porosity || '').toLowerCase();
                 const neutralPorosityMarkers = ['normal', 'good', 'low', 'medium', 'норм', 'добра', 'добрий', 'низьк', 'низк', 'середн'];
                 const highPorosityMarkers = ['high porosity', 'porous hair', 'porous canvas', 'висока пористість', 'високопорист', 'дуже пористе', 'сильна пористість', 'пористе полотно'];
@@ -1919,7 +1948,7 @@ const pigmentMap = {
                     // Fail-safe: do not disrupt primary 2-zone calculation paths
                 }
 
-                const reasons = { rootStep: rStep, lengthStep: lStep, endsLevel: eLevel, endsCondition, endsHistory, endsBaseType, hotRoot, grey, porosity, hasHighPorositySignal, specialBlondHighPorosityNeedsConfirmation, specialBlondBase6NeedsConfirmation, significantDarkeningNeedsPrepig, zoneLevelDifference, zoneProcessesDiffer, zoneDecisionNeedsConfirmation, endsLevelProvided, endsDiffersFromRoot, endsDiffersFromLength, endsLevelNeedsConfirmation, endsConditionProvided, riskyEndsCondition, endsLighteningNeeded, endsChemicalInterventionLikely, endsConditionNeedsConfirmation, endsConditionMissingWithDifferentLevel, endsHistoryProvided, endsBaseTypeProvided, riskyEndsHistory, riskyEndsBaseType, endsHistoryNeedsConfirmation, endsBaseTypeNeedsConfirmation, threeZonePreviewEligible, threeZoneGateDecision, threeZoneCandidateMassModel, threeZonePreviewOnly, threeZoneEndsRecipeReady };
+                const reasons = { rootStep: rStep, lengthStep: lStep, rootConditionProvided: Boolean(rootCondition), lengthConditionProvided: Boolean(lengthCondition), rootDamagedDetected, rootDamagedLiftNeedsConfirmation, endsLevel: eLevel, endsCondition, endsHistory, endsBaseType, hotRoot, grey, porosity, hasHighPorositySignal, specialBlondHighPorosityNeedsConfirmation, specialBlondBase6NeedsConfirmation, significantDarkeningNeedsPrepig, zoneLevelDifference, zoneProcessesDiffer, zoneDecisionNeedsConfirmation, endsLevelProvided, endsDiffersFromRoot, endsDiffersFromLength, endsLevelNeedsConfirmation, endsConditionProvided, riskyEndsCondition, endsLighteningNeeded, endsChemicalInterventionLikely, endsConditionNeedsConfirmation, endsConditionMissingWithDifferentLevel, endsHistoryProvided, endsBaseTypeProvided, riskyEndsHistory, riskyEndsBaseType, endsHistoryNeedsConfirmation, endsBaseTypeNeedsConfirmation, threeZonePreviewEligible, threeZoneGateDecision, threeZoneCandidateMassModel, threeZonePreviewOnly, threeZoneEndsRecipeReady };
                 if (endsRecCandidatePreview) {
                     reasons.endsRecCandidatePreview = endsRecCandidatePreview;
                 }

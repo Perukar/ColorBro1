@@ -485,6 +485,8 @@ assertIncludes(adapterHtml, 'Нанести');
 const defaultDomValues = {
     history: 'натуральні',
     condition: 'здоровые',
+    root_condition: 'здоровий корінь',
+    length_condition: 'здорове полотно',
     porosity: 'нормальна пористість',
     thickness: 'средние',
     density: 'средние',

@@ -11,11 +11,15 @@ if (typeof calculateProtocol !== 'function') {
 
 const neutralElasticityValue = 'нормальна еластичність';
 const neutralPorosityValue = 'нормальна пористість';
+const neutralRootConditionValue = 'здоровий корінь';
+const neutralLengthConditionValue = 'здорове полотно';
 
 function withDefaultScenarioValues(values) {
     return Object.assign({
         elasticity: neutralElasticityValue,
-        porosity: neutralPorosityValue
+        porosity: neutralPorosityValue,
+        root_condition: neutralRootConditionValue,
+        length_condition: neutralLengthConditionValue
     }, values);
 }
 
@@ -1885,6 +1889,232 @@ globalThis.__specialBlondPorosityResults = {
     porousLength: specialBlondPorousLengthResult,
     nonSpecialBlond: nonSpecialBlondHighPorosityResult
 };
+
+// === ROOT DAMAGED POWDER / LIFT SAFETY CONTRACT ===
+function rootDamageGuardSignals(html) {
+    const htmlText = String(html || '').toLowerCase();
+    const signals = [
+        'пошкоджений корінь + освітлення',
+        'пошкоджений корінь / root damage',
+        'root_condition вказує',
+        'root lift',
+        'процес кореня'
+    ];
+    return signals.filter(signal => htmlText.includes(signal));
+}
+
+function analyzeRootDamagedLiftScenario(name, values) {
+    const scenario = runDiagnosticScenario(name, values);
+    assert.ok(scenario.requestedIds.includes('output'), name + ' should access output');
+    assert.ok(!scenario.error, name + ' should not throw');
+
+    const html = scenario.html;
+    const hasApproved = html.includes('APPROVED')
+        || html.includes('ПРОТОКОЛ ЗАТВЕРДЖЕНО');
+    const hasApprovedRecipe = html.includes('approved-recipe');
+    const hasManualSignal = html.includes('MANUAL_REQUIRED')
+        || html.includes('Потрібне ручне рішення')
+        || html.includes('needs_confirmation');
+    const hasRootDamageText = rootDamageGuardSignals(html).length > 0
+        || html.toLowerCase().includes('тест-пасм');
+
+    assert.ok(!hasApproved, name + ' should not be automatic APPROVED');
+    assert.ok(!hasApprovedRecipe, name + ' should not render approved recipe blocks');
+    assert.ok(hasManualSignal, name + ' should require manual decision');
+    assert.ok(hasRootDamageText, name + ' should mention root damage or test strand risk');
+
+    return {
+        status: 'SAFE',
+        hasApproved,
+        hasApprovedRecipe,
+        hasManualSignal,
+        hasRootDamageText
+    };
+}
+
+const rootDamagedPowderResult = analyzeRootDamagedLiftScenario('ROOT-DAMAGED-POWDER-NO-APPROVED', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    root_condition: 'пошкоджений корінь',
+    length_condition: 'здорове полотно',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '5',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '8',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
+});
+console.log('ROOT-DAMAGED-POWDER-NO-APPROVED safe behavior observed.');
+
+const rootDamagedSpecialBlondResult = analyzeRootDamagedLiftScenario('ROOT-DAMAGED-SPECIAL-BLOND-NO-APPROVED', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    root_condition: 'сильно пошкоджений корінь',
+    length_condition: 'здорове полотно',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '10',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
+});
+console.log('ROOT-DAMAGED-SPECIAL-BLOND-NO-APPROVED safe behavior observed.');
+
+(function() {
+    const scenario = runDiagnosticScenario('ROOT-HEALTHY-LENGTH-DAMAGED-NO-ROOT-FALSE-POSITIVE', {
+        history: 'натуральні',
+        condition: 'здоровые',
+        root_condition: 'здоровий корінь',
+        length_condition: 'пошкоджене полотно',
+        thickness: 'средние',
+        density: 'средние',
+        length: 'средние',
+        grey_percent: '0',
+        grey_type: 'мягкая',
+        root_level: '7',
+        root_length: '1',
+        length_level: '7',
+        ends_level: '7',
+        ends_condition: 'здорові',
+        base_type: 'Натуральна',
+        target_level: '10',
+        target_direction: '1',
+        ends_history: 'натуральні',
+        ends_base_type: 'натуральна'
+    });
+    assert.ok(!scenario.error, 'ROOT-HEALTHY-LENGTH-DAMAGED-NO-ROOT-FALSE-POSITIVE should not throw');
+    const presentRootDamageSignals = rootDamageGuardSignals(scenario.html);
+    assert.deepStrictEqual(
+        presentRootDamageSignals,
+        [],
+        'ROOT-HEALTHY-LENGTH-DAMAGED-NO-ROOT-FALSE-POSITIVE should not render root damage guard text'
+    );
+    globalThis.__rootHealthyLengthDamagedNoFalsePositiveResult = { status: 'SAFE', presentRootDamageSignals };
+    console.log('ROOT-HEALTHY-LENGTH-DAMAGED-NO-ROOT-FALSE-POSITIVE safe behavior observed.');
+})();
+
+(function() {
+    const scenario = runDiagnosticScenario('ROOT-CONDITION-BARE-DAMAGE-LABEL-NO-FALSE-POSITIVE', {
+        history: 'натуральні',
+        condition: 'здоровые',
+        root_condition: 'damage',
+        length_condition: 'здорове полотно',
+        thickness: 'средние',
+        density: 'средние',
+        length: 'средние',
+        grey_percent: '0',
+        grey_type: 'мягкая',
+        root_level: '7',
+        root_length: '1',
+        length_level: '7',
+        ends_level: '7',
+        ends_condition: 'здорові',
+        base_type: 'Натуральна',
+        target_level: '8',
+        target_direction: '1',
+        ends_history: 'натуральні',
+        ends_base_type: 'натуральна'
+    });
+    assert.ok(!scenario.error, 'ROOT-CONDITION-BARE-DAMAGE-LABEL-NO-FALSE-POSITIVE should not throw');
+    const presentRootDamageSignals = rootDamageGuardSignals(scenario.html);
+    assert.deepStrictEqual(
+        presentRootDamageSignals,
+        [],
+        'ROOT-CONDITION-BARE-DAMAGE-LABEL-NO-FALSE-POSITIVE should not render root damage guard text for a bare label'
+    );
+    globalThis.__rootBareLabelNoFalsePositiveResult = { status: 'SAFE', presentRootDamageSignals };
+    console.log('ROOT-CONDITION-BARE-DAMAGE-LABEL-NO-FALSE-POSITIVE safe behavior observed.');
+})();
+
+(function() {
+    const scenario = runDiagnosticScenario('ROOT-CONDITION-BARE-DAMAGE-LABEL-TEXT-NO-FALSE-POSITIVE', {
+        history: 'натуральні',
+        condition: 'здоровые',
+        root_condition: 'root_condition damage label',
+        length_condition: 'здорове полотно',
+        thickness: 'средние',
+        density: 'средние',
+        length: 'средние',
+        grey_percent: '0',
+        grey_type: 'мягкая',
+        root_level: '7',
+        root_length: '1',
+        length_level: '7',
+        ends_level: '7',
+        ends_condition: 'здорові',
+        base_type: 'Натуральна',
+        target_level: '8',
+        target_direction: '1',
+        ends_history: 'натуральні',
+        ends_base_type: 'натуральна'
+    });
+    assert.ok(!scenario.error, 'ROOT-CONDITION-BARE-DAMAGE-LABEL-TEXT-NO-FALSE-POSITIVE should not throw');
+    const presentRootDamageSignals = rootDamageGuardSignals(scenario.html);
+    assert.deepStrictEqual(
+        presentRootDamageSignals,
+        [],
+        'ROOT-CONDITION-BARE-DAMAGE-LABEL-TEXT-NO-FALSE-POSITIVE should not render root damage guard text for a bare label text'
+    );
+    globalThis.__rootBareLabelTextNoFalsePositiveResult = { status: 'SAFE', presentRootDamageSignals };
+    console.log('ROOT-CONDITION-BARE-DAMAGE-LABEL-TEXT-NO-FALSE-POSITIVE safe behavior observed.');
+})();
+
+(function() {
+    const scenario = runDiagnosticScenario('ROOT-DAMAGED-NO-ROOT-LIFT-NO-BLOCKED', {
+        history: 'натуральні',
+        condition: 'здоровые',
+        root_condition: 'пошкоджений корінь',
+        length_condition: 'здорове полотно',
+        thickness: 'средние',
+        density: 'средние',
+        length: 'средние',
+        grey_percent: '0',
+        grey_type: 'мягкая',
+        root_level: '7',
+        root_length: '1',
+        length_level: '7',
+        ends_level: '7',
+        ends_condition: 'здорові',
+        base_type: 'Натуральна',
+        target_level: '7',
+        target_direction: '1',
+        ends_history: 'натуральні',
+        ends_base_type: 'натуральна'
+    });
+    assert.ok(!scenario.error, 'ROOT-DAMAGED-NO-ROOT-LIFT-NO-BLOCKED should not throw');
+    assert.ok(!scenario.html.includes('BLOCKED'), 'ROOT-DAMAGED-NO-ROOT-LIFT-NO-BLOCKED should not be BLOCKED');
+    const presentRootDamageSignals = rootDamageGuardSignals(scenario.html);
+    assert.deepStrictEqual(
+        presentRootDamageSignals,
+        [],
+        'ROOT-DAMAGED-NO-ROOT-LIFT-NO-BLOCKED should not render root damage lift guard text without root lift'
+    );
+    globalThis.__rootDamagedNoRootLiftResult = { status: 'SAFE', presentRootDamageSignals };
+    console.log('ROOT-DAMAGED-NO-ROOT-LIFT-NO-BLOCKED safe behavior observed.');
+})();
+
+globalThis.__rootDamageGuardResults = {
+    powder: rootDamagedPowderResult,
+    specialBlond: rootDamagedSpecialBlondResult
+};
 `;
 
 const sandbox = {
@@ -2008,5 +2238,23 @@ assert.strictEqual(sandbox.__specialBlondBareUkrPorosityResult.status, 'SAFE');
 assert.strictEqual(sandbox.__specialBlondPorosityResults.nonSpecialBlond.status, 'SAFE');
 assert.strictEqual(sandbox.__specialBlondPorosityResults.nonSpecialBlond.hasManualSignal, true);
 assert.strictEqual(sandbox.__specialBlondPorosityResults.nonSpecialBlond.hasPorosityText, true);
+assert.strictEqual(sandbox.__rootDamageGuardResults.powder.status, 'SAFE');
+assert.strictEqual(sandbox.__rootDamageGuardResults.powder.hasApproved, false);
+assert.strictEqual(sandbox.__rootDamageGuardResults.powder.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__rootDamageGuardResults.powder.hasManualSignal, true);
+assert.strictEqual(sandbox.__rootDamageGuardResults.powder.hasRootDamageText, true);
+assert.strictEqual(sandbox.__rootDamageGuardResults.specialBlond.status, 'SAFE');
+assert.strictEqual(sandbox.__rootDamageGuardResults.specialBlond.hasApproved, false);
+assert.strictEqual(sandbox.__rootDamageGuardResults.specialBlond.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__rootDamageGuardResults.specialBlond.hasManualSignal, true);
+assert.strictEqual(sandbox.__rootDamageGuardResults.specialBlond.hasRootDamageText, true);
+assert.deepStrictEqual(Array.from(sandbox.__rootHealthyLengthDamagedNoFalsePositiveResult.presentRootDamageSignals), []);
+assert.strictEqual(sandbox.__rootHealthyLengthDamagedNoFalsePositiveResult.status, 'SAFE');
+assert.deepStrictEqual(Array.from(sandbox.__rootBareLabelNoFalsePositiveResult.presentRootDamageSignals), []);
+assert.strictEqual(sandbox.__rootBareLabelNoFalsePositiveResult.status, 'SAFE');
+assert.deepStrictEqual(Array.from(sandbox.__rootBareLabelTextNoFalsePositiveResult.presentRootDamageSignals), []);
+assert.strictEqual(sandbox.__rootBareLabelTextNoFalsePositiveResult.status, 'SAFE');
+assert.deepStrictEqual(Array.from(sandbox.__rootDamagedNoRootLiftResult.presentRootDamageSignals), []);
+assert.strictEqual(sandbox.__rootDamagedNoRootLiftResult.status, 'SAFE');
 
 console.log('WWW business scenario test passed');
