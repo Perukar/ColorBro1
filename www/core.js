@@ -1652,6 +1652,18 @@ const pigmentMap = {
                 rootRec.mixtone = calcMixtone(tLevel, tDir, rootRec.process, rootRec.mass, "здоровые");
                 lenRec.mixtone = calcMixtone(tLevel, tDir, lenRec.process, lenRec.mass, condition);
 
+                function extractOxPercent(value) {
+                    const match = String(value || '').match(/(\d+(?:[.,]\d+)?)\s*%/);
+                    if (!match) return null;
+                    const parsed = Number(match[1].replace(',', '.'));
+                    return Number.isFinite(parsed) ? parsed : null;
+                }
+
+                const rootOxPercent = extractOxPercent(rootRec && rootRec.ox);
+                const lengthOxPercent = extractOxPercent(lenRec && lenRec.ox);
+                const rootHighOxidizer = rootOxPercent !== null && rootOxPercent >= 9;
+                const lengthHighOxidizer = lengthOxPercent !== null && lengthOxPercent >= 9;
+
                 const rootConditionText = String(rootCondition || '').toLowerCase();
                 const rootDamageNeutralMarkers = ['healthy', 'normal', 'здоров', 'норм'];
                 const rootDamageMarkers = ['strongly damaged', 'root damage', 'сильно пошкод', 'сильно повреж', 'damaged', 'пошкод', 'повреж', 'brittle', 'ламк'];
@@ -1705,6 +1717,30 @@ const pigmentMap = {
                     (rootRec && String(rootRec.process).includes("Special Blond")) ||
                     (lenRec && String(lenRec.process).includes("Special Blond"));
                 const specialBlondHighPorosityNeedsConfirmation = hasSpecialBlondProcess && hasHighPorositySignal;
+
+                const legacyConditionText = String(condition || '').toLowerCase();
+                const legacyHighOxidizerRisk = String(condition || '').trim() === 'сильно поврежденные'
+                    || ['strongly damaged', 'сильно пошкод', 'сильно повреж', 'damaged', 'пошкод', 'повреж'].some(marker => legacyConditionText.includes(marker));
+                const rootHighOxidizerRisk = rootDamagedDetected || legacyHighOxidizerRisk || hasHighPorositySignal || hasLowElasticitySignal;
+                const lengthHighOxidizerRisk = lengthDamagedDetected || legacyHighOxidizerRisk || hasHighPorositySignal || hasLowElasticitySignal;
+                const rootHighOxidizerNeedsConfirmation = rootHighOxidizer && rootHighOxidizerRisk;
+                const lengthHighOxidizerNeedsConfirmation = lengthHighOxidizer && lengthHighOxidizerRisk;
+
+                if (rootHighOxidizerNeedsConfirmation) {
+                    warnings.push(`⚠️ ВИСОКИЙ ОКСИД НА РИЗИКОВОМУ / ПОШКОДЖЕНОМУ КОРЕНІ: рецепт кореня містить ${rootRec.ox}. За наявності пошкодження, високої пористості, низької еластичності або іншого ризикового стану потрібне ручне рішення та тест-пасмо.`);
+                    manualDecisions.push({
+                        title: "Високий оксид на ризиковому корені",
+                        message: `Підтвердити використання ${rootRec.ox} на корені перед виконанням рецепта. Automatic approved recipe заборонений без ручного рішення майстра.`
+                    });
+                }
+
+                if (lengthHighOxidizerNeedsConfirmation) {
+                    warnings.push(`⚠️ ВИСОКИЙ ОКСИД НА РИЗИКОВІЙ / ПОШКОДЖЕНІЙ ДОВЖИНІ: рецепт довжини містить ${lenRec.ox}. За наявності пошкодження, високої пористості, низької еластичності або іншого ризикового стану потрібне ручне рішення та тест-пасмо.`);
+                    manualDecisions.push({
+                        title: "Високий оксид на ризиковій довжині",
+                        message: `Підтвердити використання ${lenRec.ox} на довжині перед виконанням рецепта. Automatic approved recipe заборонений без ручного рішення майстра.`
+                    });
+                }
 
                 if (hasHighPorositySignal) {
                     warnings.push(specialBlondHighPorosityNeedsConfirmation
@@ -1969,7 +2005,7 @@ const pigmentMap = {
                     // Fail-safe: do not disrupt primary 2-zone calculation paths
                 }
 
-                const reasons = { rootStep: rStep, lengthStep: lStep, rootConditionProvided: Boolean(rootCondition), lengthConditionProvided: Boolean(lengthCondition), rootDamagedDetected, rootDamagedLiftNeedsConfirmation, lengthDamagedDetected, lengthDamagedLiftNeedsConfirmation, endsLevel: eLevel, endsCondition, endsHistory, endsBaseType, hotRoot, grey, porosity, hasHighPorositySignal, specialBlondHighPorosityNeedsConfirmation, specialBlondBase6NeedsConfirmation, significantDarkeningNeedsPrepig, zoneLevelDifference, zoneProcessesDiffer, zoneDecisionNeedsConfirmation, endsLevelProvided, endsDiffersFromRoot, endsDiffersFromLength, endsLevelNeedsConfirmation, endsConditionProvided, riskyEndsCondition, endsLighteningNeeded, endsChemicalInterventionLikely, endsConditionNeedsConfirmation, endsConditionMissingWithDifferentLevel, endsHistoryProvided, endsBaseTypeProvided, riskyEndsHistory, riskyEndsBaseType, endsHistoryNeedsConfirmation, endsBaseTypeNeedsConfirmation, threeZonePreviewEligible, threeZoneGateDecision, threeZoneCandidateMassModel, threeZonePreviewOnly, threeZoneEndsRecipeReady };
+                const reasons = { rootStep: rStep, lengthStep: lStep, rootConditionProvided: Boolean(rootCondition), lengthConditionProvided: Boolean(lengthCondition), rootDamagedDetected, rootDamagedLiftNeedsConfirmation, lengthDamagedDetected, lengthDamagedLiftNeedsConfirmation, rootOxPercent, lengthOxPercent, rootHighOxidizer, lengthHighOxidizer, legacyHighOxidizerRisk, rootHighOxidizerRisk, lengthHighOxidizerRisk, rootHighOxidizerNeedsConfirmation, lengthHighOxidizerNeedsConfirmation, endsLevel: eLevel, endsCondition, endsHistory, endsBaseType, hotRoot, grey, porosity, hasHighPorositySignal, specialBlondHighPorosityNeedsConfirmation, specialBlondBase6NeedsConfirmation, significantDarkeningNeedsPrepig, zoneLevelDifference, zoneProcessesDiffer, zoneDecisionNeedsConfirmation, endsLevelProvided, endsDiffersFromRoot, endsDiffersFromLength, endsLevelNeedsConfirmation, endsConditionProvided, riskyEndsCondition, endsLighteningNeeded, endsChemicalInterventionLikely, endsConditionNeedsConfirmation, endsConditionMissingWithDifferentLevel, endsHistoryProvided, endsBaseTypeProvided, riskyEndsHistory, riskyEndsBaseType, endsHistoryNeedsConfirmation, endsBaseTypeNeedsConfirmation, threeZonePreviewEligible, threeZoneGateDecision, threeZoneCandidateMassModel, threeZonePreviewOnly, threeZoneEndsRecipeReady };
                 if (endsRecCandidatePreview) {
                     reasons.endsRecCandidatePreview = endsRecCandidatePreview;
                 }

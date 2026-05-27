@@ -2338,6 +2338,271 @@ globalThis.__lengthDamageGuardResults = {
     brittleLift: lengthBrittleLiftResult,
     specialBlond: lengthDamagedSpecialBlondResult
 };
+
+// === HIGH OXIDIZER + DAMAGED / RISKY HAIR SAFETY CONTRACT ===
+function highOxidizerGuardSignals(html) {
+    const htmlText = String(html || '').toLowerCase();
+    const signals = [
+        'високий оксид на ризиковому',
+        'високий оксид на ризиковій',
+        'ризиковому / пошкодженому корені',
+        'ризиковій / пошкодженій довжині',
+        'високого оксиду',
+        'використання 9%',
+        'використання 12%'
+    ];
+    return signals.filter(signal => htmlText.includes(signal));
+}
+
+function analyzeHighOxidizerDamagedHairScenario(name, values, options) {
+    const scenario = runDiagnosticScenario(name, values);
+    assert.ok(scenario.requestedIds.includes('output'), name + ' should access output');
+    assert.ok(!scenario.error, name + ' should not throw');
+
+    const html = scenario.html;
+    const htmlText = html.toLowerCase();
+    const hasApproved = html.includes('APPROVED')
+        || html.includes('ПРОТОКОЛ ЗАТВЕРДЖЕНО');
+    const hasApprovedRecipe = html.includes('approved-recipe');
+    const hasManualOrBlockSignal = html.includes('MANUAL_REQUIRED')
+        || html.includes('Потрібне ручне рішення')
+        || html.includes('needs_confirmation')
+        || html.includes('BLOCKED')
+        || html.includes('ФАТАЛЬНО');
+    const hasHighOxOutput = html.includes('9%') || html.includes('12%');
+    const presentHighOxidizerSignals = highOxidizerGuardSignals(html);
+    const hasRiskText = presentHighOxidizerSignals.length > 0
+        || htmlText.includes('пошкод')
+        || htmlText.includes('повреж')
+        || htmlText.includes('порист')
+        || htmlText.includes('еластич')
+        || htmlText.includes('тест-пасм');
+
+    assert.ok(!hasApproved, name + ' should not be automatic APPROVED');
+    assert.ok(!hasApprovedRecipe, name + ' should not render approved recipe blocks');
+    assert.ok(hasManualOrBlockSignal, name + ' should require manual/block signal');
+    assert.ok(hasRiskText, name + ' should mention high oxidizer or damaged/risky hair');
+    if (!options || options.requireHighOxOutput !== false) {
+        assert.ok(hasHighOxOutput, name + ' should expose 9% or 12% oxidizer in output');
+    }
+    if (!options || options.requireHighOxidizerSignal !== false) {
+        assert.ok(presentHighOxidizerSignals.length > 0, name + ' should render high oxidizer guard text');
+    }
+
+    return {
+        status: 'SAFE',
+        hasApproved,
+        hasApprovedRecipe,
+        hasManualOrBlockSignal,
+        hasHighOxOutput,
+        presentHighOxidizerSignals
+    };
+}
+
+const highOxRootDamagedResult = analyzeHighOxidizerDamagedHairScenario('HIGH-OXIDIZER-ROOT-DAMAGED-9-NO-APPROVED', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    root_condition: 'пошкоджений корінь',
+    length_condition: 'здорове полотно',
+    porosity: 'нормальна пористість',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '9',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
+});
+console.log('HIGH-OXIDIZER-ROOT-DAMAGED-9-NO-APPROVED safe behavior observed.');
+
+const highOxLengthDamagedResult = analyzeHighOxidizerDamagedHairScenario('HIGH-OXIDIZER-LENGTH-DAMAGED-9-NO-APPROVED', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    root_condition: 'здоровий корінь',
+    length_condition: 'пошкоджене полотно',
+    porosity: 'нормальна пористість',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '9',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
+});
+console.log('HIGH-OXIDIZER-LENGTH-DAMAGED-9-NO-APPROVED safe behavior observed.');
+
+const highOxLegacyStronglyDamagedResult = analyzeHighOxidizerDamagedHairScenario('HIGH-OXIDIZER-LEGACY-STRONGLY-DAMAGED-NO-APPROVED', {
+    history: 'натуральні',
+    condition: 'сильно поврежденные',
+    root_condition: 'здоровий корінь',
+    length_condition: 'здорове полотно',
+    porosity: 'нормальна пористість',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '9',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
+}, { requireHighOxOutput: false, requireHighOxidizerSignal: false });
+console.log('HIGH-OXIDIZER-LEGACY-STRONGLY-DAMAGED-NO-APPROVED safe behavior observed.');
+
+const highOxHighPorosityResult = analyzeHighOxidizerDamagedHairScenario('HIGH-OXIDIZER-HIGH-POROSITY-NO-APPROVED', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    root_condition: 'здоровий корінь',
+    length_condition: 'здорове полотно',
+    porosity: 'висока пористість',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '9',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
+});
+console.log('HIGH-OXIDIZER-HIGH-POROSITY-NO-APPROVED safe behavior observed.');
+
+const highOxLowElasticityResult = analyzeHighOxidizerDamagedHairScenario('HIGH-OXIDIZER-LOW-ELASTICITY-NO-APPROVED', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    root_condition: 'здоровий корінь',
+    length_condition: 'здорове полотно',
+    porosity: 'нормальна пористість',
+    elasticity: 'низька еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '9',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
+});
+console.log('HIGH-OXIDIZER-LOW-ELASTICITY-NO-APPROVED safe behavior observed.');
+
+(function() {
+    const scenario = runDiagnosticScenario('HIGH-OXIDIZER-NORMAL-HAIR-NO-FALSE-POSITIVE', {
+        history: 'натуральні',
+        condition: 'здоровые',
+        root_condition: 'здоровий корінь',
+        length_condition: 'здорове полотно',
+        porosity: 'нормальна пористість',
+        elasticity: 'нормальна еластичність',
+        thickness: 'средние',
+        density: 'средние',
+        length: 'средние',
+        grey_percent: '0',
+        grey_type: 'мягкая',
+        root_level: '7',
+        root_length: '1',
+        length_level: '7',
+        ends_level: '7',
+        ends_condition: 'здорові',
+        base_type: 'Натуральна',
+        target_level: '9',
+        target_direction: '1',
+        ends_history: 'натуральні',
+        ends_base_type: 'натуральна'
+    });
+    assert.ok(!scenario.error, 'HIGH-OXIDIZER-NORMAL-HAIR-NO-FALSE-POSITIVE should not throw');
+    assert.ok(scenario.html.includes('9%'), 'HIGH-OXIDIZER-NORMAL-HAIR-NO-FALSE-POSITIVE should still expose high oxidizer recipe output');
+    const presentHighOxidizerSignals = highOxidizerGuardSignals(scenario.html);
+    assert.deepStrictEqual(
+        presentHighOxidizerSignals,
+        [],
+        'HIGH-OXIDIZER-NORMAL-HAIR-NO-FALSE-POSITIVE should not render damaged-hair high oxidizer warning for normal hair'
+    );
+    globalThis.__highOxNormalHairFalsePositiveResult = { status: 'SAFE', presentHighOxidizerSignals };
+    console.log('HIGH-OXIDIZER-NORMAL-HAIR-NO-FALSE-POSITIVE safe behavior observed.');
+})();
+
+(function() {
+    // Production extractOxPercent is local to calculateProtocol; this runtime case verifies 1.9% is not treated as >= 9.
+    const scenario = runDiagnosticScenario('HIGH-OXIDIZER-PARSE-DECIMAL-NO-FALSE-POSITIVE', {
+        history: 'натуральні',
+        condition: 'здоровые',
+        root_condition: 'пошкоджений корінь',
+        length_condition: 'пошкоджене полотно',
+        porosity: 'нормальна пористість',
+        elasticity: 'нормальна еластичність',
+        thickness: 'средние',
+        density: 'средние',
+        length: 'средние',
+        grey_percent: '0',
+        grey_type: 'мягкая',
+        root_level: '7',
+        root_length: '1',
+        length_level: '7',
+        ends_level: '7',
+        ends_condition: 'здорові',
+        base_type: 'Натуральна',
+        target_level: '6',
+        target_direction: '1',
+        ends_history: 'натуральні',
+        ends_base_type: 'натуральна'
+    });
+    assert.ok(!scenario.error, 'HIGH-OXIDIZER-PARSE-DECIMAL-NO-FALSE-POSITIVE should not throw');
+    const presentHighOxidizerSignals = highOxidizerGuardSignals(scenario.html);
+    assert.deepStrictEqual(
+        presentHighOxidizerSignals,
+        [],
+        'HIGH-OXIDIZER-PARSE-DECIMAL-NO-FALSE-POSITIVE should not treat 1.9% as high oxidizer'
+    );
+    globalThis.__highOxParseDecimalFalsePositiveResult = { status: 'SAFE', presentHighOxidizerSignals };
+    console.log('HIGH-OXIDIZER-PARSE-DECIMAL-NO-FALSE-POSITIVE safe behavior observed.');
+})();
+
+globalThis.__highOxidizerDamagedHairResults = {
+    rootDamaged: highOxRootDamagedResult,
+    lengthDamaged: highOxLengthDamagedResult,
+    legacyStronglyDamaged: highOxLegacyStronglyDamagedResult,
+    highPorosity: highOxHighPorosityResult,
+    lowElasticity: highOxLowElasticityResult
+};
 `;
 
 const sandbox = {
@@ -2500,5 +2765,33 @@ assert.deepStrictEqual(Array.from(sandbox.__lengthBareLabelNoFalsePositiveResult
 assert.strictEqual(sandbox.__lengthBareLabelNoFalsePositiveResult.status, 'SAFE');
 assert.deepStrictEqual(Array.from(sandbox.__lengthDamagedNoLengthLiftResult.presentLengthDamageSignals), []);
 assert.strictEqual(sandbox.__lengthDamagedNoLengthLiftResult.status, 'SAFE');
+assert.strictEqual(sandbox.__highOxidizerDamagedHairResults.rootDamaged.status, 'SAFE');
+assert.strictEqual(sandbox.__highOxidizerDamagedHairResults.rootDamaged.hasApproved, false);
+assert.strictEqual(sandbox.__highOxidizerDamagedHairResults.rootDamaged.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__highOxidizerDamagedHairResults.rootDamaged.hasManualOrBlockSignal, true);
+assert.ok(sandbox.__highOxidizerDamagedHairResults.rootDamaged.presentHighOxidizerSignals.length > 0);
+assert.strictEqual(sandbox.__highOxidizerDamagedHairResults.lengthDamaged.status, 'SAFE');
+assert.strictEqual(sandbox.__highOxidizerDamagedHairResults.lengthDamaged.hasApproved, false);
+assert.strictEqual(sandbox.__highOxidizerDamagedHairResults.lengthDamaged.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__highOxidizerDamagedHairResults.lengthDamaged.hasManualOrBlockSignal, true);
+assert.ok(sandbox.__highOxidizerDamagedHairResults.lengthDamaged.presentHighOxidizerSignals.length > 0);
+assert.strictEqual(sandbox.__highOxidizerDamagedHairResults.legacyStronglyDamaged.status, 'SAFE');
+assert.strictEqual(sandbox.__highOxidizerDamagedHairResults.legacyStronglyDamaged.hasApproved, false);
+assert.strictEqual(sandbox.__highOxidizerDamagedHairResults.legacyStronglyDamaged.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__highOxidizerDamagedHairResults.legacyStronglyDamaged.hasManualOrBlockSignal, true);
+assert.strictEqual(sandbox.__highOxidizerDamagedHairResults.highPorosity.status, 'SAFE');
+assert.strictEqual(sandbox.__highOxidizerDamagedHairResults.highPorosity.hasApproved, false);
+assert.strictEqual(sandbox.__highOxidizerDamagedHairResults.highPorosity.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__highOxidizerDamagedHairResults.highPorosity.hasManualOrBlockSignal, true);
+assert.ok(sandbox.__highOxidizerDamagedHairResults.highPorosity.presentHighOxidizerSignals.length > 0);
+assert.strictEqual(sandbox.__highOxidizerDamagedHairResults.lowElasticity.status, 'SAFE');
+assert.strictEqual(sandbox.__highOxidizerDamagedHairResults.lowElasticity.hasApproved, false);
+assert.strictEqual(sandbox.__highOxidizerDamagedHairResults.lowElasticity.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__highOxidizerDamagedHairResults.lowElasticity.hasManualOrBlockSignal, true);
+assert.ok(sandbox.__highOxidizerDamagedHairResults.lowElasticity.presentHighOxidizerSignals.length > 0);
+assert.deepStrictEqual(Array.from(sandbox.__highOxNormalHairFalsePositiveResult.presentHighOxidizerSignals), []);
+assert.strictEqual(sandbox.__highOxNormalHairFalsePositiveResult.status, 'SAFE');
+assert.deepStrictEqual(Array.from(sandbox.__highOxParseDecimalFalsePositiveResult.presentHighOxidizerSignals), []);
+assert.strictEqual(sandbox.__highOxParseDecimalFalsePositiveResult.status, 'SAFE');
 
 console.log('WWW business scenario test passed');
