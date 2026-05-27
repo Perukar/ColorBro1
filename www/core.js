@@ -1673,6 +1673,27 @@ const pigmentMap = {
                     });
                 }
 
+                const lengthConditionText = String(lengthCondition || '').toLowerCase();
+                const lengthDamageNeutralMarkers = ['healthy', 'normal', 'здоров', 'норм'];
+                const lengthDamageMarkers = ['strongly damaged', 'length damage', 'brittle', 'damaged', 'сильно пошкод', 'сильно повреж', 'пошкод', 'повреж', 'ламк'];
+                const isLengthDamageNeutral = lengthDamageNeutralMarkers.some(marker => lengthConditionText.includes(marker));
+                const lengthDamagedDetected = Boolean(lengthConditionText)
+                    && !isLengthDamageNeutral
+                    && lengthDamageMarkers.some(marker => lengthConditionText.includes(marker));
+                const lengthProcessText = lenRec ? String(lenRec.process || '').toLowerCase() : '';
+                const lengthLiftProcessMarkers = ['lift', 'lightening', 'powder', 'special blond', 'порош', 'освіт', 'освет'];
+                const lengthLiftOrHighRiskProcess = Boolean(lenRec)
+                    && (lStep > 0 || lengthLiftProcessMarkers.some(marker => lengthProcessText.includes(marker)));
+                const lengthDamagedLiftNeedsConfirmation = lengthDamagedDetected && lengthLiftOrHighRiskProcess;
+
+                if (lengthDamagedLiftNeedsConfirmation) {
+                    warnings.push("⚠️ ПОШКОДЖЕНА / ЛАМКА ДОВЖИНА + ОСВІТЛЕННЯ: length_condition вказує на пошкоджену або ламку довжину. Підняття рівня, порошок або Special Blond потребують ручного рішення та тест-пасма.");
+                    manualDecisions.push({
+                        title: "Пошкоджена довжина / length damage",
+                        message: `Підтвердити стан довжини перед length lift. length_condition: ${lengthCondition}. Процес довжини: ${lenRec ? lenRec.process : 'не визначено'}. Automatic approved recipe заборонений без ручного рішення.`
+                    });
+                }
+
                 const porosityText = String(porosity || '').toLowerCase();
                 const neutralPorosityMarkers = ['normal', 'good', 'low', 'medium', 'норм', 'добра', 'добрий', 'низьк', 'низк', 'середн'];
                 const highPorosityMarkers = ['high porosity', 'porous hair', 'porous canvas', 'висока пористість', 'високопорист', 'дуже пористе', 'сильна пористість', 'пористе полотно'];
@@ -1948,7 +1969,7 @@ const pigmentMap = {
                     // Fail-safe: do not disrupt primary 2-zone calculation paths
                 }
 
-                const reasons = { rootStep: rStep, lengthStep: lStep, rootConditionProvided: Boolean(rootCondition), lengthConditionProvided: Boolean(lengthCondition), rootDamagedDetected, rootDamagedLiftNeedsConfirmation, endsLevel: eLevel, endsCondition, endsHistory, endsBaseType, hotRoot, grey, porosity, hasHighPorositySignal, specialBlondHighPorosityNeedsConfirmation, specialBlondBase6NeedsConfirmation, significantDarkeningNeedsPrepig, zoneLevelDifference, zoneProcessesDiffer, zoneDecisionNeedsConfirmation, endsLevelProvided, endsDiffersFromRoot, endsDiffersFromLength, endsLevelNeedsConfirmation, endsConditionProvided, riskyEndsCondition, endsLighteningNeeded, endsChemicalInterventionLikely, endsConditionNeedsConfirmation, endsConditionMissingWithDifferentLevel, endsHistoryProvided, endsBaseTypeProvided, riskyEndsHistory, riskyEndsBaseType, endsHistoryNeedsConfirmation, endsBaseTypeNeedsConfirmation, threeZonePreviewEligible, threeZoneGateDecision, threeZoneCandidateMassModel, threeZonePreviewOnly, threeZoneEndsRecipeReady };
+                const reasons = { rootStep: rStep, lengthStep: lStep, rootConditionProvided: Boolean(rootCondition), lengthConditionProvided: Boolean(lengthCondition), rootDamagedDetected, rootDamagedLiftNeedsConfirmation, lengthDamagedDetected, lengthDamagedLiftNeedsConfirmation, endsLevel: eLevel, endsCondition, endsHistory, endsBaseType, hotRoot, grey, porosity, hasHighPorositySignal, specialBlondHighPorosityNeedsConfirmation, specialBlondBase6NeedsConfirmation, significantDarkeningNeedsPrepig, zoneLevelDifference, zoneProcessesDiffer, zoneDecisionNeedsConfirmation, endsLevelProvided, endsDiffersFromRoot, endsDiffersFromLength, endsLevelNeedsConfirmation, endsConditionProvided, riskyEndsCondition, endsLighteningNeeded, endsChemicalInterventionLikely, endsConditionNeedsConfirmation, endsConditionMissingWithDifferentLevel, endsHistoryProvided, endsBaseTypeProvided, riskyEndsHistory, riskyEndsBaseType, endsHistoryNeedsConfirmation, endsBaseTypeNeedsConfirmation, threeZonePreviewEligible, threeZoneGateDecision, threeZoneCandidateMassModel, threeZonePreviewOnly, threeZoneEndsRecipeReady };
                 if (endsRecCandidatePreview) {
                     reasons.endsRecCandidatePreview = endsRecCandidatePreview;
                 }

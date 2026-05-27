@@ -2115,6 +2115,229 @@ globalThis.__rootDamageGuardResults = {
     powder: rootDamagedPowderResult,
     specialBlond: rootDamagedSpecialBlondResult
 };
+
+// === LENGTH DAMAGED / BRITTLE LIFT SAFETY CONTRACT ===
+function lengthDamageGuardSignals(html) {
+    const htmlText = String(html || '').toLowerCase();
+    const signals = [
+        'пошкоджена / ламка довжина + освітлення',
+        'пошкоджена довжина / length damage',
+        'length_condition вказує',
+        'length lift',
+        'процес довжини'
+    ];
+    return signals.filter(signal => htmlText.includes(signal));
+}
+
+function analyzeLengthDamagedLiftScenario(name, values) {
+    const scenario = runDiagnosticScenario(name, values);
+    assert.ok(scenario.requestedIds.includes('output'), name + ' should access output');
+    assert.ok(!scenario.error, name + ' should not throw');
+
+    const html = scenario.html;
+    const hasApproved = html.includes('APPROVED')
+        || html.includes('ПРОТОКОЛ ЗАТВЕРДЖЕНО');
+    const hasApprovedRecipe = html.includes('approved-recipe');
+    const hasManualSignal = html.includes('MANUAL_REQUIRED')
+        || html.includes('Потрібне ручне рішення')
+        || html.includes('needs_confirmation');
+    const hasLengthDamageText = lengthDamageGuardSignals(html).length > 0
+        || html.toLowerCase().includes('тест-пасм');
+
+    assert.ok(!hasApproved, name + ' should not be automatic APPROVED');
+    assert.ok(!hasApprovedRecipe, name + ' should not render approved recipe blocks');
+    assert.ok(hasManualSignal, name + ' should require manual decision');
+    assert.ok(hasLengthDamageText, name + ' should mention length damage or test strand risk');
+
+    return {
+        status: 'SAFE',
+        hasApproved,
+        hasApprovedRecipe,
+        hasManualSignal,
+        hasLengthDamageText
+    };
+}
+
+const lengthDamagedLiftResult = analyzeLengthDamagedLiftScenario('LENGTH-DAMAGED-LIFT-NO-APPROVED', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    root_condition: 'здоровий корінь',
+    length_condition: 'пошкоджене полотно',
+    porosity: 'нормальна пористість',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '9',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
+});
+console.log('LENGTH-DAMAGED-LIFT-NO-APPROVED safe behavior observed.');
+
+const lengthBrittleLiftResult = analyzeLengthDamagedLiftScenario('LENGTH-BRITTLE-LIFT-NO-APPROVED', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    root_condition: 'здоровий корінь',
+    length_condition: 'ламке полотно',
+    porosity: 'нормальна пористість',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '10',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
+});
+console.log('LENGTH-BRITTLE-LIFT-NO-APPROVED safe behavior observed.');
+
+const lengthDamagedSpecialBlondResult = analyzeLengthDamagedLiftScenario('LENGTH-DAMAGED-SPECIAL-BLOND-NO-APPROVED', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    root_condition: 'здоровий корінь',
+    length_condition: 'сильно пошкоджене полотно',
+    porosity: 'нормальна пористість',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '10',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
+});
+console.log('LENGTH-DAMAGED-SPECIAL-BLOND-NO-APPROVED safe behavior observed.');
+
+(function() {
+    const scenario = runDiagnosticScenario('LENGTH-HEALTHY-ROOT-DAMAGED-NO-LENGTH-FALSE-POSITIVE', {
+        history: 'натуральні',
+        condition: 'здоровые',
+        root_condition: 'пошкоджений корінь',
+        length_condition: 'здорове полотно',
+        thickness: 'средние',
+        density: 'средние',
+        length: 'средние',
+        grey_percent: '0',
+        grey_type: 'мягкая',
+        root_level: '7',
+        root_length: '1',
+        length_level: '7',
+        ends_level: '7',
+        ends_condition: 'здорові',
+        base_type: 'Натуральна',
+        target_level: '8',
+        target_direction: '1',
+        ends_history: 'натуральні',
+        ends_base_type: 'натуральна'
+    });
+    assert.ok(!scenario.error, 'LENGTH-HEALTHY-ROOT-DAMAGED-NO-LENGTH-FALSE-POSITIVE should not throw');
+    const presentLengthDamageSignals = lengthDamageGuardSignals(scenario.html);
+    assert.deepStrictEqual(
+        presentLengthDamageSignals,
+        [],
+        'LENGTH-HEALTHY-ROOT-DAMAGED-NO-LENGTH-FALSE-POSITIVE should not render length damage guard text'
+    );
+    globalThis.__lengthHealthyRootDamagedNoFalsePositiveResult = { status: 'SAFE', presentLengthDamageSignals };
+    console.log('LENGTH-HEALTHY-ROOT-DAMAGED-NO-LENGTH-FALSE-POSITIVE safe behavior observed.');
+})();
+
+(function() {
+    const scenario = runDiagnosticScenario('LENGTH-CONDITION-BARE-DAMAGE-LABEL-NO-FALSE-POSITIVE', {
+        history: 'натуральні',
+        condition: 'здоровые',
+        root_condition: 'здоровий корінь',
+        length_condition: 'damage',
+        thickness: 'средние',
+        density: 'средние',
+        length: 'средние',
+        grey_percent: '0',
+        grey_type: 'мягкая',
+        root_level: '7',
+        root_length: '1',
+        length_level: '7',
+        ends_level: '7',
+        ends_condition: 'здорові',
+        base_type: 'Натуральна',
+        target_level: '8',
+        target_direction: '1',
+        ends_history: 'натуральні',
+        ends_base_type: 'натуральна'
+    });
+    assert.ok(!scenario.error, 'LENGTH-CONDITION-BARE-DAMAGE-LABEL-NO-FALSE-POSITIVE should not throw');
+    const presentLengthDamageSignals = lengthDamageGuardSignals(scenario.html);
+    assert.deepStrictEqual(
+        presentLengthDamageSignals,
+        [],
+        'LENGTH-CONDITION-BARE-DAMAGE-LABEL-NO-FALSE-POSITIVE should not render length damage guard text for a bare label'
+    );
+    globalThis.__lengthBareLabelNoFalsePositiveResult = { status: 'SAFE', presentLengthDamageSignals };
+    console.log('LENGTH-CONDITION-BARE-DAMAGE-LABEL-NO-FALSE-POSITIVE safe behavior observed.');
+})();
+
+(function() {
+    const scenario = runDiagnosticScenario('LENGTH-DAMAGED-NO-LENGTH-LIFT-NO-BLOCKED', {
+        history: 'натуральні',
+        condition: 'здоровые',
+        root_condition: 'здоровий корінь',
+        length_condition: 'пошкоджене полотно',
+        thickness: 'средние',
+        density: 'средние',
+        length: 'средние',
+        grey_percent: '0',
+        grey_type: 'мягкая',
+        root_level: '7',
+        root_length: '1',
+        length_level: '7',
+        ends_level: '7',
+        ends_condition: 'здорові',
+        base_type: 'Натуральна',
+        target_level: '7',
+        target_direction: '1',
+        ends_history: 'натуральні',
+        ends_base_type: 'натуральна'
+    });
+    assert.ok(!scenario.error, 'LENGTH-DAMAGED-NO-LENGTH-LIFT-NO-BLOCKED should not throw');
+    assert.ok(!scenario.html.includes('BLOCKED'), 'LENGTH-DAMAGED-NO-LENGTH-LIFT-NO-BLOCKED should not be BLOCKED');
+    const presentLengthDamageSignals = lengthDamageGuardSignals(scenario.html);
+    assert.deepStrictEqual(
+        presentLengthDamageSignals,
+        [],
+        'LENGTH-DAMAGED-NO-LENGTH-LIFT-NO-BLOCKED should not render length damage lift guard text without length lift'
+    );
+    globalThis.__lengthDamagedNoLengthLiftResult = { status: 'SAFE', presentLengthDamageSignals };
+    console.log('LENGTH-DAMAGED-NO-LENGTH-LIFT-NO-BLOCKED safe behavior observed.');
+})();
+
+globalThis.__lengthDamageGuardResults = {
+    lift: lengthDamagedLiftResult,
+    brittleLift: lengthBrittleLiftResult,
+    specialBlond: lengthDamagedSpecialBlondResult
+};
 `;
 
 const sandbox = {
@@ -2256,5 +2479,26 @@ assert.deepStrictEqual(Array.from(sandbox.__rootBareLabelTextNoFalsePositiveResu
 assert.strictEqual(sandbox.__rootBareLabelTextNoFalsePositiveResult.status, 'SAFE');
 assert.deepStrictEqual(Array.from(sandbox.__rootDamagedNoRootLiftResult.presentRootDamageSignals), []);
 assert.strictEqual(sandbox.__rootDamagedNoRootLiftResult.status, 'SAFE');
+assert.strictEqual(sandbox.__lengthDamageGuardResults.lift.status, 'SAFE');
+assert.strictEqual(sandbox.__lengthDamageGuardResults.lift.hasApproved, false);
+assert.strictEqual(sandbox.__lengthDamageGuardResults.lift.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__lengthDamageGuardResults.lift.hasManualSignal, true);
+assert.strictEqual(sandbox.__lengthDamageGuardResults.lift.hasLengthDamageText, true);
+assert.strictEqual(sandbox.__lengthDamageGuardResults.brittleLift.status, 'SAFE');
+assert.strictEqual(sandbox.__lengthDamageGuardResults.brittleLift.hasApproved, false);
+assert.strictEqual(sandbox.__lengthDamageGuardResults.brittleLift.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__lengthDamageGuardResults.brittleLift.hasManualSignal, true);
+assert.strictEqual(sandbox.__lengthDamageGuardResults.brittleLift.hasLengthDamageText, true);
+assert.strictEqual(sandbox.__lengthDamageGuardResults.specialBlond.status, 'SAFE');
+assert.strictEqual(sandbox.__lengthDamageGuardResults.specialBlond.hasApproved, false);
+assert.strictEqual(sandbox.__lengthDamageGuardResults.specialBlond.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__lengthDamageGuardResults.specialBlond.hasManualSignal, true);
+assert.strictEqual(sandbox.__lengthDamageGuardResults.specialBlond.hasLengthDamageText, true);
+assert.deepStrictEqual(Array.from(sandbox.__lengthHealthyRootDamagedNoFalsePositiveResult.presentLengthDamageSignals), []);
+assert.strictEqual(sandbox.__lengthHealthyRootDamagedNoFalsePositiveResult.status, 'SAFE');
+assert.deepStrictEqual(Array.from(sandbox.__lengthBareLabelNoFalsePositiveResult.presentLengthDamageSignals), []);
+assert.strictEqual(sandbox.__lengthBareLabelNoFalsePositiveResult.status, 'SAFE');
+assert.deepStrictEqual(Array.from(sandbox.__lengthDamagedNoLengthLiftResult.presentLengthDamageSignals), []);
+assert.strictEqual(sandbox.__lengthDamagedNoLengthLiftResult.status, 'SAFE');
 
 console.log('WWW business scenario test passed');
