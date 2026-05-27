@@ -213,6 +213,15 @@ For ПЕРУКАР specifically:
 ## Правило DAMAGE / POROSITY / ELASTICITY
 
 - high damage / сильне пошкодження / критичне пошкодження не має давати automatic APPROVED для lift, powder, Special Blond або високого оксиду;
+- root_condition має реальне UI-поле `#root_condition`;
+- length_condition має реальне UI-поле `#length_condition`;
+- root damaged + root lift / powder / Special Blond не має давати automatic APPROVED;
+- approved-recipe заборонений для root damaged + root lift / powder / Special Blond;
+- мінімальна поведінка для root damaged + root lift / powder / Special Blond: MANUAL_REQUIRED;
+- BLOCKED не вводиться цим root damaged guard;
+- bare `damage` / `root_condition damage label` не має трактуватись як root damage без явного root damage marker;
+- healthy / normal / здоровий / нормальний корінь не має давати false-positive;
+- length_condition поки не має окремого production guard;
 - high porosity / висока пористість тепер має реальне UI-поле `#porosity`;
 - Special Blond + high porosity не має давати automatic APPROVED;
 - approved-recipe заборонений для Special Blond + high porosity;
@@ -226,6 +235,7 @@ For ПЕРУКАР specifically:
 - `normal` / `good` / `нормальна еластичність` не має давати false-positive;
 - automatic APPROVED і approved-recipe заборонені для low elasticity сценаріїв;
 - warning-only не достатній для high-risk lift-сценаріїв;
+- тести `ROOT-DAMAGED-POWDER-NO-APPROVED`, `ROOT-DAMAGED-SPECIAL-BLOND-NO-APPROVED`, `ROOT-HEALTHY-LENGTH-DAMAGED-NO-ROOT-FALSE-POSITIVE`, `ROOT-CONDITION-BARE-DAMAGE-LABEL-NO-FALSE-POSITIVE`, `ROOT-CONDITION-BARE-DAMAGE-LABEL-TEXT-NO-FALSE-POSITIVE`, `ROOT-DAMAGED-NO-ROOT-LIFT-NO-BLOCKED` мають залишатися захистом контракту;
 - тести `SPECIAL-BLOND-HIGH-POROSITY-NO-APPROVED`, `SPECIAL-BLOND-POROUS-LENGTH-NO-APPROVED`, `SPECIAL-BLOND-NORMAL-POROSITY-NO-FALSE-POSITIVE`, `SPECIAL-BLOND-BARE-POROSITY-NO-FALSE-POSITIVE`, `SPECIAL-BLOND-BARE-UKR-POROSITY-NO-FALSE-POSITIVE`, `NON-SPECIAL-BLOND-HIGH-POROSITY-MANUAL-CONSISTENCY` мають залишатися захистом контракту;
 - тести `ELASTICITY-LOW-LIFT-NO-APPROVED`, `ELASTICITY-LOW-SPECIAL-BLOND-NO-APPROVED`, `ELASTICITY-LOW-TONING-MANUAL-MINIMUM`, `ELASTICITY-NORMAL-LIFT-NO-FALSE-POSITIVE` мають залишатися захистом контракту;
 - тести ENDS-DAMAGED-LIFT, ENDS-CONDITION-POROUS-LIFT, ENDS-CONDITION-BRITTLE-HIGH-LIFT, ENDS-CONDITION-DAMAGED-CHEMISTRY мають залишатися захистом контракту;
