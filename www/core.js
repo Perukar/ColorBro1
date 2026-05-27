@@ -1848,12 +1848,15 @@ const pigmentMap = {
                 const endsDiffersFromLength = endsLevelProvided && eLevel !== lLevel;
                 const endsLevelNeedsConfirmation = endsDiffersFromRoot || endsDiffersFromLength;
                 const endsConditionText = String(endsCondition || '').toLowerCase();
+                const endsHistoryText = String(endsHistory || '').toLowerCase();
+                const endsBaseTypeText = String(endsBaseType || '').toLowerCase();
+                function includesAnyMarker(text, markers) {
+                    return markers.some(marker => text.includes(marker));
+                }
                 const endsConditionProvided = Boolean(endsConditionText);
-                const riskyEndsCondition = ['пористі', 'ламкі', 'сильно пошкоджені', 'критично пошкоджені'].includes(endsConditionText)
-                    || endsConditionText.includes('порист')
-                    || endsConditionText.includes('ламк')
-                    || endsConditionText.includes('пошкод')
-                    || endsConditionText.includes('повреж');
+                const endsConditionRiskMarkers = ['damaged', 'brittle', 'porous', 'пошкод', 'повреж', 'ламк', 'порист', 'критич', 'сух', 'пересуш', 'розшар', 'січ', 'облам'];
+                const riskyEndsCondition = Boolean(endsConditionText)
+                    && includesAnyMarker(endsConditionText, endsConditionRiskMarkers);
                 const endsLighteningNeeded = endsLevelProvided && tLevel > eLevel;
                 const endsChemicalInterventionLikely = Boolean(rootRec || lenRec);
                 const endsConditionNeedsConfirmation = riskyEndsCondition
@@ -1893,17 +1896,14 @@ const pigmentMap = {
                      });
                 }
 
-                const endsHistoryText = String(endsHistory || '').toLowerCase();
-                const endsBaseTypeText = String(endsBaseType || '').toLowerCase();
                 const endsHistoryProvided = Boolean(endsHistoryText);
                 const endsBaseTypeProvided = Boolean(endsBaseTypeText);
-                const riskyEndsHistory = [
-                    'косметичний пігмент', 'темний косметичний пігмент', 
-                    'після змивки', 'хна / метали', 'невідома історія'
-                ].includes(endsHistoryText) || endsHistoryText.includes('невідома');
-                const riskyEndsBaseType = [
-                    'косметична', 'змішана / нерівномірна', 'невідома'
-                ].includes(endsBaseTypeText);
+                const endsHistoryRiskMarkers = ['освітлен', 'осветл', 'lightened', 'bleached', 'bleach', 'decolor', 'космет', 'фарб', 'окраш', 'colored', 'dyed', 'хна', 'henna', 'метал', 'salts', 'dark cosmetic', 'темна космет', 'black', 'чорн', 'накопич', 'unknown', 'невідом'];
+                const endsBaseTypeRiskMarkers = ['освітлен', 'осветл', 'lightened', 'космет', 'фарб', 'окраш', 'colored', 'dyed', 'змішан', 'смешан', 'mixed', 'uneven', 'нерівном', 'пятн', 'плям', 'темна космет', 'dark cosmetic', 'black', 'чорн'];
+                const riskyEndsHistory = Boolean(endsHistoryText)
+                    && includesAnyMarker(endsHistoryText, endsHistoryRiskMarkers);
+                const riskyEndsBaseType = Boolean(endsBaseTypeText)
+                    && includesAnyMarker(endsBaseTypeText, endsBaseTypeRiskMarkers);
 
                 const endsHistoryNeedsConfirmation = endsLevelProvided && !endsHistoryProvided && endsLevelNeedsConfirmation;
                 const endsBaseTypeNeedsConfirmation = endsLevelProvided && !endsBaseTypeProvided && endsLevelNeedsConfirmation;
@@ -1937,6 +1937,24 @@ const pigmentMap = {
                     manualDecisions.push({
                         title: "Ризикова база кінців",
                         message: `Тип бази "${endsBaseType}" при цільовому рівні ${tLevel} потребує ручного рішення майстра.`
+                    });
+                }
+
+                const endsLevelDiffers = endsLevelProvided && Number.isFinite(lLevel) && eLevel !== lLevel;
+                const sameLevelButEndsRisky = endsLevelProvided
+                    && Number.isFinite(lLevel)
+                    && eLevel === lLevel
+                    && (riskyEndsCondition || riskyEndsHistory || riskyEndsBaseType);
+                const endsConflictDetected = endsLevelDiffers
+                    || riskyEndsCondition
+                    || riskyEndsHistory
+                    || riskyEndsBaseType;
+
+                if (endsConflictDetected) {
+                    warnings.push("⚠️ MULTI-ZONE / ENDS CONFLICT: кінці мають окремий стан/історію/базу. Unified root/length approved recipe заборонений без ручної перевірки.");
+                    manualDecisions.push({
+                        title: "Multi-zone ends conflict",
+                        message: `ends_condition: ${endsCondition || 'не вказано'}, ends_history: ${endsHistory || 'не вказано'}, ends_base_type: ${endsBaseType || 'не вказано'}, ends_level: ${endsLevelProvided ? eLevel : 'не вказано'}. Ці дані показують ризик або конфлікт кінців. Production endsRec не активується; потрібна ручна оцінка, тест-пасмо і окреме рішення майстра перед використанням root/length рецепта.`
                     });
                 }
 
@@ -2050,7 +2068,7 @@ const pigmentMap = {
                     // Fail-safe: do not disrupt primary 2-zone calculation paths
                 }
 
-                const reasons = { rootStep: rStep, lengthStep: lStep, rootConditionProvided: Boolean(rootCondition), lengthConditionProvided: Boolean(lengthCondition), rootDamagedDetected, rootDamagedLiftNeedsConfirmation, lengthDamagedDetected, lengthDamagedLiftNeedsConfirmation, rootOxPercent, lengthOxPercent, rootHighOxidizer, lengthHighOxidizer, legacyHighOxidizerRisk, rootHighOxidizerRisk, lengthHighOxidizerRisk, rootHighOxidizerNeedsConfirmation, lengthHighOxidizerNeedsConfirmation, endsLevel: eLevel, endsCondition, endsHistory, endsBaseType, hotRoot, grey, porosity, hasHighPorositySignal, specialBlondHighPorosityNeedsConfirmation, specialBlondBase6NeedsConfirmation, significantDarkeningNeedsPrepig, zoneLevelDifference, zoneProcessesDiffer, zoneDecisionNeedsConfirmation, endsLevelProvided, endsDiffersFromRoot, endsDiffersFromLength, endsLevelNeedsConfirmation, endsConditionProvided, riskyEndsCondition, endsLighteningNeeded, endsChemicalInterventionLikely, endsConditionNeedsConfirmation, endsConditionMissingWithDifferentLevel, endsHistoryProvided, endsBaseTypeProvided, riskyEndsHistory, riskyEndsBaseType, endsHistoryNeedsConfirmation, endsBaseTypeNeedsConfirmation, threeZonePreviewEligible, threeZoneGateDecision, threeZoneCandidateMassModel, threeZonePreviewOnly, threeZoneEndsRecipeReady };
+                const reasons = { rootStep: rStep, lengthStep: lStep, rootConditionProvided: Boolean(rootCondition), lengthConditionProvided: Boolean(lengthCondition), rootDamagedDetected, rootDamagedLiftNeedsConfirmation, lengthDamagedDetected, lengthDamagedLiftNeedsConfirmation, rootOxPercent, lengthOxPercent, rootHighOxidizer, lengthHighOxidizer, legacyHighOxidizerRisk, rootHighOxidizerRisk, lengthHighOxidizerRisk, rootHighOxidizerNeedsConfirmation, lengthHighOxidizerNeedsConfirmation, endsLevel: eLevel, endsCondition, endsHistory, endsBaseType, hotRoot, grey, porosity, hasHighPorositySignal, specialBlondHighPorosityNeedsConfirmation, specialBlondBase6NeedsConfirmation, significantDarkeningNeedsPrepig, zoneLevelDifference, zoneProcessesDiffer, zoneDecisionNeedsConfirmation, endsLevelProvided, endsDiffersFromRoot, endsDiffersFromLength, endsLevelNeedsConfirmation, endsConditionProvided, riskyEndsCondition, endsLighteningNeeded, endsChemicalInterventionLikely, endsConditionNeedsConfirmation, endsConditionMissingWithDifferentLevel, endsHistoryProvided, endsBaseTypeProvided, riskyEndsHistory, riskyEndsBaseType, endsHistoryNeedsConfirmation, endsBaseTypeNeedsConfirmation, endsLevelDiffers, sameLevelButEndsRisky, endsConflictDetected, threeZonePreviewEligible, threeZoneGateDecision, threeZoneCandidateMassModel, threeZonePreviewOnly, threeZoneEndsRecipeReady };
                 if (endsRecCandidatePreview) {
                     reasons.endsRecCandidatePreview = endsRecCandidatePreview;
                 }

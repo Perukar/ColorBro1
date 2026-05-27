@@ -761,6 +761,71 @@ function analyzeEndsScenario(name, values) {
     };
 }
 
+function multiZoneGuardSignals(html) {
+    const htmlText = String(html || '').toLowerCase();
+    const signals = [
+        'multi-zone',
+        'ends conflict',
+        'різнозон',
+        'кінці мають окремий',
+        'ends_condition',
+        'ends_history',
+        'ends_base_type',
+        'diagnostic-only',
+        'не production',
+        'тест-пасм',
+        'multi-zone ends conflict'
+    ];
+    return signals.filter(signal => htmlText.includes(signal.toLowerCase()));
+}
+
+function hasProductionEndsRecSignal(html) {
+    return html.includes('<h3>Кінці</h3>')
+        || html.includes('<h3>Ends</h3>')
+        || html.includes('endsRec:')
+        || html.includes('endsRecipeReady: true')
+        || html.includes('productionRecipe')
+        || html.includes('formula-to-mix')
+        || html.includes('finalFormula')
+        || html.includes('dyeMass')
+        || html.includes('oxidizerMass')
+        || html.includes('exactGrams')
+        || html.includes('&quot;mode&quot;: &quot;3-zone&quot;');
+}
+
+function analyzeMultiZoneConflictScenario(name, values) {
+    const scenario = runDiagnosticScenario(name, values);
+    assert.ok(scenario.requestedIds.includes('output'), name + ' should access output');
+
+    const html = scenario.html;
+    const hasApproved = html.includes('APPROVED')
+        || html.includes('ПРОТОКОЛ ЗАТВЕРДЖЕНО');
+    const hasApprovedRecipe = html.includes('approved-recipe');
+    const hasManualSignal = html.includes('MANUAL_REQUIRED')
+        || html.includes('Потрібне ручне рішення')
+        || html.includes('needs_confirmation');
+    const presentMultiZoneSignals = multiZoneGuardSignals(html);
+    const productionEndsRecSignal = hasProductionEndsRecSignal(html);
+
+    assert.ok(!scenario.error, name + ' should not throw at runtime');
+    assert.ok(!hasApproved, name + ' should not be automatic APPROVED');
+    assert.ok(!hasApprovedRecipe, name + ' should not render approved-recipe');
+    assert.ok(hasManualSignal, name + ' should require manual confirmation');
+    assert.ok(presentMultiZoneSignals.length > 0, name + ' should render multi-zone / ends conflict text');
+    assert.ok(!productionEndsRecSignal, name + ' should not render production endsRec');
+
+    return {
+        name,
+        html,
+        status: 'SAFE',
+        hasApproved,
+        hasApprovedRecipe,
+        hasManualSignal,
+        presentMultiZoneSignals,
+        productionEndsRecSignal
+    };
+}
+
 const endsLighterScenario = analyzeEndsScenario('ENDS-LIGHTER-THAN-LENGTH', {
     history: 'натуральні',
     condition: 'здоровые',
@@ -1189,6 +1254,253 @@ globalThis.__endsHistoryBaseResults = {
     baseCosmeticLift: { status: 'SAFE', hasManualSignal: endsBaseTypeCosmeticLiftScenario.hasManualSignal },
     baseMixedUneven: { status: 'SAFE', hasManualSignal: endsBaseTypeMixedUnevenScenario.hasManualSignal },
     missingWithDifferentLevel: { status: 'SAFE', hasManualSignal: endsHistoryMissingWithDifferentLevelScenario.hasManualSignal }
+};
+
+const multiZoneEndsBrittleLiftResult = analyzeMultiZoneConflictScenario('MULTI-ZONE-ENDS-BRITTLE-LIFT-NO-APPROVED', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    root_condition: 'здоровий корінь',
+    length_condition: 'здорове полотно',
+    porosity: 'нормальна пористість',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'ламкі кінці',
+    base_type: 'Натуральна',
+    target_level: '9',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
+});
+assert.ok(multiZoneEndsBrittleLiftResult.html.includes('ламкі кінці'), 'MULTI-ZONE-ENDS-BRITTLE-LIFT-NO-APPROVED should mention brittle ends');
+console.log('MULTI-ZONE-ENDS-BRITTLE-LIFT-NO-APPROVED safe behavior observed.');
+
+const multiZoneEndsDamagedLengthLiftResult = analyzeMultiZoneConflictScenario('MULTI-ZONE-ENDS-DAMAGED-LENGTH-LIFT-NO-APPROVED', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    root_condition: 'здоровий корінь',
+    length_condition: 'здорове полотно',
+    porosity: 'нормальна пористість',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'пошкоджені кінці',
+    base_type: 'Натуральна',
+    target_level: '9',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
+});
+assert.ok(multiZoneEndsDamagedLengthLiftResult.html.includes('пошкоджені кінці'), 'MULTI-ZONE-ENDS-DAMAGED-LENGTH-LIFT-NO-APPROVED should mention damaged ends');
+console.log('MULTI-ZONE-ENDS-DAMAGED-LENGTH-LIFT-NO-APPROVED safe behavior observed.');
+
+const multiZoneEndsLightenedSameLevelResult = analyzeMultiZoneConflictScenario('MULTI-ZONE-ENDS-LIGHTENED-SAME-LEVEL-NO-UNIFIED-APPROVED', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    root_condition: 'здоровий корінь',
+    length_condition: 'здорове полотно',
+    porosity: 'нормальна пористість',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '7',
+    target_direction: '1',
+    ends_history: 'освітлені',
+    ends_base_type: 'освітлена'
+});
+assert.ok(multiZoneEndsLightenedSameLevelResult.html.includes('освітлені') || multiZoneEndsLightenedSameLevelResult.html.includes('освітлена'), 'MULTI-ZONE-ENDS-LIGHTENED-SAME-LEVEL-NO-UNIFIED-APPROVED should mention lightened ends');
+console.log('MULTI-ZONE-ENDS-LIGHTENED-SAME-LEVEL-NO-UNIFIED-APPROVED safe behavior observed.');
+
+const multiZoneEndsMixedBaseSameLevelResult = analyzeMultiZoneConflictScenario('MULTI-ZONE-ENDS-MIXED-BASE-SAME-LEVEL-NO-APPROVED', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    root_condition: 'здоровий корінь',
+    length_condition: 'здорове полотно',
+    porosity: 'нормальна пористість',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '7',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'змішана / нерівномірна'
+});
+assert.ok(multiZoneEndsMixedBaseSameLevelResult.html.includes('змішана / нерівномірна'), 'MULTI-ZONE-ENDS-MIXED-BASE-SAME-LEVEL-NO-APPROVED should mention mixed ends base');
+console.log('MULTI-ZONE-ENDS-MIXED-BASE-SAME-LEVEL-NO-APPROVED safe behavior observed.');
+
+const multiZoneEndsHennaMetalsResult = analyzeMultiZoneConflictScenario('MULTI-ZONE-ENDS-HENNA-METALS-NO-APPROVED', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    root_condition: 'здоровий корінь',
+    length_condition: 'здорове полотно',
+    porosity: 'нормальна пористість',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '7',
+    target_direction: '1',
+    ends_history: 'хна / металеві солі',
+    ends_base_type: 'натуральна'
+});
+assert.ok(multiZoneEndsHennaMetalsResult.html.includes('хна') || multiZoneEndsHennaMetalsResult.html.includes('метал'), 'MULTI-ZONE-ENDS-HENNA-METALS-NO-APPROVED should mention henna/metals');
+console.log('MULTI-ZONE-ENDS-HENNA-METALS-NO-APPROVED safe behavior observed.');
+
+const multiZoneEndsDarkCosmeticResult = analyzeMultiZoneConflictScenario('MULTI-ZONE-ENDS-DARK-COSMETIC-CONFLICT-NO-APPROVED', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    root_condition: 'здоровий корінь',
+    length_condition: 'здорове полотно',
+    porosity: 'нормальна пористість',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '7',
+    target_direction: '1',
+    ends_history: 'темна косметична база',
+    ends_base_type: 'темна косметична'
+});
+assert.ok(multiZoneEndsDarkCosmeticResult.html.includes('темна косметична'), 'MULTI-ZONE-ENDS-DARK-COSMETIC-CONFLICT-NO-APPROVED should mention dark cosmetic ends');
+console.log('MULTI-ZONE-ENDS-DARK-COSMETIC-CONFLICT-NO-APPROVED safe behavior observed.');
+
+const multiZoneLengthHealthyEndsDamagedResult = analyzeMultiZoneConflictScenario('MULTI-ZONE-LENGTH-HEALTHY-ENDS-DAMAGED-NO-PRODUCTION-ENDSREC', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    root_condition: 'здоровий корінь',
+    length_condition: 'здорове полотно',
+    porosity: 'нормальна пористість',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'пошкоджені кінці',
+    base_type: 'Натуральна',
+    target_level: '7',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
+});
+console.log('MULTI-ZONE-LENGTH-HEALTHY-ENDS-DAMAGED-NO-PRODUCTION-ENDSREC safe behavior observed.');
+
+const multiZoneNormalEndsScenario = runDiagnosticScenario('MULTI-ZONE-NORMAL-ENDS-NO-FALSE-POSITIVE', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    root_condition: 'здоровий корінь',
+    length_condition: 'здорове полотно',
+    porosity: 'нормальна пористість',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '7',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
+});
+assert.ok(!multiZoneNormalEndsScenario.error, 'MULTI-ZONE-NORMAL-ENDS-NO-FALSE-POSITIVE should not throw');
+const multiZoneNormalSignals = multiZoneGuardSignals(multiZoneNormalEndsScenario.html);
+assert.deepStrictEqual(multiZoneNormalSignals, [], 'MULTI-ZONE-NORMAL-ENDS-NO-FALSE-POSITIVE should not render multi-zone guard text');
+console.log('MULTI-ZONE-NORMAL-ENDS-NO-FALSE-POSITIVE safe behavior observed.');
+
+const multiZoneDiagnosticNotProductionResult = analyzeMultiZoneConflictScenario('MULTI-ZONE-DIAGNOSTIC-NOT-PRODUCTION-SOURCE', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    root_condition: 'здоровий корінь',
+    length_condition: 'здорове полотно',
+    porosity: 'нормальна пористість',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '7',
+    target_direction: '1',
+    ends_history: 'освітлені',
+    ends_base_type: 'освітлена'
+});
+assert.ok(!multiZoneDiagnosticNotProductionResult.productionEndsRecSignal, 'MULTI-ZONE-DIAGNOSTIC-NOT-PRODUCTION-SOURCE should keep ends diagnostic/non-production only');
+console.log('MULTI-ZONE-DIAGNOSTIC-NOT-PRODUCTION-SOURCE safe behavior observed.');
+
+globalThis.__multiZoneConflictResults = {
+    brittleLift: multiZoneEndsBrittleLiftResult,
+    damagedLengthLift: multiZoneEndsDamagedLengthLiftResult,
+    lightenedSameLevel: multiZoneEndsLightenedSameLevelResult,
+    mixedBaseSameLevel: multiZoneEndsMixedBaseSameLevelResult,
+    hennaMetals: multiZoneEndsHennaMetalsResult,
+    darkCosmetic: multiZoneEndsDarkCosmeticResult,
+    lengthHealthyEndsDamaged: multiZoneLengthHealthyEndsDamagedResult,
+    normalEndsFalsePositive: { status: 'SAFE', presentMultiZoneSignals: multiZoneNormalSignals },
+    diagnosticNotProduction: multiZoneDiagnosticNotProductionResult
 };
 
 
@@ -3086,5 +3398,22 @@ assert.deepStrictEqual(Array.from(sandbox.__brandSpecificFalsePositiveResults.no
 assert.strictEqual(sandbox.__brandSpecificFalsePositiveResults.normalSameLevel.status, 'SAFE');
 assert.deepStrictEqual(Array.from(sandbox.__brandSpecificFalsePositiveResults.genericPermanent6.presentBrandSignals), []);
 assert.strictEqual(sandbox.__brandSpecificFalsePositiveResults.genericPermanent6.status, 'SAFE');
+assert.strictEqual(sandbox.__multiZoneConflictResults.brittleLift.status, 'SAFE');
+assert.strictEqual(sandbox.__multiZoneConflictResults.brittleLift.hasApproved, false);
+assert.strictEqual(sandbox.__multiZoneConflictResults.brittleLift.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__multiZoneConflictResults.brittleLift.productionEndsRecSignal, false);
+assert.strictEqual(sandbox.__multiZoneConflictResults.damagedLengthLift.status, 'SAFE');
+assert.strictEqual(sandbox.__multiZoneConflictResults.damagedLengthLift.hasApproved, false);
+assert.strictEqual(sandbox.__multiZoneConflictResults.damagedLengthLift.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__multiZoneConflictResults.lightenedSameLevel.status, 'SAFE');
+assert.strictEqual(sandbox.__multiZoneConflictResults.lightenedSameLevel.hasManualSignal, true);
+assert.strictEqual(sandbox.__multiZoneConflictResults.mixedBaseSameLevel.status, 'SAFE');
+assert.strictEqual(sandbox.__multiZoneConflictResults.hennaMetals.status, 'SAFE');
+assert.strictEqual(sandbox.__multiZoneConflictResults.darkCosmetic.status, 'SAFE');
+assert.strictEqual(sandbox.__multiZoneConflictResults.lengthHealthyEndsDamaged.status, 'SAFE');
+assert.deepStrictEqual(Array.from(sandbox.__multiZoneConflictResults.normalEndsFalsePositive.presentMultiZoneSignals), []);
+assert.strictEqual(sandbox.__multiZoneConflictResults.normalEndsFalsePositive.status, 'SAFE');
+assert.strictEqual(sandbox.__multiZoneConflictResults.diagnosticNotProduction.productionEndsRecSignal, false);
+assert.strictEqual(sandbox.__multiZoneConflictResults.diagnosticNotProduction.status, 'SAFE');
 
 console.log('WWW business scenario test passed');
