@@ -175,9 +175,12 @@ const greyBaseOutput = { innerHTML: '' };
 document.getElementById = (id) => id === 'output' ? greyBaseOutput : { value: greyBaseScenarioValues[id] };
 calculateProtocol();
 const greyBaseHtml = greyBaseOutput.innerHTML;
-const greyBaseHasBase = greyBaseHtml.includes('База 6.00');
-const greyBaseHasPermanent = greyBaseHtml.includes('Перманент');
-assert.ok(greyBaseHasBase, 'GREY-50-ADDS-00-BASE should add .00 base to recipe');
+const greyBaseHasBase = greyBaseHtml.includes('База 6.00')
+    || greyBaseHtml.includes('.00 / grey coverage')
+    || greyBaseHtml.includes('.00 grey coverage');
+const greyBaseHasPermanent = greyBaseHtml.includes('Перманент')
+    || greyBaseHtml.includes('Brand-specific rules required');
+assert.ok(greyBaseHasBase, 'GREY-50-ADDS-00-BASE should expose .00 base / grey coverage signal');
 assert.ok(greyBaseHasPermanent, 'GREY-50-ADDS-00-BASE should use Permanent');
 console.log('GREY-50-ADDS-00-BASE safe behavior observed.');
 
@@ -2596,12 +2599,273 @@ console.log('HIGH-OXIDIZER-LOW-ELASTICITY-NO-APPROVED safe behavior observed.');
     console.log('HIGH-OXIDIZER-PARSE-DECIMAL-NO-FALSE-POSITIVE safe behavior observed.');
 })();
 
+// === BRAND-SPECIFIC CONSTRAINTS: MISSING BRAND RULE MATRIX MANUAL GATE ===
+function brandSpecificGuardSignals(html) {
+    const htmlText = String(html || '').toLowerCase();
+    const signals = [
+        'brand / system rules не підтверджені',
+        'brand-specific rules required',
+        'brand rule matrix',
+        'brand/system rules',
+        'бренд-залежний процес',
+        'підтвердження бренду',
+        'бренду, системи, лінійки',
+        'лінійки, сумісності окисника',
+        'інструкції виробника',
+        'special blond',
+        '.00 / grey coverage',
+        'high oxidizer',
+        'powder / порошок',
+        'toning / тонування'
+    ];
+    return signals.filter(signal => htmlText.includes(signal));
+}
+
+function analyzeBrandMissingRuleMatrixScenario(name, values, expectedTextSignals) {
+    const scenario = runDiagnosticScenario(name, values);
+    assert.ok(scenario.requestedIds.includes('output'), name + ' should access output');
+    assert.ok(!scenario.error, name + ' should not throw');
+
+    const html = scenario.html;
+    const htmlText = html.toLowerCase();
+    const hasApproved = html.includes('APPROVED')
+        || html.includes('ПРОТОКОЛ ЗАТВЕРДЖЕНО');
+    const hasApprovedRecipe = html.includes('approved-recipe');
+    const hasManualSignal = html.includes('MANUAL_REQUIRED')
+        || html.includes('Потрібне ручне рішення')
+        || html.includes('needs_confirmation')
+        || html.includes('Brand-specific rules required');
+    const presentBrandSignals = brandSpecificGuardSignals(html);
+
+    assert.ok(!hasApproved, name + ' should not be automatic APPROVED');
+    assert.ok(!hasApprovedRecipe, name + ' should not render approved recipe blocks');
+    assert.ok(hasManualSignal, name + ' should require manual signal');
+    assert.ok(presentBrandSignals.length > 0, name + ' should render brand/system guard text');
+    expectedTextSignals.forEach(signal => {
+        assert.ok(htmlText.includes(signal), name + ' should mention ' + signal);
+    });
+
+    return {
+        status: 'SAFE',
+        hasApproved,
+        hasApprovedRecipe,
+        hasManualSignal,
+        presentBrandSignals
+    };
+}
+
+function analyzeBrandSpecificFalsePositiveScenario(name, values) {
+    const scenario = runDiagnosticScenario(name, values);
+    assert.ok(scenario.requestedIds.includes('output'), name + ' should access output');
+    assert.ok(!scenario.error, name + ' should not throw');
+
+    const presentBrandSignals = brandSpecificGuardSignals(scenario.html);
+    assert.deepStrictEqual(
+        presentBrandSignals,
+        [],
+        name + ' should not render missing brand rule matrix warning'
+    );
+
+    return {
+        status: 'SAFE',
+        presentBrandSignals
+    };
+}
+
+const brandMissingSpecialBlondResult = analyzeBrandMissingRuleMatrixScenario('BRAND-MISSING-SPECIAL-BLOND-NO-APPROVED', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    root_condition: 'здоровий корінь',
+    length_condition: 'здорове полотно',
+    porosity: 'нормальна пористість',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '10',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
+}, ['brand/system rules', 'special blond', '9%']);
+console.log('BRAND-MISSING-SPECIAL-BLOND-NO-APPROVED safe behavior observed.');
+
+const brandMissingGrey00Result = analyzeBrandMissingRuleMatrixScenario('BRAND-MISSING-GREY-00-NO-APPROVED', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    root_condition: 'здоровий корінь',
+    length_condition: 'здорове полотно',
+    porosity: 'нормальна пористість',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '70',
+    grey_type: 'мягкая',
+    root_level: '6',
+    root_length: '1',
+    length_level: '6',
+    ends_level: '6',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '7',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
+}, ['brand/system rules', '.00', 'grey coverage']);
+console.log('BRAND-MISSING-GREY-00-NO-APPROVED safe behavior observed.');
+
+const brandMissingHighOxidizerResult = analyzeBrandMissingRuleMatrixScenario('BRAND-MISSING-HIGH-OXIDIZER-NO-APPROVED', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    root_condition: 'здоровий корінь',
+    length_condition: 'здорове полотно',
+    porosity: 'нормальна пористість',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '9',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
+}, ['brand/system rules', 'high oxidizer', '9%']);
+console.log('BRAND-MISSING-HIGH-OXIDIZER-NO-APPROVED safe behavior observed.');
+
+const brandMissingPowderResult = analyzeBrandMissingRuleMatrixScenario('BRAND-MISSING-POWDER-NO-APPROVED', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    root_condition: 'здоровий корінь',
+    length_condition: 'здорове полотно',
+    porosity: 'нормальна пористість',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '5',
+    root_length: '1',
+    length_level: '5',
+    ends_level: '5',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '9',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
+}, ['brand/system rules', 'powder', 'порошок']);
+console.log('BRAND-MISSING-POWDER-NO-APPROVED safe behavior observed.');
+
+const brandMissingToningResult = analyzeBrandMissingRuleMatrixScenario('BRAND-MISSING-TONING-LINE-NO-APPROVED', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    root_condition: 'здоровий корінь',
+    length_condition: 'здорове полотно',
+    porosity: 'нормальна пористість',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '9',
+    root_length: '1',
+    length_level: '9',
+    ends_level: '9',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '8',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
+}, ['brand/system rules', 'toning', 'тонування']);
+console.log('BRAND-MISSING-TONING-LINE-NO-APPROVED safe behavior observed.');
+
+const brandNormalSameLevelResult = analyzeBrandSpecificFalsePositiveScenario('BRAND-NORMAL-SAME-LEVEL-NO-FALSE-POSITIVE', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    root_condition: 'здоровий корінь',
+    length_condition: 'здорове полотно',
+    porosity: 'нормальна пористість',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '7',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
+});
+console.log('BRAND-NORMAL-SAME-LEVEL-NO-FALSE-POSITIVE safe behavior observed.');
+
+const brandGenericPermanent6Result = analyzeBrandSpecificFalsePositiveScenario('BRAND-GENERIC-PERMANENT-6-NO-BRAND-GATE-IF-NOT-SENSITIVE', {
+    history: 'натуральні',
+    condition: 'здоровые',
+    root_condition: 'здоровий корінь',
+    length_condition: 'здорове полотно',
+    porosity: 'нормальна пористість',
+    elasticity: 'нормальна еластичність',
+    thickness: 'средние',
+    density: 'средние',
+    length: 'средние',
+    grey_percent: '0',
+    grey_type: 'мягкая',
+    root_level: '7',
+    root_length: '1',
+    length_level: '7',
+    ends_level: '7',
+    ends_condition: 'здорові',
+    base_type: 'Натуральна',
+    target_level: '8',
+    target_direction: '1',
+    ends_history: 'натуральні',
+    ends_base_type: 'натуральна'
+});
+console.log('BRAND-GENERIC-PERMANENT-6-NO-BRAND-GATE-IF-NOT-SENSITIVE safe behavior observed.');
+
 globalThis.__highOxidizerDamagedHairResults = {
     rootDamaged: highOxRootDamagedResult,
     lengthDamaged: highOxLengthDamagedResult,
     legacyStronglyDamaged: highOxLegacyStronglyDamagedResult,
     highPorosity: highOxHighPorosityResult,
     lowElasticity: highOxLowElasticityResult
+};
+
+globalThis.__brandSpecificGuardResults = {
+    specialBlond: brandMissingSpecialBlondResult,
+    grey00: brandMissingGrey00Result,
+    highOxidizer: brandMissingHighOxidizerResult,
+    powder: brandMissingPowderResult,
+    toning: brandMissingToningResult
+};
+
+globalThis.__brandSpecificFalsePositiveResults = {
+    normalSameLevel: brandNormalSameLevelResult,
+    genericPermanent6: brandGenericPermanent6Result
 };
 `;
 
@@ -2793,5 +3057,34 @@ assert.deepStrictEqual(Array.from(sandbox.__highOxNormalHairFalsePositiveResult.
 assert.strictEqual(sandbox.__highOxNormalHairFalsePositiveResult.status, 'SAFE');
 assert.deepStrictEqual(Array.from(sandbox.__highOxParseDecimalFalsePositiveResult.presentHighOxidizerSignals), []);
 assert.strictEqual(sandbox.__highOxParseDecimalFalsePositiveResult.status, 'SAFE');
+assert.strictEqual(sandbox.__brandSpecificGuardResults.specialBlond.status, 'SAFE');
+assert.strictEqual(sandbox.__brandSpecificGuardResults.specialBlond.hasApproved, false);
+assert.strictEqual(sandbox.__brandSpecificGuardResults.specialBlond.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__brandSpecificGuardResults.specialBlond.hasManualSignal, true);
+assert.ok(Array.from(sandbox.__brandSpecificGuardResults.specialBlond.presentBrandSignals).length > 0);
+assert.strictEqual(sandbox.__brandSpecificGuardResults.grey00.status, 'SAFE');
+assert.strictEqual(sandbox.__brandSpecificGuardResults.grey00.hasApproved, false);
+assert.strictEqual(sandbox.__brandSpecificGuardResults.grey00.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__brandSpecificGuardResults.grey00.hasManualSignal, true);
+assert.ok(Array.from(sandbox.__brandSpecificGuardResults.grey00.presentBrandSignals).length > 0);
+assert.strictEqual(sandbox.__brandSpecificGuardResults.highOxidizer.status, 'SAFE');
+assert.strictEqual(sandbox.__brandSpecificGuardResults.highOxidizer.hasApproved, false);
+assert.strictEqual(sandbox.__brandSpecificGuardResults.highOxidizer.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__brandSpecificGuardResults.highOxidizer.hasManualSignal, true);
+assert.ok(Array.from(sandbox.__brandSpecificGuardResults.highOxidizer.presentBrandSignals).length > 0);
+assert.strictEqual(sandbox.__brandSpecificGuardResults.powder.status, 'SAFE');
+assert.strictEqual(sandbox.__brandSpecificGuardResults.powder.hasApproved, false);
+assert.strictEqual(sandbox.__brandSpecificGuardResults.powder.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__brandSpecificGuardResults.powder.hasManualSignal, true);
+assert.ok(Array.from(sandbox.__brandSpecificGuardResults.powder.presentBrandSignals).length > 0);
+assert.strictEqual(sandbox.__brandSpecificGuardResults.toning.status, 'SAFE');
+assert.strictEqual(sandbox.__brandSpecificGuardResults.toning.hasApproved, false);
+assert.strictEqual(sandbox.__brandSpecificGuardResults.toning.hasApprovedRecipe, false);
+assert.strictEqual(sandbox.__brandSpecificGuardResults.toning.hasManualSignal, true);
+assert.ok(Array.from(sandbox.__brandSpecificGuardResults.toning.presentBrandSignals).length > 0);
+assert.deepStrictEqual(Array.from(sandbox.__brandSpecificFalsePositiveResults.normalSameLevel.presentBrandSignals), []);
+assert.strictEqual(sandbox.__brandSpecificFalsePositiveResults.normalSameLevel.status, 'SAFE');
+assert.deepStrictEqual(Array.from(sandbox.__brandSpecificFalsePositiveResults.genericPermanent6.presentBrandSignals), []);
+assert.strictEqual(sandbox.__brandSpecificFalsePositiveResults.genericPermanent6.status, 'SAFE');
 
 console.log('WWW business scenario test passed');

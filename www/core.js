@@ -1742,6 +1742,51 @@ const pigmentMap = {
                     });
                 }
 
+                const hasBrandRuleMatrix = false;
+                function collectBrandSensitiveRecipeText(recipe) {
+                    if (!recipe) return '';
+                    return [
+                        recipe.process,
+                        recipe.formula,
+                        recipe.dye,
+                        recipe.ox,
+                        recipe.ratio,
+                        recipe.text,
+                        recipe.notes
+                    ].filter(Boolean).map(value => String(value)).join(' ');
+                }
+
+                const brandSensitiveRecipeText = [
+                    collectBrandSensitiveRecipeText(rootRec),
+                    collectBrandSensitiveRecipeText(lenRec)
+                ].join(' ').toLowerCase();
+                const brandSensitiveReasons = [];
+                const brandSensitiveSpecialBlond = ['special blond', 'special blonde', 'спецблонд', 'спец блонд']
+                    .some(marker => brandSensitiveRecipeText.includes(marker));
+                const brandSensitiveGreyBase = ['.00', '/00', 'double natural', 'intense natural']
+                    .some(marker => brandSensitiveRecipeText.includes(marker));
+                const brandSensitiveHighOxidizer = rootHighOxidizer || lengthHighOxidizer;
+                const brandSensitivePowder = ['powder', 'порошок', 'порош']
+                    .some(marker => brandSensitiveRecipeText.includes(marker));
+                const brandSensitiveToning = ['перманент / тонування', 'тонування', 'toning']
+                    .some(marker => brandSensitiveRecipeText.includes(marker));
+
+                if (brandSensitiveSpecialBlond) brandSensitiveReasons.push('Special Blond');
+                if (brandSensitiveGreyBase) brandSensitiveReasons.push('.00 / grey coverage');
+                if (brandSensitiveHighOxidizer) brandSensitiveReasons.push('high oxidizer >= 9%');
+                if (brandSensitivePowder) brandSensitiveReasons.push('powder / порошок');
+                if (brandSensitiveToning) brandSensitiveReasons.push('toning / Тонування');
+
+                const brandSensitiveRecipe = brandSensitiveReasons.length > 0;
+                if (brandSensitiveRecipe && !hasBrandRuleMatrix) {
+                    const brandSensitiveReasonText = brandSensitiveReasons.join(', ');
+                    warnings.push(`⚠️ BRAND / SYSTEM RULES НЕ ПІДТВЕРДЖЕНІ: рецепт містить бренд-залежний процес (${brandSensitiveReasonText}). Потрібне підтвердження бренду, системи, лінійки, окисника, пропорції та інструкції виробника.`);
+                    manualDecisions.push({
+                        title: "Brand-specific rules required",
+                        message: `Brand rule matrix відсутня. Виявлено: ${brandSensitiveReasonText}. Special Blond, .00 grey coverage, high oxidizer, powder і toning залежать від бренду, лінійки, сумісності окисника, пропорції змішування та інструкції виробника. Automatic approved recipe заборонений без підтвердження brand/system rules.`
+                    });
+                }
+
                 if (hasHighPorositySignal) {
                     warnings.push(specialBlondHighPorosityNeedsConfirmation
                         ? "⚠️ SPECIAL BLOND + ВИСОКА ПОРИСТІСТЬ: Пористе полотно при Special Blond може дати плямистість, провал тону або нестабільний результат. Потрібне ручне рішення та тест-пасмо."
