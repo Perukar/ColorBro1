@@ -792,6 +792,35 @@ if (typeof PerucarWwwMappingV1 !== 'object') {
     throw new Error('PerucarWwwMappingV1 presence check failed');
 }
 
+// === RENDER-TIMING-TOP-LEVEL ===
+// buildWwwRenderState must expose a top-level numeric 'timing' field.
+// When runtime.timing is a number it must pass through unchanged.
+// When runtime.timing is absent it must default to 0.
+const timingTopLevelState = buildWwwRenderState({
+    status: 'APPROVED',
+    timing: 45,
+    timingInfo: { totalMinutes: 45, modifierMinutes: 5 }
+});
+assert.strictEqual(typeof timingTopLevelState.timing, 'number', 'RENDER-TIMING-TOP-LEVEL: timing must be a number');
+assert.strictEqual(timingTopLevelState.timing, 45, 'RENDER-TIMING-TOP-LEVEL: timing must equal the provided value');
+assert.strictEqual(timingTopLevelState.timingInfo.totalMinutes, 45, 'RENDER-TIMING-TOP-LEVEL: timingInfo.totalMinutes must be preserved');
+
+const timingAbsentState = buildWwwRenderState({ status: 'APPROVED' });
+assert.strictEqual(typeof timingAbsentState.timing, 'number', 'RENDER-TIMING-TOP-LEVEL: absent timing must default to number');
+assert.strictEqual(timingAbsentState.timing, 0, 'RENDER-TIMING-TOP-LEVEL: absent timing must default to 0');
+
+const timingZeroState = buildWwwRenderState({ status: 'APPROVED', timing: 0 });
+assert.strictEqual(timingZeroState.timing, 0, 'RENDER-TIMING-TOP-LEVEL: explicit 0 must stay 0');
+
+// calculateProtocol with Перманент scenario must produce timing > 0 in the full output
+const timingApprovedHtml = runCalculateProtocolWithValues({
+    root_level: '7', length_level: '7', ends_level: '7',
+    target_level: '8', target_direction: '0', thickness: 'средние'
+});
+assertIncludes(timingApprovedHtml, 'Таймінги');
+assertIncludes(timingApprovedHtml, '&quot;totalMinutes&quot;: 40');
+
+console.log('RENDER-TIMING-TOP-LEVEL safe behavior observed.');
 console.log('WWW render runtime test passed');
 `;
 

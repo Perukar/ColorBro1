@@ -3179,6 +3179,155 @@ globalThis.__brandSpecificFalsePositiveResults = {
     normalSameLevel: brandNormalSameLevelResult,
     genericPermanent6: brandGenericPermanent6Result
 };
+
+// ============================================================
+// TIMING PRODUCTION CONTRACT TESTS
+// ============================================================
+
+// Helper: extract JSON-serialised timingInfo from rendered HTML.
+// renderTimingInfo outputs: <pre>JSON.stringify(timingInfo, null, 2)</pre>
+function extractTimingInfoFromHtml(html) {
+    const match = html.match(/class="timing-info"[^>]*>[\\s\\S]*?<pre>([\\s\\S]*?)<\\/pre>/);
+    if (!match) return null;
+    const decoded = match[1]
+        .replace(/&quot;/g, '"')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>');
+    try { return JSON.parse(decoded); } catch (e) { return null; }
+}
+
+// === TIMING-PERMANENT-HAS-TOTAL ===
+// Перманент (rStep=1, rLevel=7) must produce totalMinutes > 0 in timingInfo.
+const timingPermValues = withDefaultScenarioValues({
+    history: 'натуральні', condition: 'здоровые', thickness: 'средние',
+    density: 'средние', length: 'средние', grey_percent: '0', grey_type: 'мягкая',
+    root_level: '7', root_length: '1', length_level: '7',
+    ends_level: '7', ends_condition: 'здорові',
+    base_type: 'Натуральна', target_level: '8', target_direction: '0',
+    ends_history: 'натуральні', ends_base_type: 'натуральна'
+});
+const timingPermResult = runDiagnosticScenario('TIMING-PERMANENT-HAS-TOTAL', timingPermValues);
+assert.ok(!timingPermResult.error, 'TIMING-PERMANENT-HAS-TOTAL should not throw');
+const timingPermInfo = extractTimingInfoFromHtml(timingPermResult.html);
+assert.ok(timingPermInfo !== null, 'TIMING-PERMANENT-HAS-TOTAL: timingInfo block must be present');
+assert.ok(typeof timingPermInfo.totalMinutes === 'number', 'TIMING-PERMANENT-HAS-TOTAL: totalMinutes must be a number');
+assert.ok(timingPermInfo.totalMinutes > 0, 'TIMING-PERMANENT-HAS-TOTAL: totalMinutes must be > 0 for Перманент');
+assert.strictEqual(timingPermInfo.totalMinutes, 40, 'TIMING-PERMANENT-HAS-TOTAL: Перманент base = 40 min, средние thickness → total 40');
+console.log('TIMING-PERMANENT-HAS-TOTAL safe behavior observed. totalMinutes=' + timingPermInfo.totalMinutes);
+
+// === TIMING-SPECIAL-BLOND-HAS-TOTAL ===
+// Special Blond (rLevel=7, rStep=3) must produce totalMinutes > 0.
+const timingSbValues = withDefaultScenarioValues({
+    history: 'натуральні', condition: 'здоровые', thickness: 'средние',
+    density: 'средние', length: 'средние', grey_percent: '0', grey_type: 'мягкая',
+    root_level: '7', root_length: '1', length_level: '7',
+    ends_level: '7', ends_condition: 'здорові',
+    base_type: 'Натуральна', target_level: '10', target_direction: '0',
+    ends_history: 'натуральні', ends_base_type: 'натуральна'
+});
+const timingSbResult = runDiagnosticScenario('TIMING-SPECIAL-BLOND-HAS-TOTAL', timingSbValues);
+assert.ok(!timingSbResult.error, 'TIMING-SPECIAL-BLOND-HAS-TOTAL should not throw');
+const timingSbInfo = extractTimingInfoFromHtml(timingSbResult.html);
+assert.ok(timingSbInfo !== null, 'TIMING-SPECIAL-BLOND-HAS-TOTAL: timingInfo block must be present');
+assert.ok(typeof timingSbInfo.totalMinutes === 'number', 'TIMING-SPECIAL-BLOND-HAS-TOTAL: totalMinutes must be a number');
+assert.ok(timingSbInfo.totalMinutes > 0, 'TIMING-SPECIAL-BLOND-HAS-TOTAL: totalMinutes must be > 0 for Special Blond');
+assert.strictEqual(timingSbInfo.totalMinutes, 50, 'TIMING-SPECIAL-BLOND-HAS-TOTAL: Special Blond base = 50 min, средние thickness → total 50');
+console.log('TIMING-SPECIAL-BLOND-HAS-TOTAL safe behavior observed. totalMinutes=' + timingSbInfo.totalMinutes);
+
+// === TIMING-THICKNESS-MODIFIER ===
+// тонкие (-10) vs толстые (+10) must shift totalMinutes by 10 min each.
+const timingThinValues = withDefaultScenarioValues({
+    history: 'натуральні', condition: 'здоровые', thickness: 'тонкие',
+    density: 'средние', length: 'средние', grey_percent: '0', grey_type: 'мягкая',
+    root_level: '7', root_length: '1', length_level: '7',
+    ends_level: '7', ends_condition: 'здорові',
+    base_type: 'Натуральна', target_level: '8', target_direction: '0',
+    ends_history: 'натуральні', ends_base_type: 'натуральна'
+});
+const timingThickValues = withDefaultScenarioValues({
+    history: 'натуральні', condition: 'здоровые', thickness: 'толстые',
+    density: 'средние', length: 'средние', grey_percent: '0', grey_type: 'мягкая',
+    root_level: '7', root_length: '1', length_level: '7',
+    ends_level: '7', ends_condition: 'здорові',
+    base_type: 'Натуральна', target_level: '8', target_direction: '0',
+    ends_history: 'натуральні', ends_base_type: 'натуральна'
+});
+const timingThinResult = runDiagnosticScenario('TIMING-THICKNESS-MODIFIER-THIN', timingThinValues);
+const timingThickResult = runDiagnosticScenario('TIMING-THICKNESS-MODIFIER-THICK', timingThickValues);
+assert.ok(!timingThinResult.error, 'TIMING-THICKNESS-MODIFIER: thin should not throw');
+assert.ok(!timingThickResult.error, 'TIMING-THICKNESS-MODIFIER: thick should not throw');
+const timingThinInfo = extractTimingInfoFromHtml(timingThinResult.html);
+const timingThickInfo = extractTimingInfoFromHtml(timingThickResult.html);
+assert.ok(timingThinInfo !== null, 'TIMING-THICKNESS-MODIFIER: thin timingInfo block must be present');
+assert.ok(timingThickInfo !== null, 'TIMING-THICKNESS-MODIFIER: thick timingInfo block must be present');
+assert.strictEqual(timingThinInfo.modifierMinutes, -10, 'TIMING-THICKNESS-MODIFIER: thin → modifierMinutes = -10');
+assert.strictEqual(timingThickInfo.modifierMinutes, 10, 'TIMING-THICKNESS-MODIFIER: thick → modifierMinutes = +10');
+assert.ok(timingThickInfo.totalMinutes > timingThinInfo.totalMinutes, 'TIMING-THICKNESS-MODIFIER: thick totalMinutes must exceed thin totalMinutes');
+assert.strictEqual(timingThickInfo.totalMinutes - timingThinInfo.totalMinutes, 20, 'TIMING-THICKNESS-MODIFIER: thick−thin difference must be 20 min');
+console.log('TIMING-THICKNESS-MODIFIER safe behavior observed. thin=' + timingThinInfo.totalMinutes + ' thick=' + timingThickInfo.totalMinutes);
+
+// === TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK ===
+// The diagnostic ends block must NOT contain production timing fields.
+// Main timingInfo MUST be present with totalMinutes.
+// Ends diagnostic block must NOT leak mixing timing (no totalMinutes inside it).
+const timingDiagValues = withDefaultScenarioValues({
+    history: 'натуральні', condition: 'здоровые', thickness: 'средние',
+    density: 'средние', length: 'средние', grey_percent: '0', grey_type: 'мягкая',
+    root_level: '6', root_length: '1', length_level: '6',
+    ends_level: '8', ends_condition: 'здорові',
+    base_type: 'Натуральна', target_level: '6', target_direction: '1',
+    ends_history: 'натуральні', ends_base_type: 'натуральна'
+});
+const timingDiagResult = runDiagnosticScenario('TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK', timingDiagValues);
+assert.ok(!timingDiagResult.error, 'TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK should not throw');
+const timingDiagHtml = timingDiagResult.html;
+// Main timingInfo MUST be rendered with real totalMinutes
+const timingDiagInfo = extractTimingInfoFromHtml(timingDiagHtml);
+assert.ok(timingDiagInfo !== null, 'TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK: main timingInfo must be rendered');
+assert.ok(typeof timingDiagInfo.totalMinutes === 'number', 'TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK: totalMinutes must be a number');
+// Ends diagnostic block isolation: candidateOnly / notForMixing must be present, no production fields
+assert.ok(timingDiagHtml.includes('notForMixing'), 'TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK: diagnostic block must have notForMixing');
+assert.ok(!timingDiagHtml.includes('dyeMass'), 'TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK: no dyeMass leak');
+assert.ok(!timingDiagHtml.includes('oxidizerMass'), 'TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK: no oxidizerMass leak');
+assert.ok(!timingDiagHtml.includes('formula-to-mix'), 'TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK: no formula-to-mix leak');
+assert.ok(!timingDiagHtml.includes('grams'), 'TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK: no grams leak');
+assert.ok(!hasProductionEndsRecSignal(timingDiagHtml), 'TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK: no production endsRec signal');
+console.log('TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK safe behavior observed. totalMinutes=' + timingDiagInfo.totalMinutes);
+
+// === TIMING-SAFETY-REGRESSION-SPECIAL-BLOND-GREY ===
+// Special Blond + grey > 0 must remain MANUAL_REQUIRED regardless of timing changes.
+// Timing changes must NOT accidentally convert safety to APPROVED.
+const timingGreySbValues = withDefaultScenarioValues({
+    history: 'натуральні', condition: 'здоровые', thickness: 'средние',
+    density: 'средние', length: 'средние', grey_percent: '10', grey_type: 'мягкая',
+    root_level: '7', root_length: '1', length_level: '7',
+    ends_level: '7', ends_condition: 'здорові',
+    base_type: 'Натуральна', target_level: '10', target_direction: '0',
+    ends_history: 'натуральні', ends_base_type: 'натуральна'
+});
+const timingGreySbResult = runDiagnosticScenario('TIMING-SAFETY-REGRESSION-SPECIAL-BLOND-GREY', timingGreySbValues);
+assert.ok(!timingGreySbResult.error, 'TIMING-SAFETY-REGRESSION-SPECIAL-BLOND-GREY should not throw');
+const timingGreySbHtml = timingGreySbResult.html;
+assert.ok(!timingGreySbHtml.includes('APPROVED') || timingGreySbHtml.includes('MANUAL_REQUIRED'),
+    'TIMING-SAFETY-REGRESSION-SPECIAL-BLOND-GREY: Special Blond + grey must NOT be unconditional APPROVED');
+assert.ok(timingGreySbHtml.includes('MANUAL_REQUIRED'),
+    'TIMING-SAFETY-REGRESSION-SPECIAL-BLOND-GREY: must remain MANUAL_REQUIRED');
+assert.ok(!timingGreySbHtml.includes('approved-recipe'),
+    'TIMING-SAFETY-REGRESSION-SPECIAL-BLOND-GREY: must NOT render approved-recipe block');
+// Timing itself must still be calculated and present
+const timingGreySbInfo = extractTimingInfoFromHtml(timingGreySbHtml);
+assert.ok(timingGreySbInfo !== null, 'TIMING-SAFETY-REGRESSION-SPECIAL-BLOND-GREY: timingInfo must be rendered even for MANUAL_REQUIRED');
+assert.ok(timingGreySbInfo.totalMinutes > 0, 'TIMING-SAFETY-REGRESSION-SPECIAL-BLOND-GREY: totalMinutes must still be > 0');
+console.log('TIMING-SAFETY-REGRESSION-SPECIAL-BLOND-GREY safe behavior observed. status=MANUAL_REQUIRED totalMinutes=' + timingGreySbInfo.totalMinutes);
+
+globalThis.__timingResults = {
+    permanent: { totalMinutes: timingPermInfo.totalMinutes, status: 'SAFE' },
+    specialBlond: { totalMinutes: timingSbInfo.totalMinutes, status: 'SAFE' },
+    thicknessModifier: { thin: timingThinInfo.totalMinutes, thick: timingThickInfo.totalMinutes, status: 'SAFE' },
+    diagnosticIsolation: { totalMinutes: timingDiagInfo.totalMinutes, status: 'SAFE' },
+    safetyRegression: { totalMinutes: timingGreySbInfo.totalMinutes, status: 'SAFE' }
+};
 `;
 
 const sandbox = {
@@ -3415,5 +3564,16 @@ assert.deepStrictEqual(Array.from(sandbox.__multiZoneConflictResults.normalEndsF
 assert.strictEqual(sandbox.__multiZoneConflictResults.normalEndsFalsePositive.status, 'SAFE');
 assert.strictEqual(sandbox.__multiZoneConflictResults.diagnosticNotProduction.productionEndsRecSignal, false);
 assert.strictEqual(sandbox.__multiZoneConflictResults.diagnosticNotProduction.status, 'SAFE');
+
+// TIMING external asserts
+assert.strictEqual(sandbox.__timingResults.permanent.status, 'SAFE');
+assert.ok(sandbox.__timingResults.permanent.totalMinutes > 0);
+assert.strictEqual(sandbox.__timingResults.specialBlond.status, 'SAFE');
+assert.ok(sandbox.__timingResults.specialBlond.totalMinutes > 0);
+assert.strictEqual(sandbox.__timingResults.thicknessModifier.status, 'SAFE');
+assert.ok(sandbox.__timingResults.thicknessModifier.thick > sandbox.__timingResults.thicknessModifier.thin);
+assert.strictEqual(sandbox.__timingResults.diagnosticIsolation.status, 'SAFE');
+assert.strictEqual(sandbox.__timingResults.safetyRegression.status, 'SAFE');
+assert.ok(sandbox.__timingResults.safetyRegression.totalMinutes > 0);
 
 console.log('WWW business scenario test passed');

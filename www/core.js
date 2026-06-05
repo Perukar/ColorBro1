@@ -40,6 +40,7 @@ const pigmentMap = {
             return resStr;
         }
 
+
         const PerucarWwwMappingV1 = Object.freeze({
             getWwwValue(id) {
                 const element = document.getElementById(id);
@@ -405,6 +406,7 @@ const pigmentMap = {
                 mixtoneInfo: runtime.mixtoneInfo || null,
                 massModel: runtime.massModel || null,
                 timingInfo: runtime.timingInfo || null,
+                timing: typeof runtime.timing === 'number' ? runtime.timing : 0,
                 diagnostics: Array.isArray(runtime.diagnostics) ? runtime.diagnostics : [],
                 reasons: runtime.reasons || [],
                 endsRecDiagnosticWiringCandidate: runtime.endsRecDiagnosticWiringCandidate || null
@@ -1322,6 +1324,25 @@ const pigmentMap = {
             return contract;
         }
 
+        /**
+         * getBaseProcessTiming(processText)
+         * Pure helper. Returns base process timing in minutes for a given process.
+         * Does NOT include tMod (thickness modifier). Caller adds tMod separately.
+         * Returns 0 for unrecognised processes (no timing signal).
+         *
+         * @param {string} processText - process description string from rootRec/lenRec
+         * @returns {number} base minutes (integer)
+         */
+        function getBaseProcessTiming(processText) {
+            const p = String(processText || '').toLowerCase();
+            if (p.includes('special blond')) return 50;
+            if (p.includes('порошок') || p.includes('powder')) return 50;
+            if (p.includes('перманент / тонування')) return 25;
+            if (p.includes('тонування') || p.includes('toning')) return 25;
+            if (p.includes('перманент')) return 40;
+            return 0;
+        }
+
         function calculateProtocol() {
             try {
                 let history = document.getElementById('history').value;
@@ -1651,6 +1672,14 @@ const pigmentMap = {
 
                 rootRec.mixtone = calcMixtone(tLevel, tDir, rootRec.process, rootRec.mass, "здоровые");
                 lenRec.mixtone = calcMixtone(tLevel, tDir, lenRec.process, lenRec.mass, condition);
+
+                // Calculate production timing from process types.
+                // timing = max(root, length) base minutes + tMod (thickness modifier).
+                // If no process matches, timing stays 0 (not rendered as empty).
+                const rootBaseTiming = getBaseProcessTiming(rootRec ? rootRec.process : '');
+                const lenBaseTiming = getBaseProcessTiming(lenRec ? lenRec.process : '');
+                const baseTiming = Math.max(rootBaseTiming, lenBaseTiming);
+                timing = baseTiming > 0 ? Math.max(0, baseTiming + tMod) : 0;
 
                 function extractOxPercent(value) {
                     const match = String(value || '').match(/(\d+(?:[.,]\d+)?)\s*%/);
@@ -2086,6 +2115,7 @@ const pigmentMap = {
                     mixtoneInfo: { root: rootRec.mixtone, length: lenRec.mixtone },
                     massModel: Object.assign({}, massModel, { rootMass: rMass, lengthMass: lMass }),
                     timingInfo: { totalMinutes: timing, modifierMinutes: tMod },
+                    timing,
                     reasons,
                     endsRecDiagnosticWiringCandidate
                 });
