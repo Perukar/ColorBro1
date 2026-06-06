@@ -156,6 +156,25 @@ Do not disable all hooks to work around a single false positive.
 6. Re-run `VERIFY_BEFORE_INSTALL.md § verify hooks can be disabled safely` in reverse
    to confirm hooks activate correctly
 
+## 8.1 Windows-Safe Hook Inspection
+
+**Symptom:** You try to inspect `.ps1` hooks with a wildcard `git grep` command and get confusing or empty results.
+
+**Diagnosis:** On Windows, `git grep` does not always expand `*.ps1` the same way shell globbing does.
+
+**Fix:**
+1. List the hook files explicitly:
+   ```powershell
+   Get-ChildItem ".ralfbot\hooks\*.ps1"
+   ```
+2. Search the returned files explicitly:
+   ```powershell
+   Get-ChildItem ".ralfbot\hooks\*.ps1" | Select-String -Pattern "deny|allow|permissionDecision"
+   ```
+3. Use `git grep` only with exact file paths that already exist
+
+Do not depend on `git grep` wildcard expansion for hook discovery on Windows.
+
 ---
 
 ## 9. PowerShell Execution Policy Issue

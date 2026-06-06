@@ -19,6 +19,17 @@
 - PowerShell 7 (`pwsh`) recommended. On Windows PowerShell 5.1 replace `pwsh` with `powershell` in settings (test first).
 - `git` and `node` on PATH.
 
+## Windows-safe hook inspection
+When you inspect hook scripts on Windows, prefer an explicit file list instead of relying on `git grep` to expand `*.ps1` patterns.
+
+Example:
+```powershell
+Get-ChildItem ".ralfbot\hooks\*.ps1" | Select-String -Pattern "deny|allow|permissionDecision"
+```
+
+If you need to inspect every hook file safely, use `Get-ChildItem` first and then `Select-String` on the returned file objects.
+`git grep` may not expand `*.ps1` the way a shell glob does in every environment, so do not depend on it for hook-file discovery.
+
 ## Quick manual use (no Claude Code needed)
 ```
 pwsh -NoProfile -File hooks/ralfbot-preflight.ps1 -ExpectedRoot "D:/PERUKAR"
@@ -38,4 +49,5 @@ Without an entry, the file-guard blocks edits to LOCKED files.
 - **bash-guard fail-mode:** if hook stdin can't be parsed it **fails OPEN** (allows) with a stderr warning, to avoid bricking the session. To fail CLOSED, swap the marked line for `Deny-PreToolUse "unparseable hook input"`.
 - **chaining:** any `&&`, `;`, or `|` combined with git/destructive commands is blocked — run commands separately.
 - **raw `git commit` is blocked** unless the command goes through `ralfbot-commit-gate.ps1`.
+- **exact-file staging only:** commit-gate tasks must stage only the explicit file list from the task card. Never use `git add .`, `git add -A`, `git clean`, or force push as a shortcut.
 - Full policy, install steps, and "what hooks do NOT enforce" → `../references/hooks-policy.md`.

@@ -191,6 +191,8 @@ and have no safety implications.
 - Modifying a locked file not listed in `locked_files_involved`
 - Proceeding with a RELAXING safety impact without approval evidence
 
+For exact-file tasks, the staged set must match the task card exactly. Do not use `git add .`, `git add -A`, or `git clean` to try to fix scope mistakes, and do not treat force push as a workaround.
+
 ---
 
 ## 9. Report Format
@@ -238,6 +240,8 @@ The user must explicitly approve:
 - Test runs listed in `required_tests`
 - `git status` or `git diff` calls
 - The final report format
+
+If a task card says exact-file only, RALFBOT must stage only the explicit file list and stop if the staged set contains anything extra or missing.
 
 If RALFBOT is asking for approval on low-risk in-scope operations,
 see `TROUBLESHOOTING.md § Claude asks unnecessary read-only confirmation`.
