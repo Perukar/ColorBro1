@@ -266,14 +266,39 @@ const pigmentMap = {
                     ['Маса', recipe.mass],
                     ['Пропорція', recipe.ratio],
                     ['Мікстон', recipe.mixtone],
+                    ['Фінальна формула', options.approved === true ? recipe.finalFormula : null],
                     ['Нотатки', recipe.notes]
                 ].filter(([, value]) => value !== undefined && value !== null && value !== '');
                 const htmlRows = rows.map(([label, value]) => `<li><b>${this.escapeHtml(label)}:</b> ${this.escapeHtml(value)}</li>`).join('');
                 return `<div class="${className}"><h3>${this.escapeHtml(title)}</h3><ul>${htmlRows}</ul></div>`;
             },
 
+            // Central gate for the final/executable salon recipe (approved-recipe).
+            // Missing productionReady is unsafe by default; buildWwwRenderState must
+            // explicitly mark real production-approved runtime states as ready.
+            canRenderExecutableRecipe(state) {
+                return Boolean(state)
+                    && state.status === 'APPROVED'
+                    && state.productionReady === true
+                    && Boolean(state.rootRec || state.midRec || state.lenRec)
+                    && !this.isDiagnosticOnlyTimingState(state);
+            },
+
+            renderProductionNotReadyNotice() {
+                const items = [
+                    { title: 'Статус', message: 'APPROVED без productionReady=true' },
+                    'Готовий рецепт приховано: готовність до виробництва не підтверджено.',
+                    'Не для змішування. Потрібне рішення майстра.'
+                ];
+                return this.renderList('Рецепт недоступний', items, 'recipe non-final-recipe production-not-ready');
+            },
+
             renderRecipes(state) {
                 if (!state || state.status !== 'APPROVED') return '';
+                if (!state.rootRec && !state.midRec && !state.lenRec) return '';
+                if (!this.canRenderExecutableRecipe(state)) {
+                    return this.renderProductionNotReadyNotice();
+                }
                 return [
                     this.renderRecipe('Корінь', state.rootRec, { approved: true }),
                     this.renderRecipe('Mid-band', state.midRec, { approved: true }),
@@ -312,8 +337,8 @@ const pigmentMap = {
                 return `<div class="mixtone-info"><h3>Мікстони</h3><pre>${this.escapeHtml(JSON.stringify(mixtoneInfo, null, 2))}</pre></div>`;
             },
 
-            sanitizeMassModelForRender(massModel, status) {
-                if (!massModel || status === 'APPROVED') return massModel;
+            sanitizeMassModelForRender(massModel, state) {
+                if (!massModel || this.canRenderExecutableRecipe(state)) return massModel;
                 const safeModel = {};
                 if (Object.prototype.hasOwnProperty.call(massModel, 'mode')) {
                     safeModel.mode = massModel.mode;
@@ -325,9 +350,9 @@ const pigmentMap = {
                 return safeModel;
             },
 
-            renderMassModel(massModel, status) {
+            renderMassModel(massModel, state) {
                 if (!massModel) return '';
-                const safeMassModel = this.sanitizeMassModelForRender(massModel, status);
+                const safeMassModel = this.sanitizeMassModelForRender(massModel, state);
                 return `<div class="mass-model"><h3>Маси</h3><pre>${this.escapeHtml(JSON.stringify(safeMassModel, null, 2))}</pre></div>`;
             },
 
@@ -345,7 +370,7 @@ const pigmentMap = {
                 if (!timingInfo) return timingInfo;
                 const status = state && state.status;
                 const isDiagnosticOnly = this.isDiagnosticOnlyTimingState(state);
-                if (status === 'APPROVED' && !isDiagnosticOnly) return timingInfo;
+                if (this.canRenderExecutableRecipe(state)) return timingInfo;
                 if (status === 'BLOCKED') {
                     return {
                         timingStatus: 'blocked',
@@ -360,6 +385,13 @@ const pigmentMap = {
                         requiresManualConfirmation: true,
                         productionTimingHidden: true,
                         message: 'Timing info is diagnostic only and not a ready-to-execute instruction.'
+                    };
+                }
+                if (status === 'APPROVED') {
+                    return {
+                        timingStatus: 'production-not-ready',
+                        productionTimingHidden: true,
+                        message: 'Production timing is hidden until productionReady=true.'
                     };
                 }
                 return Object.assign({}, timingInfo, {
@@ -396,7 +428,7 @@ const pigmentMap = {
                     this.renderEndsDiagnosticDisplay(state.endsRecDiagnosticWiringCandidate),
                     hasPhases ? this.renderPhases(state.phases) : this.renderProtocolText(state.protocolText),
                     this.renderMixtoneInfo(state.mixtoneInfo),
-                    this.renderMassModel(state.massModel, state.status),
+                    this.renderMassModel(state.massModel, state),
                     this.renderTimingInfo(state.timingInfo, state),
                     this.renderDiagnostics(state.diagnostics, state.reasons)
                 ].join('');
@@ -445,12 +477,26 @@ const pigmentMap = {
                     phaseName: `Етап ${index + 1}`,
                     steps: [stripWwwHtmlText(item)]
                 })).filter((phase) => phase.steps[0] !== '');
+            const status = runtime.status || 'APPROVED';
+            const blockers = Array.isArray(runtime.blockers) ? runtime.blockers : [];
+            const manualDecisions = Array.isArray(runtime.manualDecisions) ? runtime.manualDecisions : [];
+            const hasDiagnosticCandidate = Boolean(runtime.endsRecDiagnosticWiringCandidate);
+            const hasProductionRecipe = Boolean(runtime.rootRec || runtime.midRec || runtime.lenRec);
+            const inferredProductionReady = status === 'APPROVED'
+                && blockers.length === 0
+                && manualDecisions.length === 0
+                && !hasDiagnosticCandidate
+                && hasProductionRecipe;
+            const productionReady = runtime.productionReady === true
+                ? inferredProductionReady
+                : inferredProductionReady && runtime.productionReady !== false;
 
             return {
-                status: runtime.status || 'APPROVED',
+                status,
                 target: runtime.target,
-                blockers: Array.isArray(runtime.blockers) ? runtime.blockers : [],
-                manualDecisions: Array.isArray(runtime.manualDecisions) ? runtime.manualDecisions : [],
+                productionReady,
+                blockers,
+                manualDecisions,
                 warnings: Array.isArray(runtime.warnings) ? runtime.warnings : [],
                 rootRec: normalizeWwwRecipeForRender(runtime.rootRec),
                 midRec: normalizeWwwRecipeForRender(runtime.midRec),

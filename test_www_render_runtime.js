@@ -80,6 +80,7 @@ function extractSelectOptionValues(html, selectId) {
 
 const approvedHtml = PerucarWwwRenderV1.renderStateToHtml({
     status: 'APPROVED',
+    productionReady: true,
     target: '8.1',
     warnings: ['Пористе волосся'],
     rootRec: {
@@ -88,7 +89,8 @@ const approvedHtml = PerucarWwwRenderV1.renderStateToHtml({
         ox: '6%',
         mass: 30,
         ratio: '1:1',
-        mixtone: '1 г'
+        mixtone: '1 г',
+        finalFormula: 'ready-to-mix finalFormula root'
     },
     protocolText: 'Fallback protocol text must not render',
     phases: [
@@ -107,6 +109,7 @@ const approvedHtml = PerucarWwwRenderV1.renderStateToHtml({
 assertIncludes(approvedHtml, 'APPROVED');
 assertIncludes(approvedHtml, '8.1');
 assertIncludes(approvedHtml, 'approved-recipe');
+assertIncludes(approvedHtml, 'ready-to-mix finalFormula root');
 assertIncludes(approvedHtml, 'Корінь');
 assertIncludes(approvedHtml, 'Барвник 8.1');
 assertIncludes(approvedHtml, 'Пористе волосся');
@@ -124,6 +127,48 @@ assertIncludes(approvedTimingBlockHtml, '&quot;totalMinutes&quot;: 45');
 assertNotIncludes(approvedTimingBlockHtml, 'advisory-only');
 assertNotIncludes(approvedTimingBlockHtml, 'productionTimingHidden');
 
+const approvedNotReadyHtml = PerucarWwwRenderV1.renderStateToHtml({
+    status: 'APPROVED',
+    productionReady: false,
+    rootRec: {
+        process: 'Перманент',
+        dye: 'Барвник 8.1',
+        ox: '6%',
+        mass: 30,
+        ratio: '1:1',
+        finalFormula: 'ready-to-mix false productionReady formula'
+    },
+    massModel: { totalMass: 60, rootMass: 24, lengthMass: 36, mode: '2-zone', endsMass: null },
+    timingInfo: { totalMinutes: 45, modifierMinutes: 5 }
+});
+const approvedNotReadyMassBlockHtml = extractFirstDivBlockByHeading(approvedNotReadyHtml, 'Маси');
+const approvedNotReadyTimingBlockHtml = extractFirstDivBlockByHeading(approvedNotReadyHtml, 'Таймінги');
+assertIncludes(approvedNotReadyHtml, 'APPROVED');
+assertIncludes(approvedNotReadyHtml, 'Рецепт недоступний');
+assertNotIncludes(approvedNotReadyHtml, 'approved-recipe');
+assertNotIncludes(approvedNotReadyHtml, 'ready-to-mix false productionReady formula');
+assertIncludes(approvedNotReadyMassBlockHtml, '&quot;mixingMassesHidden&quot;: true');
+assertNotIncludes(approvedNotReadyMassBlockHtml, 'totalMass');
+assertIncludes(approvedNotReadyTimingBlockHtml, '&quot;timingStatus&quot;: &quot;production-not-ready&quot;');
+assertIncludes(approvedNotReadyTimingBlockHtml, '&quot;productionTimingHidden&quot;: true');
+assertNotIncludes(approvedNotReadyTimingBlockHtml, 'totalMinutes');
+
+const approvedMissingProductionReadyHtml = PerucarWwwRenderV1.renderStateToHtml({
+    status: 'APPROVED',
+    rootRec: {
+        process: 'Перманент',
+        dye: 'Барвник 8.1',
+        ox: '6%',
+        mass: 30,
+        ratio: '1:1',
+        finalFormula: 'ready-to-mix missing productionReady formula'
+    }
+});
+assertIncludes(approvedMissingProductionReadyHtml, 'APPROVED');
+assertIncludes(approvedMissingProductionReadyHtml, 'Рецепт недоступний');
+assertNotIncludes(approvedMissingProductionReadyHtml, 'approved-recipe');
+assertNotIncludes(approvedMissingProductionReadyHtml, 'ready-to-mix missing productionReady formula');
+
 const blockedHtml = PerucarWwwRenderV1.renderStateToHtml({
     status: 'BLOCKED',
     blockers: ['ФАТАЛЬНО: Хна/метали'],
@@ -133,7 +178,8 @@ const blockedHtml = PerucarWwwRenderV1.renderStateToHtml({
         dye: 'Барвник 8.1',
         ox: '6%',
         mass: 30,
-        ratio: '1:1'
+        ratio: '1:1',
+        finalFormula: 'ready-to-mix blocked formula'
     }
 });
 
@@ -142,6 +188,7 @@ assertIncludes(blockedHtml, 'ФАТАЛЬНО: Хна/метали');
 assertIncludes(blockedHtml, 'BLOCKED');
 assertNotIncludes(blockedHtml, 'approved-recipe');
 assertNotIncludes(blockedHtml, 'Барвник 8.1');
+assertNotIncludes(blockedHtml, 'ready-to-mix blocked formula');
 const blockedTimingBlockHtml = extractFirstDivBlockByHeading(blockedHtml, 'Таймінги');
 assertIncludes(blockedTimingBlockHtml, '&quot;timingStatus&quot;: &quot;blocked&quot;');
 assertIncludes(blockedTimingBlockHtml, '&quot;productionTimingHidden&quot;: true');
@@ -159,7 +206,8 @@ const manualHtml = PerucarWwwRenderV1.renderStateToHtml({
         dye: 'S.B. 9.1',
         ox: '12%',
         mass: 30,
-        ratio: '1:2'
+        ratio: '1:2',
+        finalFormula: 'ready-to-mix manual formula'
     }
 });
 
@@ -169,6 +217,7 @@ assertIncludes(manualHtml, 'Оцінити тест-пасмо');
 assertIncludes(manualHtml, 'Потрібне рішення щодо освітлення');
 assertNotIncludes(manualHtml, 'approved-recipe');
 assertNotIncludes(manualHtml, 'S.B. 9.1');
+assertNotIncludes(manualHtml, 'ready-to-mix manual formula');
 const manualTimingBlockHtml = extractFirstDivBlockByHeading(manualHtml, 'Таймінги');
 assertIncludes(manualTimingBlockHtml, '&quot;totalMinutes&quot;: 50');
 assertIncludes(manualTimingBlockHtml, '&quot;timingStatus&quot;: &quot;advisory-only&quot;');
@@ -341,6 +390,7 @@ assert.strictEqual(diagnosticDisplayCandidate.endsRecipeReady, false, diagnostic
 
 const twoZoneContractState = {
     status: 'APPROVED',
+    productionReady: true,
     rootRec: {
         process: 'Перманент',
         dye: 'Root 8.1',
@@ -365,16 +415,13 @@ const diagnosticDisplayHtml = PerucarWwwRenderV1.renderStateToHtml({
 const diagnosticDisplayBlockHtml = extractFirstDivBlockByHeading(diagnosticDisplayHtml, 'Діагностика кінців');
 
 assertNotIncludes(twoZoneBaselineHtml, 'Діагностика кінців');
-assert.strictEqual(
-    extractFirstDivBlockByHeading(diagnosticDisplayHtml, 'Корінь'),
-    extractFirstDivBlockByHeading(twoZoneBaselineHtml, 'Корінь'),
-    diagnosticDisplayRenderContract.id + ' must not mix diagnostic data into rootRec'
-);
-assert.strictEqual(
-    extractFirstDivBlockByHeading(diagnosticDisplayHtml, 'Довжина'),
-    extractFirstDivBlockByHeading(twoZoneBaselineHtml, 'Довжина'),
-    diagnosticDisplayRenderContract.id + ' must not mix diagnostic data into lenRec'
-);
+assertIncludes(twoZoneBaselineHtml, 'approved-recipe');
+assertIncludes(twoZoneBaselineHtml, 'Root 8.1');
+assertIncludes(twoZoneBaselineHtml, 'Length 8.1');
+assertIncludes(diagnosticDisplayHtml, 'Рецепт недоступний');
+assertNotIncludes(diagnosticDisplayHtml, 'approved-recipe');
+assertNotIncludes(diagnosticDisplayHtml, 'Root 8.1');
+assertNotIncludes(diagnosticDisplayHtml, 'Length 8.1');
 assertIncludes(diagnosticDisplayBlockHtml, 'Діагностика кінців');
 assertIncludes(diagnosticDisplayBlockHtml, 'Попередній перегляд');
 assertIncludes(diagnosticDisplayBlockHtml, 'Preview only');
@@ -508,6 +555,7 @@ try {
 
 assert.strictEqual(calculateProtocolCalls, 0);
 assert.strictEqual(adapterState.status, 'APPROVED');
+assert.strictEqual(adapterState.productionReady, true);
 assert.strictEqual(adapterState.rootRec.dye.includes('<'), false);
 assert.strictEqual(adapterState.phases.length, 2);
 assert.strictEqual(adapterState.phases[0].phaseName, 'Етап 1');
@@ -527,6 +575,7 @@ assertNotIncludes(adapterHtml, '<script>alert(1)</script>');
 assertNotIncludes(adapterHtml, '<b>Крок 1</b>');
 assertNotIncludes(adapterHtml, '<b>Барвник</b>');
 assertNotIncludes(adapterHtml, '<br>Нанести');
+assertIncludes(adapterHtml, 'approved-recipe');
 assertIncludes(adapterHtml, 'Крок 1');
 assertIncludes(adapterHtml, 'Нанести');
 
