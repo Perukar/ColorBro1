@@ -117,6 +117,7 @@ assertIncludes(approvedHtml, '15 хв');
 assertNotIncludes(approvedHtml, 'Fallback protocol text must not render');
 assertIncludes(approvedHtml, 'Мікстони');
 assertIncludes(approvedHtml, 'Маси');
+assertIncludes(approvedHtml, '&quot;totalMass&quot;: 60');
 assertIncludes(approvedHtml, 'Таймінги');
 
 const blockedHtml = PerucarWwwRenderV1.renderStateToHtml({
@@ -157,6 +158,36 @@ assertIncludes(manualHtml, 'Оцінити тест-пасмо');
 assertIncludes(manualHtml, 'Потрібне рішення щодо освітлення');
 assertNotIncludes(manualHtml, 'approved-recipe');
 assertNotIncludes(manualHtml, 'S.B. 9.1');
+
+const manualMassModelHtml = PerucarWwwRenderV1.renderStateToHtml({
+    status: 'MANUAL_REQUIRED',
+    manualDecisions: [
+        { title: 'Перевірити формулу', message: 'Не змішувати без рішення майстра' }
+    ],
+    massModel: {
+        baseMass: 60,
+        densityMultiplier: 1,
+        totalMass: 60,
+        rootMass: 24,
+        lengthMass: 36,
+        endsMass: null,
+        mode: '2-zone'
+    }
+});
+const manualMassModelBlockHtml = extractFirstDivBlockByHeading(manualMassModelHtml, 'Маси');
+
+assertIncludes(manualMassModelHtml, 'MANUAL_REQUIRED');
+assertIncludes(manualMassModelBlockHtml, '&quot;mode&quot;: &quot;2-zone&quot;');
+assertIncludes(manualMassModelBlockHtml, '&quot;endsMass&quot;: null');
+assertIncludes(manualMassModelBlockHtml, '&quot;mixingMassesHidden&quot;: true');
+assertNotIncludes(manualMassModelBlockHtml, 'baseMass');
+assertNotIncludes(manualMassModelBlockHtml, 'densityMultiplier');
+assertNotIncludes(manualMassModelBlockHtml, 'totalMass');
+assertNotIncludes(manualMassModelBlockHtml, 'rootMass');
+assertNotIncludes(manualMassModelBlockHtml, 'lengthMass');
+assertNotIncludes(manualMassModelBlockHtml, '24');
+assertNotIncludes(manualMassModelBlockHtml, '36');
+assertNotIncludes(manualMassModelBlockHtml, '60');
 
 const fatalHtml = PerucarWwwRenderV1.renderStateToHtml({
     status: 'FATAL_ERROR',
@@ -624,6 +655,12 @@ function assertSafeRuntimeDiagnosticDisplay(html, id) {
     assertIncludes(diagnosticBlockHtml, 'Diagnostic candidate builder створив preview-кандидата.');
     assertIncludes(massModelBlockHtml, '&quot;mode&quot;: &quot;2-zone&quot;');
     assertIncludes(massModelBlockHtml, '&quot;endsMass&quot;: null');
+    assertIncludes(massModelBlockHtml, '&quot;mixingMassesHidden&quot;: true');
+    assertNotIncludes(massModelBlockHtml, '&quot;baseMass&quot;');
+    assertNotIncludes(massModelBlockHtml, '&quot;densityMultiplier&quot;');
+    assertNotIncludes(massModelBlockHtml, '&quot;totalMass&quot;');
+    assertNotIncludes(massModelBlockHtml, '&quot;rootMass&quot;');
+    assertNotIncludes(massModelBlockHtml, '&quot;lengthMass&quot;');
     assertNotIncludes(massModelBlockHtml, '&quot;mode&quot;: &quot;3-zone&quot;');
     assertNotIncludes(html, '<h3>Кінці</h3>');
     assertNotIncludes(html, 'endsRec:');

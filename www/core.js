@@ -312,9 +312,23 @@ const pigmentMap = {
                 return `<div class="mixtone-info"><h3>Мікстони</h3><pre>${this.escapeHtml(JSON.stringify(mixtoneInfo, null, 2))}</pre></div>`;
             },
 
-            renderMassModel(massModel) {
+            sanitizeMassModelForRender(massModel, status) {
+                if (!massModel || status === 'APPROVED') return massModel;
+                const safeModel = {};
+                if (Object.prototype.hasOwnProperty.call(massModel, 'mode')) {
+                    safeModel.mode = massModel.mode;
+                }
+                if (Object.prototype.hasOwnProperty.call(massModel, 'endsMass')) {
+                    safeModel.endsMass = massModel.endsMass == null ? null : 'hidden';
+                }
+                safeModel.mixingMassesHidden = true;
+                return safeModel;
+            },
+
+            renderMassModel(massModel, status) {
                 if (!massModel) return '';
-                return `<div class="mass-model"><h3>Маси</h3><pre>${this.escapeHtml(JSON.stringify(massModel, null, 2))}</pre></div>`;
+                const safeMassModel = this.sanitizeMassModelForRender(massModel, status);
+                return `<div class="mass-model"><h3>Маси</h3><pre>${this.escapeHtml(JSON.stringify(safeMassModel, null, 2))}</pre></div>`;
             },
 
             renderTimingInfo(timingInfo) {
@@ -342,7 +356,7 @@ const pigmentMap = {
                     this.renderEndsDiagnosticDisplay(state.endsRecDiagnosticWiringCandidate),
                     hasPhases ? this.renderPhases(state.phases) : this.renderProtocolText(state.protocolText),
                     this.renderMixtoneInfo(state.mixtoneInfo),
-                    this.renderMassModel(state.massModel),
+                    this.renderMassModel(state.massModel, state.status),
                     this.renderTimingInfo(state.timingInfo),
                     this.renderDiagnostics(state.diagnostics, state.reasons)
                 ].join('');
