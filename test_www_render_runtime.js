@@ -1126,6 +1126,27 @@ assertIncludes(tdirValidHtml, 'approved-recipe');
 assertNotIncludes(tdirValidHtml, 'бажаний відтінок');
 
 console.log('TARGET-DIRECTION-GATE verified: missing=BLOCKED, empty=BLOCKED, valid=APPROVED.');
+// ===== LENGTH / DENSITY / THICKNESS MANDATORY GATE (regression) =====
+// Each of length/density/thickness missing/absent or empty => BLOCKED (missing critical field);
+// all present with otherwise valid data => normal APPROVED flow.
+['length', 'density', 'thickness'].forEach(function(fld) {
+    const missHtml = runCalculateProtocolWithValues({}, { missingIds: [fld] });
+    assertIncludes(missHtml, 'BLOCKED');
+    assertIncludes(missHtml, 'Недостатньо критичних даних');
+    assertNotIncludes(missHtml, 'approved-recipe');
+    assertNotIncludes(missHtml, 'Фінальна формула');
+    const emptyOverride = {};
+    emptyOverride[fld] = '';
+    const emptyHtml = runCalculateProtocolWithValues(emptyOverride);
+    assertIncludes(emptyHtml, 'BLOCKED');
+    assertNotIncludes(emptyHtml, 'approved-recipe');
+});
+
+const ldtValidHtml = runCalculateProtocolWithValues({ length: 'средние', density: 'средние', thickness: 'средние' });
+assertIncludes(ldtValidHtml, 'approved-recipe');
+assertNotIncludes(ldtValidHtml, 'довжина волосся');
+
+console.log('LENGTH-DENSITY-THICKNESS-GATE verified: each missing/empty=BLOCKED, valid=APPROVED.');
 console.log('WWW render runtime test passed');
 `;
 

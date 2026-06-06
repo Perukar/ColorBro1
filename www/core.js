@@ -1470,9 +1470,12 @@ const pigmentMap = {
                 const lengthCondition = lengthConditionElement ? String(lengthConditionElement.value || '').trim() : '';
                 const porosityElement = document.getElementById('porosity');
                 const porosity = porosityElement ? String(porosityElement.value || '').trim() : '';
-                let thickness = document.getElementById('thickness').value;
-                let density = document.getElementById('density').value;
-                let length = document.getElementById('length').value;
+                const thicknessElement = document.getElementById('thickness');
+                let thickness = thicknessElement ? thicknessElement.value : '';
+                const densityElement = document.getElementById('density');
+                let density = densityElement ? densityElement.value : '';
+                const lengthElement = document.getElementById('length');
+                let length = lengthElement ? lengthElement.value : '';
                 let grey = parseInt(document.getElementById('grey_percent').value);
                 let greyType = document.getElementById('grey_type').value;
                 
@@ -1507,6 +1510,9 @@ const pigmentMap = {
                 if (!String(condition || '').trim()) missingCriticalFields.push("стан волосся");
                 if (!String(scalp || '').trim()) missingCriticalFields.push("чутливість шкіри голови");
                 if (!String(tDir || '').trim()) missingCriticalFields.push("бажаний відтінок");
+                if (!String(length || '').trim()) missingCriticalFields.push("довжина волосся");
+                if (!String(density || '').trim()) missingCriticalFields.push("густота волосся");
+                if (!String(thickness || '').trim()) missingCriticalFields.push("товщина волосся");
 
                 if (missingCriticalFields.length > 0) {
                     const state = buildWwwRenderState({
