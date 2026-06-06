@@ -1,0 +1,55 @@
+{
+  "_README": "TEMPLATE ONLY - DO NOT INSTALL AS-IS. Remove this _README key before use. VERIFY AGAINST CURRENT CLAUDE CODE DOCS BEFORE INSTALLATION: hook event names, matcher syntax, $CLAUDE_PROJECT_DIR support, permissions pattern syntax, and PreToolUse decision schema may differ in your version. This file is the PROJECT-level example (.claude/settings.json) - committed/shared.",
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./**/*.pem)",
+      "Read(./**/*.key)",
+      "Read(./**/id_rsa)",
+      "Read(./**/*secrets*)",
+      "Read(./**/*credentials*)",
+      "Read(./**/*token*)",
+      "Bash(git push:*)",
+      "Bash(git reset:*)",
+      "Bash(git clean:*)",
+      "Bash(git checkout:*)",
+      "Bash(git switch:*)",
+      "Bash(git restore:*)",
+      "Bash(git stash:*)",
+      "Bash(git add .:*)",
+      "Bash(git add -A:*)",
+      "Bash(git add --all:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "pwsh -NoProfile -File \"$CLAUDE_PROJECT_DIR/.ralfbot/hooks/ralfbot-pretooluse-bash-guard.ps1\"" }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "pwsh -NoProfile -File \"$CLAUDE_PROJECT_DIR/.ralfbot/hooks/ralfbot-pretooluse-file-guard.ps1\"" }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "pwsh -NoProfile -File \"$CLAUDE_PROJECT_DIR/.ralfbot/hooks/ralfbot-preflight.ps1\"" }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "pwsh -NoProfile -File \"$CLAUDE_PROJECT_DIR/.ralfbot/hooks/ralfbot-preflight.ps1\"" }
+        ]
+      }
+    ]
+  }
+}

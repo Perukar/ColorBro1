@@ -1,0 +1,318 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PERUKAR RALFBOT Task Schema",
+  "version": "1.0.0-patch-d1",
+  "description": "Schema for PERUKAR RALFBOT backlog task cards. PATCH D-1 applied: relaxation_user_approval_evidence is required and must be non-empty when safety_impact is RELAXING or UNKNOWN.",
+  "type": "object",
+  "additionalProperties": false,
+
+  "required": [
+    "task_id",
+    "task_title",
+    "mode",
+    "context",
+    "goal",
+    "non_goals",
+    "expected_repo_root",
+    "expected_head",
+    "branch_policy",
+    "allowed_files",
+    "forbidden_files",
+    "locked_files_involved",
+    "source_of_truth_refs",
+    "required_tests",
+    "commit_allowed",
+    "approved_commit_file_list",
+    "stop_conditions",
+    "definition_of_done"
+  ],
+
+  "properties": {
+
+    "task_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique task identifier. Example: TASK-D-042."
+    },
+
+    "task_title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Short human-readable title for the task."
+    },
+
+    "mode": {
+      "type": "string",
+      "description": "Execution mode of the task. Controls which protocol the agent follows.",
+      "enum": [
+        "READONLY_AUDIT",
+        "IMPLEMENTATION",
+        "RECOVERY",
+        "COMMIT_GATE",
+        "DOCUMENTATION",
+        "LOCKED_DOC_UPDATE",
+        "CLEANUP",
+        "UNKNOWN_TO_AUDIT"
+      ]
+    },
+
+    "context": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Why this task exists. What situation triggered it."
+    },
+
+    "goal": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Single concrete outcome. Must be specific enough that done is unambiguous."
+    },
+
+    "non_goals": {
+      "type": "array",
+      "description": "Explicit list of things this task does NOT do.",
+      "items": { "type": "string", "minLength": 1 }
+    },
+
+    "expected_repo_root": {
+      "type": "string",
+      "description": "Absolute path to the repository root expected before starting."
+    },
+
+    "expected_head": {
+      "type": "string",
+      "description": "Expected git branch name or commit SHA before starting."
+    },
+
+    "branch_policy": {
+      "type": "string",
+      "description": "Branch constraints. E.g. work on current branch, must be on branch X, etc."
+    },
+
+    "allowed_files": {
+      "type": "array",
+      "description": "Maximum set of files the agent may touch. NOT an approved commit list.",
+      "items": { "type": "string", "minLength": 1 }
+    },
+
+    "forbidden_files": {
+      "type": "array",
+      "description": "Files the agent must never touch during this task.",
+      "items": { "type": "string", "minLength": 1 }
+    },
+
+    "locked_files_involved": {
+      "type": "array",
+      "description": "Locked files this task touches and the specific reason each must change.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["file", "why"],
+        "properties": {
+          "file": { "type": "string", "minLength": 1 },
+          "why":  { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+
+    "source_of_truth_refs": {
+      "type": "array",
+      "description": "Documents, specs, or decisions that define what the correct content should be.",
+      "items": { "type": "string", "minLength": 1 }
+    },
+
+    "required_tests": {
+      "type": "array",
+      "description": "All tests that must pass before the task is considered done.",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1
+    },
+
+    "commit_allowed": {
+      "type": "string",
+      "description": "Explicit commit authorization. Must be yes to commit. If no, stop at Ready for commit gate: yes.",
+      "enum": ["yes", "no"]
+    },
+
+    "approved_commit_file_list": {
+      "type": "array",
+      "description": "Exact list of files that may appear in the commit. Must be subset of allowed_files.",
+      "items": { "type": "string", "minLength": 1 }
+    },
+
+    "commit_message": {
+      "type": "string",
+      "description": "The exact commit message to use. Required when commit_allowed is yes."
+    },
+
+    "stop_conditions": {
+      "type": "array",
+      "description": "Conditions that must cause the agent to stop immediately.",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1
+    },
+
+    "definition_of_done": {
+      "type": "array",
+      "description": "Checklist that must all be true before the task is declared complete.",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1
+    },
+
+    "contract_direction": {
+      "type": "object",
+      "description": "Required for LOCKED_DOC_UPDATE. Describes the exact contract change: old rule, new rule, reason.",
+      "additionalProperties": false,
+      "required": ["old_contract", "new_contract", "reason_for_change"],
+      "properties": {
+        "old_contract":       { "type": "string", "minLength": 1 },
+        "new_contract":       { "type": "string", "minLength": 1 },
+        "reason_for_change":  { "type": "string", "minLength": 1 }
+      }
+    },
+
+    "safety_impact": {
+      "type": "string",
+      "description": "Required for LOCKED_DOC_UPDATE. RELAXING or UNKNOWN triggers mandatory user approval evidence (PATCH D-1).",
+      "enum": ["TIGHTENING", "RELAXING", "CLARIFICATION_ONLY", "UNKNOWN"]
+    },
+
+    "affected_invariants": {
+      "type": "array",
+      "description": "Required for LOCKED_DOC_UPDATE. Which system invariants this change touches.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "productionReady",
+          "approval_state",
+          "missingCriticalFields",
+          "allergy_scalp",
+          "special_blond",
+          "grey",
+          "target_direction",
+          "brand_matrix",
+          "diagnostic_only",
+          "third_zone_ends",
+          "mass_model",
+          "timing",
+          "ui_runtime_mapping",
+          "tests_as_spec"
+        ]
+      },
+      "minItems": 1
+    },
+
+    "required_paired_changes": {
+      "type": "object",
+      "description": "Required for LOCKED_DOC_UPDATE. States which paired changes are needed.",
+      "additionalProperties": false,
+      "properties": {
+        "docs_contract_updated":  { "type": "boolean" },
+        "agents_md_updated":      { "type": "boolean" },
+        "tests_updated":          { "type": "boolean" },
+        "runtime_updated":        { "type": "boolean" },
+        "reason_if_not_needed":   { "type": "string" }
+      }
+    },
+
+    "rollback_plan": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Required for LOCKED_DOC_UPDATE. How to undo this change. Must be specific."
+    },
+
+    "relaxation_user_approved": {
+      "type": "boolean",
+      "description": "PATCH D-1: Must be true when safety_impact is RELAXING or UNKNOWN. A boolean alone is not sufficient — relaxation_user_approval_evidence must also be present and non-empty."
+    },
+
+    "relaxation_user_approval_evidence": {
+      "type": "string",
+      "minLength": 1,
+      "description": "PATCH D-1: Required when safety_impact is RELAXING or UNKNOWN. Must be the EXACT verbatim quote from the user approval message, or a traceable decision ID. Agent must NOT infer approval from silence or lack of objection. Agent must NOT infer approval from prior related decisions. Agent must NOT fabricate or invent evidence. An empty string is rejected."
+    }
+
+  },
+
+  "allOf": [
+
+    {
+      "$comment": "LOCKED_DOC_UPDATE mode requires additional fields: contract_direction, safety_impact, affected_invariants, required_paired_changes, rollback_plan.",
+      "if": {
+        "properties": { "mode": { "const": "LOCKED_DOC_UPDATE" } },
+        "required": ["mode"]
+      },
+      "then": {
+        "required": [
+          "contract_direction",
+          "safety_impact",
+          "affected_invariants",
+          "required_paired_changes",
+          "rollback_plan"
+        ]
+      }
+    },
+
+    {
+      "$comment": "PATCH D-1: If safety_impact is RELAXING, relaxation_user_approved must be true AND relaxation_user_approval_evidence must be present and non-empty.",
+      "if": {
+        "properties": { "safety_impact": { "const": "RELAXING" } },
+        "required": ["safety_impact"]
+      },
+      "then": {
+        "required": [
+          "relaxation_user_approved",
+          "relaxation_user_approval_evidence"
+        ],
+        "properties": {
+          "relaxation_user_approved": {
+            "const": true,
+            "description": "PATCH D-1: Must be explicitly true. Agent must not set this without a real user decision."
+          },
+          "relaxation_user_approval_evidence": {
+            "type": "string",
+            "minLength": 1,
+            "description": "PATCH D-1: Exact user approval quote or decision ID. Must not be empty. Must not be fabricated."
+          }
+        }
+      }
+    },
+
+    {
+      "$comment": "PATCH D-1: If safety_impact is UNKNOWN, same requirements as RELAXING — treat as high risk.",
+      "if": {
+        "properties": { "safety_impact": { "const": "UNKNOWN" } },
+        "required": ["safety_impact"]
+      },
+      "then": {
+        "required": [
+          "relaxation_user_approved",
+          "relaxation_user_approval_evidence"
+        ],
+        "properties": {
+          "relaxation_user_approved": {
+            "const": true,
+            "description": "PATCH D-1: Must be explicitly true. Agent must not set this without a real user decision."
+          },
+          "relaxation_user_approval_evidence": {
+            "type": "string",
+            "minLength": 1,
+            "description": "PATCH D-1: Exact user approval quote or decision ID. Must not be empty. Must not be fabricated."
+          }
+        }
+      }
+    },
+
+    {
+      "$comment": "commit_allowed yes requires commit_message to be present.",
+      "if": {
+        "properties": { "commit_allowed": { "const": "yes" } },
+        "required": ["commit_allowed"]
+      },
+      "then": {
+        "required": ["commit_message"]
+      }
+    }
+
+  ]
+}
