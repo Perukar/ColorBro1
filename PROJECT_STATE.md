@@ -1,5 +1,19 @@
 # PROJECT_STATE — Perucar
 
+## 0. Post-RALFBOT checkpoint
+
+- RALFBOT installed and pushed: yes
+- Commit: `7b0ad56 Install RALFBOT guard system`
+- Remote: `origin/main`
+- Post-install smoke: PASS
+- First real RALFBOT audit: PASS
+- Brand contract: PASS
+- Timing contract: PASS
+- Mass model contract: PASS
+- EndsRec readiness contract: PASS
+- Current rule: future work must use bounded task cards
+- No current action required for brand, timing, mass, or endsRec
+
 ## 1. Поточний HEAD
 
 Поточний HEAD: 84b1e2c Normalize blocked result shape
