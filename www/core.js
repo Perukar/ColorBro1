@@ -1491,7 +1491,8 @@ const pigmentMap = {
                 let bType = document.getElementById('base_type').value;
                 
                 let tLevel = parseInt(document.getElementById('target_level').value);
-                let tDir = document.getElementById('target_direction').value;
+                const tDirElement = document.getElementById('target_direction');
+                let tDir = tDirElement ? tDirElement.value : '';
                 let allergy = document.getElementById('allergy').value;
                 const scalpElement = document.getElementById('scalp_sensitivity');
                 let scalp = scalpElement ? scalpElement.value : '';
@@ -1505,6 +1506,7 @@ const pigmentMap = {
                 if (!String(bType || '').trim()) missingCriticalFields.push("тип бази");
                 if (!String(condition || '').trim()) missingCriticalFields.push("стан волосся");
                 if (!String(scalp || '').trim()) missingCriticalFields.push("чутливість шкіри голови");
+                if (!String(tDir || '').trim()) missingCriticalFields.push("бажаний відтінок");
 
                 if (missingCriticalFields.length > 0) {
                     const state = buildWwwRenderState({

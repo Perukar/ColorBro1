@@ -1107,6 +1107,25 @@ assertIncludes(allergyStillBlocksHtml, 'алергія');
 assertNotIncludes(allergyStillBlocksHtml, 'approved-recipe');
 
 console.log('SCALP-SENSITIVITY-GATE verified: missing=BLOCKED, unknown/sensitive=MANUAL, irritated=BLOCKED, normal=APPROVED; allergy preserved.');
+// ===== TARGET_DIRECTION MANDATORY GATE (regression) =====
+// missing/absent or empty target_direction => BLOCKED (missing critical field);
+// valid target_direction with otherwise valid data => normal APPROVED flow.
+const tdirMissingHtml = runCalculateProtocolWithValues({}, { missingIds: ['target_direction'] });
+assertIncludes(tdirMissingHtml, 'BLOCKED');
+assertIncludes(tdirMissingHtml, 'бажаний відтінок');
+assertNotIncludes(tdirMissingHtml, 'approved-recipe');
+assertNotIncludes(tdirMissingHtml, 'Фінальна формула');
+
+const tdirEmptyHtml = runCalculateProtocolWithValues({ target_direction: '' });
+assertIncludes(tdirEmptyHtml, 'BLOCKED');
+assertIncludes(tdirEmptyHtml, 'бажаний відтінок');
+assertNotIncludes(tdirEmptyHtml, 'approved-recipe');
+
+const tdirValidHtml = runCalculateProtocolWithValues({ target_direction: '1' });
+assertIncludes(tdirValidHtml, 'approved-recipe');
+assertNotIncludes(tdirValidHtml, 'бажаний відтінок');
+
+console.log('TARGET-DIRECTION-GATE verified: missing=BLOCKED, empty=BLOCKED, valid=APPROVED.');
 console.log('WWW render runtime test passed');
 `;
 
