@@ -1536,6 +1536,48 @@ const pigmentMap = {
                     return;
                 }
 
+                // LENGTH / DENSITY / THICKNESS UNRECOGNIZED-VALUE GATE (one grouped gate = one commit)
+                // Policy: present-but-unrecognized values for length, density, thickness MUST produce BLOCKED,
+                // never MANUAL_REQUIRED and never a silent default. These are required production fields;
+                // an out-of-enum value is treated as invalid critical production input, not as a safe default.
+                const allowedLengthValues = new Set(['короткие', 'средние', 'длинные']);
+                const allowedDensityValues = new Set(['редкие', 'средние', 'густые']);
+                const allowedThicknessValues = new Set(['тонкие', 'средние', 'толстые']);
+                const lengthTrimmed = String(length || '').trim();
+                const densityTrimmed = String(density || '').trim();
+                const thicknessTrimmed = String(thickness || '').trim();
+                const unrecognizedCriticalFields = [];
+                if (lengthTrimmed && !allowedLengthValues.has(lengthTrimmed)) {
+                    unrecognizedCriticalFields.push('довжина волосся: "' + lengthTrimmed + '"');
+                }
+                if (densityTrimmed && !allowedDensityValues.has(densityTrimmed)) {
+                    unrecognizedCriticalFields.push('густота волосся: "' + densityTrimmed + '"');
+                }
+                if (thicknessTrimmed && !allowedThicknessValues.has(thicknessTrimmed)) {
+                    unrecognizedCriticalFields.push('товщина волосся: "' + thicknessTrimmed + '"');
+                }
+                if (unrecognizedCriticalFields.length > 0) {
+                    const state = buildWwwRenderState({
+                        status: 'BLOCKED',
+                        target: Number.isFinite(tLevel) ? (tLevel + '.' + tDir) : 'не визначено',
+                        blockers: [
+                            'Нерозпізнані критичні значення (поза дозволеним переліком): ' + unrecognizedCriticalFields.join(', ') + '.'
+                        ],
+                        warnings: [
+                            'Фінальний рецепт не може бути підтверджений з нерозпізнаними значеннями довжини, густоти або товщини.'
+                        ],
+                        diagnostics: [
+                            'Оберіть лише дозволені варіанти для довжини, густоти та товщини. Значення поза переліком не приймається як безпечне за замовчуванням.'
+                        ],
+                        reasons: {
+                            unrecognized_critical_inputs: true,
+                            unrecognizedCriticalFields
+                        }
+                    });
+                    document.getElementById('output').innerHTML = PerucarWwwRenderV1.renderStateToHtml(state);
+                    return;
+                }
+
                 // ALLERGY PRODUCTION GATE (one gate = one commit)
                 // Safety passport: confirmed allergy => BLOCKED; unknown/undisclosed => MANUAL_REQUIRED.
                 // A negative (no) allergy answer is required before any oxidative recipe can auto-approve.

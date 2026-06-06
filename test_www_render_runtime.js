@@ -1147,6 +1147,37 @@ assertIncludes(ldtValidHtml, 'approved-recipe');
 assertNotIncludes(ldtValidHtml, 'довжина волосся');
 
 console.log('LENGTH-DENSITY-THICKNESS-GATE verified: each missing/empty=BLOCKED, valid=APPROVED.');
+// ===== LENGTH / DENSITY / THICKNESS UNRECOGNIZED-VALUE GATE (regression) =====
+// Policy: present-but-unrecognized values for each of length/density/thickness MUST produce BLOCKED,
+// never MANUAL_REQUIRED and never a silent default. Tests cover Cyrillic gibberish, English token,
+// and allowed-token of a sibling field (typo into wrong field).
+const ldtUnrecognizedCases = [
+    { fld: 'length',    value: 'неизвестно' },
+    { fld: 'length',    value: 'xyz' },
+    { fld: 'length',    value: 'тонкие' },
+    { fld: 'density',   value: 'неизвестно' },
+    { fld: 'density',   value: 'xyz' },
+    { fld: 'density',   value: 'короткие' },
+    { fld: 'thickness', value: 'неизвестно' },
+    { fld: 'thickness', value: 'xyz' },
+    { fld: 'thickness', value: 'густые' }
+];
+ldtUnrecognizedCases.forEach(function(tc) {
+    const ov = {};
+    ov[tc.fld] = tc.value;
+    const html = runCalculateProtocolWithValues(ov);
+    assertIncludes(html, 'BLOCKED');
+    assertIncludes(html, 'Нерозпізнані критичні значення');
+    assertNotIncludes(html, 'approved-recipe');
+    assertNotIncludes(html, 'MANUAL_REQUIRED');
+    assertNotIncludes(html, 'Фінальна формула');
+});
+
+const ldtAllValidHtml = runCalculateProtocolWithValues();
+assertIncludes(ldtAllValidHtml, 'approved-recipe');
+assertNotIncludes(ldtAllValidHtml, 'Нерозпізнані критичні значення');
+
+console.log('LENGTH-DENSITY-THICKNESS-UNRECOGNIZED-GATE verified: each unknown value=BLOCKED (no MANUAL_REQUIRED, no silent default).');
 console.log('WWW render runtime test passed');
 `;
 
