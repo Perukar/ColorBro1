@@ -119,10 +119,15 @@ assertIncludes(approvedHtml, 'Мікстони');
 assertIncludes(approvedHtml, 'Маси');
 assertIncludes(approvedHtml, '&quot;totalMass&quot;: 60');
 assertIncludes(approvedHtml, 'Таймінги');
+const approvedTimingBlockHtml = extractFirstDivBlockByHeading(approvedHtml, 'Таймінги');
+assertIncludes(approvedTimingBlockHtml, '&quot;totalMinutes&quot;: 45');
+assertNotIncludes(approvedTimingBlockHtml, 'advisory-only');
+assertNotIncludes(approvedTimingBlockHtml, 'productionTimingHidden');
 
 const blockedHtml = PerucarWwwRenderV1.renderStateToHtml({
     status: 'BLOCKED',
     blockers: ['ФАТАЛЬНО: Хна/метали'],
+    timingInfo: { totalMinutes: 40, modifierMinutes: 0 },
     rootRec: {
         process: 'Перманент',
         dye: 'Барвник 8.1',
@@ -137,12 +142,18 @@ assertIncludes(blockedHtml, 'ФАТАЛЬНО: Хна/метали');
 assertIncludes(blockedHtml, 'BLOCKED');
 assertNotIncludes(blockedHtml, 'approved-recipe');
 assertNotIncludes(blockedHtml, 'Барвник 8.1');
+const blockedTimingBlockHtml = extractFirstDivBlockByHeading(blockedHtml, 'Таймінги');
+assertIncludes(blockedTimingBlockHtml, '&quot;timingStatus&quot;: &quot;blocked&quot;');
+assertIncludes(blockedTimingBlockHtml, '&quot;productionTimingHidden&quot;: true');
+assertNotIncludes(blockedTimingBlockHtml, 'totalMinutes');
+assertNotIncludes(blockedTimingBlockHtml, 'modifierMinutes');
 
 const manualHtml = PerucarWwwRenderV1.renderStateToHtml({
     status: 'MANUAL_REQUIRED',
     manualDecisions: [
         { title: 'Оцінити тест-пасмо', message: 'Потрібне рішення щодо освітлення' }
     ],
+    timingInfo: { totalMinutes: 50, modifierMinutes: 5 },
     rootRec: {
         process: 'Special Blond',
         dye: 'S.B. 9.1',
@@ -158,6 +169,12 @@ assertIncludes(manualHtml, 'Оцінити тест-пасмо');
 assertIncludes(manualHtml, 'Потрібне рішення щодо освітлення');
 assertNotIncludes(manualHtml, 'approved-recipe');
 assertNotIncludes(manualHtml, 'S.B. 9.1');
+const manualTimingBlockHtml = extractFirstDivBlockByHeading(manualHtml, 'Таймінги');
+assertIncludes(manualTimingBlockHtml, '&quot;totalMinutes&quot;: 50');
+assertIncludes(manualTimingBlockHtml, '&quot;timingStatus&quot;: &quot;advisory-only&quot;');
+assertIncludes(manualTimingBlockHtml, '&quot;requiresManualConfirmation&quot;: true');
+assertIncludes(manualTimingBlockHtml, '&quot;notReadyToExecute&quot;: true');
+assertIncludes(manualTimingBlockHtml, 'not a ready-to-execute instruction');
 
 const manualMassModelHtml = PerucarWwwRenderV1.renderStateToHtml({
     status: 'MANUAL_REQUIRED',
@@ -639,6 +656,7 @@ assert.ok(emptyHistoryGate.missingFields.includes('ends_history'));
 function assertSafeRuntimeDiagnosticDisplay(html, id) {
     const diagnosticBlockHtml = extractFirstDivBlockByHeading(html, 'Діагностика кінців');
     const massModelBlockHtml = extractFirstDivBlockByHeading(html, 'Маси');
+    const timingBlockHtml = extractFirstDivBlockByHeading(html, 'Таймінги');
 
     assertIncludes(html, 'MANUAL_REQUIRED');
     assertIncludes(diagnosticBlockHtml, 'Діагностика кінців');
@@ -662,6 +680,12 @@ function assertSafeRuntimeDiagnosticDisplay(html, id) {
     assertNotIncludes(massModelBlockHtml, '&quot;rootMass&quot;');
     assertNotIncludes(massModelBlockHtml, '&quot;lengthMass&quot;');
     assertNotIncludes(massModelBlockHtml, '&quot;mode&quot;: &quot;3-zone&quot;');
+    assertIncludes(timingBlockHtml, '&quot;timingStatus&quot;: &quot;diagnostic-only&quot;');
+    assertIncludes(timingBlockHtml, '&quot;notForMixing&quot;: true');
+    assertIncludes(timingBlockHtml, '&quot;requiresManualConfirmation&quot;: true');
+    assertIncludes(timingBlockHtml, '&quot;productionTimingHidden&quot;: true');
+    assertNotIncludes(timingBlockHtml, 'totalMinutes');
+    assertNotIncludes(timingBlockHtml, 'modifierMinutes');
     assertNotIncludes(html, '<h3>Кінці</h3>');
     assertNotIncludes(html, 'endsRec:');
     assertNotIncludes(html, 'endsFormula:');

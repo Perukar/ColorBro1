@@ -3269,8 +3269,8 @@ console.log('TIMING-THICKNESS-MODIFIER safe behavior observed. thin=' + timingTh
 
 // === TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK ===
 // The diagnostic ends block must NOT contain production timing fields.
-// Main timingInfo MUST be present with totalMinutes.
-// Ends diagnostic block must NOT leak mixing timing (no totalMinutes inside it).
+// Main timingInfo MUST be present but sanitized as diagnostic-only.
+// Ends diagnostic output must NOT leak production timing or mixing timing.
 const timingDiagValues = withDefaultScenarioValues({
     history: 'натуральні', condition: 'здоровые', thickness: 'средние',
     density: 'средние', length: 'средние', grey_percent: '0', grey_type: 'мягкая',
@@ -3282,10 +3282,15 @@ const timingDiagValues = withDefaultScenarioValues({
 const timingDiagResult = runDiagnosticScenario('TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK', timingDiagValues);
 assert.ok(!timingDiagResult.error, 'TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK should not throw');
 const timingDiagHtml = timingDiagResult.html;
-// Main timingInfo MUST be rendered with real totalMinutes
+// Main timingInfo MUST be rendered, but exact production timing is hidden for diagnostic-only.
 const timingDiagInfo = extractTimingInfoFromHtml(timingDiagHtml);
 assert.ok(timingDiagInfo !== null, 'TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK: main timingInfo must be rendered');
-assert.ok(typeof timingDiagInfo.totalMinutes === 'number', 'TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK: totalMinutes must be a number');
+assert.strictEqual(timingDiagInfo.timingStatus, 'diagnostic-only', 'TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK: timingInfo must be diagnostic-only');
+assert.strictEqual(timingDiagInfo.notForMixing, true, 'TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK: timingInfo must keep notForMixing');
+assert.strictEqual(timingDiagInfo.productionTimingHidden, true, 'TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK: production timing must be hidden');
+assert.strictEqual(timingDiagInfo.requiresManualConfirmation, true, 'TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK: manual confirmation marker required');
+assert.strictEqual(Object.prototype.hasOwnProperty.call(timingDiagInfo, 'totalMinutes'), false, 'TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK: no totalMinutes leak');
+assert.strictEqual(Object.prototype.hasOwnProperty.call(timingDiagInfo, 'modifierMinutes'), false, 'TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK: no modifierMinutes leak');
 // Ends diagnostic block isolation: candidateOnly / notForMixing must be present, no production fields
 assert.ok(timingDiagHtml.includes('notForMixing'), 'TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK: diagnostic block must have notForMixing');
 assert.ok(!timingDiagHtml.includes('dyeMass'), 'TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK: no dyeMass leak');
@@ -3293,7 +3298,7 @@ assert.ok(!timingDiagHtml.includes('oxidizerMass'), 'TIMING-DIAGNOSTIC-ONLY-NO-M
 assert.ok(!timingDiagHtml.includes('formula-to-mix'), 'TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK: no formula-to-mix leak');
 assert.ok(!timingDiagHtml.includes('grams'), 'TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK: no grams leak');
 assert.ok(!hasProductionEndsRecSignal(timingDiagHtml), 'TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK: no production endsRec signal');
-console.log('TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK safe behavior observed. totalMinutes=' + timingDiagInfo.totalMinutes);
+console.log('TIMING-DIAGNOSTIC-ONLY-NO-MIXING-TIMING-LEAK safe behavior observed. timingStatus=' + timingDiagInfo.timingStatus);
 
 // === TIMING-SAFETY-REGRESSION-SPECIAL-BLOND-GREY ===
 // Special Blond + grey > 0 must remain MANUAL_REQUIRED regardless of timing changes.
@@ -3319,14 +3324,17 @@ assert.ok(!timingGreySbHtml.includes('approved-recipe'),
 const timingGreySbInfo = extractTimingInfoFromHtml(timingGreySbHtml);
 assert.ok(timingGreySbInfo !== null, 'TIMING-SAFETY-REGRESSION-SPECIAL-BLOND-GREY: timingInfo must be rendered even for MANUAL_REQUIRED');
 assert.ok(timingGreySbInfo.totalMinutes > 0, 'TIMING-SAFETY-REGRESSION-SPECIAL-BLOND-GREY: totalMinutes must still be > 0');
+assert.strictEqual(timingGreySbInfo.timingStatus, 'advisory-only', 'TIMING-SAFETY-REGRESSION-SPECIAL-BLOND-GREY: timingInfo must be advisory-only');
+assert.strictEqual(timingGreySbInfo.requiresManualConfirmation, true, 'TIMING-SAFETY-REGRESSION-SPECIAL-BLOND-GREY: timingInfo must require manual confirmation');
+assert.strictEqual(timingGreySbInfo.notReadyToExecute, true, 'TIMING-SAFETY-REGRESSION-SPECIAL-BLOND-GREY: timingInfo must not look ready to execute');
 console.log('TIMING-SAFETY-REGRESSION-SPECIAL-BLOND-GREY safe behavior observed. status=MANUAL_REQUIRED totalMinutes=' + timingGreySbInfo.totalMinutes);
 
 globalThis.__timingResults = {
     permanent: { totalMinutes: timingPermInfo.totalMinutes, status: 'SAFE' },
     specialBlond: { totalMinutes: timingSbInfo.totalMinutes, status: 'SAFE' },
     thicknessModifier: { thin: timingThinInfo.totalMinutes, thick: timingThickInfo.totalMinutes, status: 'SAFE' },
-    diagnosticIsolation: { totalMinutes: timingDiagInfo.totalMinutes, status: 'SAFE' },
-    safetyRegression: { totalMinutes: timingGreySbInfo.totalMinutes, status: 'SAFE' }
+    diagnosticIsolation: { timingStatus: timingDiagInfo.timingStatus, status: 'SAFE' },
+    safetyRegression: { totalMinutes: timingGreySbInfo.totalMinutes, timingStatus: timingGreySbInfo.timingStatus, status: 'SAFE' }
 };
 `;
 
@@ -3573,7 +3581,9 @@ assert.ok(sandbox.__timingResults.specialBlond.totalMinutes > 0);
 assert.strictEqual(sandbox.__timingResults.thicknessModifier.status, 'SAFE');
 assert.ok(sandbox.__timingResults.thicknessModifier.thick > sandbox.__timingResults.thicknessModifier.thin);
 assert.strictEqual(sandbox.__timingResults.diagnosticIsolation.status, 'SAFE');
+assert.strictEqual(sandbox.__timingResults.diagnosticIsolation.timingStatus, 'diagnostic-only');
 assert.strictEqual(sandbox.__timingResults.safetyRegression.status, 'SAFE');
+assert.strictEqual(sandbox.__timingResults.safetyRegression.timingStatus, 'advisory-only');
 assert.ok(sandbox.__timingResults.safetyRegression.totalMinutes > 0);
 
 console.log('WWW business scenario test passed');

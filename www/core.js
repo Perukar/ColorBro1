@@ -331,9 +331,49 @@ const pigmentMap = {
                 return `<div class="mass-model"><h3>Маси</h3><pre>${this.escapeHtml(JSON.stringify(safeMassModel, null, 2))}</pre></div>`;
             },
 
-            renderTimingInfo(timingInfo) {
+            isDiagnosticOnlyTimingState(state) {
+                const candidate = state && state.endsRecDiagnosticWiringCandidate;
+                return Boolean(candidate && (
+                    candidate.notForMixing === true ||
+                    candidate.previewOnly === true ||
+                    candidate.candidateOnly === true ||
+                    candidate.productionReady === false
+                ));
+            },
+
+            sanitizeTimingInfoForRender(timingInfo, state) {
+                if (!timingInfo) return timingInfo;
+                const status = state && state.status;
+                const isDiagnosticOnly = this.isDiagnosticOnlyTimingState(state);
+                if (status === 'APPROVED' && !isDiagnosticOnly) return timingInfo;
+                if (status === 'BLOCKED') {
+                    return {
+                        timingStatus: 'blocked',
+                        productionTimingHidden: true,
+                        message: 'Production timing is hidden because output is blocked.'
+                    };
+                }
+                if (isDiagnosticOnly) {
+                    return {
+                        timingStatus: 'diagnostic-only',
+                        notForMixing: true,
+                        requiresManualConfirmation: true,
+                        productionTimingHidden: true,
+                        message: 'Timing info is diagnostic only and not a ready-to-execute instruction.'
+                    };
+                }
+                return Object.assign({}, timingInfo, {
+                    timingStatus: 'advisory-only',
+                    requiresManualConfirmation: true,
+                    notReadyToExecute: true,
+                    message: 'Timing info is advisory only and not a ready-to-execute instruction.'
+                });
+            },
+
+            renderTimingInfo(timingInfo, state) {
                 if (!timingInfo) return '';
-                return `<div class="timing-info"><h3>Таймінги</h3><pre>${this.escapeHtml(JSON.stringify(timingInfo, null, 2))}</pre></div>`;
+                const safeTimingInfo = this.sanitizeTimingInfoForRender(timingInfo, state);
+                return `<div class="timing-info"><h3>Таймінги</h3><pre>${this.escapeHtml(JSON.stringify(safeTimingInfo, null, 2))}</pre></div>`;
             },
 
             renderStatusHeader(state) {
@@ -357,7 +397,7 @@ const pigmentMap = {
                     hasPhases ? this.renderPhases(state.phases) : this.renderProtocolText(state.protocolText),
                     this.renderMixtoneInfo(state.mixtoneInfo),
                     this.renderMassModel(state.massModel, state.status),
-                    this.renderTimingInfo(state.timingInfo),
+                    this.renderTimingInfo(state.timingInfo, state),
                     this.renderDiagnostics(state.diagnostics, state.reasons)
                 ].join('');
             },
