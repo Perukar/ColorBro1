@@ -1493,6 +1493,8 @@ const pigmentMap = {
                 let tLevel = parseInt(document.getElementById('target_level').value);
                 let tDir = document.getElementById('target_direction').value;
                 let allergy = document.getElementById('allergy').value;
+                const scalpElement = document.getElementById('scalp_sensitivity');
+                let scalp = scalpElement ? scalpElement.value : '';
 
                 let alerts = [], warnings = [], diagnostics = [], manualDecisions = [];
                 const missingCriticalFields = [];
@@ -1502,6 +1504,7 @@ const pigmentMap = {
                 if (!String(history || '').trim()) missingCriticalFields.push("історія фарбування");
                 if (!String(bType || '').trim()) missingCriticalFields.push("тип бази");
                 if (!String(condition || '').trim()) missingCriticalFields.push("стан волосся");
+                if (!String(scalp || '').trim()) missingCriticalFields.push("чутливість шкіри голови");
 
                 if (missingCriticalFields.length > 0) {
                     const state = buildWwwRenderState({
@@ -1549,6 +1552,32 @@ const pigmentMap = {
                     manualDecisions.push({
                         title: 'Алергічний статус не підтверджено',
                         message: 'Потрібен тест на алерген (PPD / парафенілендіамін) і рішення майстра перед оксидаційним фарбуванням. Рецепт не може бути автоматично затверджений.'
+                    });
+                }
+
+                // SCALP SENSITIVITY PRODUCTION GATE (one gate = one commit)
+                // Safety passport: irritated/inflamed scalp => BLOCKED; sensitive or unknown => MANUAL_REQUIRED;
+                // normal => no gate. Absent/empty is already handled as a missing critical field (BLOCKED) above.
+                const scalpRaw = String(scalp || '').trim().toLowerCase();
+                const scalpIrritatedSet = new Set(['irritated', 'damaged', 'inflamed', 'подразнена', 'подразнення', 'запалена', 'пошкоджена']);
+                const scalpNormalSet = new Set(['normal', 'норма', 'нормальна', 'healthy', 'здорова']);
+                const scalpIrritated = scalpIrritatedSet.has(scalpRaw);
+                const scalpNormal = scalpNormalSet.has(scalpRaw);
+                if (scalpIrritated) {
+                    const state = buildWwwRenderState({
+                        status: 'BLOCKED',
+                        target: `${tLevel}.${tDir}`,
+                        blockers: ['ФАТАЛЬНО: Подразнена / запалена шкіра голови. Оксидаційне фарбування заборонено до відновлення шкіри.'],
+                        warnings,
+                        diagnostics
+                    });
+                    document.getElementById('output').innerHTML = PerucarWwwRenderV1.renderStateToHtml(state);
+                    return;
+                }
+                if (!scalpNormal) {
+                    manualDecisions.push({
+                        title: 'Стан шкіри голови потребує оцінки',
+                        message: 'Чутлива або непідтверджена шкіра голови потребує ручної професійної оцінки перед оксидаційним фарбуванням. Рецепт не може бути автоматично затверджений.'
                     });
                 }
 

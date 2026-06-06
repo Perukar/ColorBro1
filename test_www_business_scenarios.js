@@ -20,7 +20,8 @@ function withDefaultScenarioValues(values) {
         porosity: neutralPorosityValue,
         root_condition: neutralRootConditionValue,
         length_condition: neutralLengthConditionValue,
-        allergy: 'no'
+        allergy: 'no',
+        scalp_sensitivity: 'normal'
     }, values);
 }
 
@@ -151,6 +152,7 @@ assert.ok(prepigRequestedIds.includes('output'), 'PREPIG-10-6 should write to ou
 // === GREY-50-SPECIAL-BLOND-BLOCK ===
 const greySbScenarioValues = {
     allergy: 'no',
+    scalp_sensitivity: 'normal',
     history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
     grey_percent: '50', grey_type: 'мягкая',
     root_level: '6', root_length: '1', length_level: '6', ends_level: '6', ends_condition: 'здорові',
@@ -169,6 +171,7 @@ console.log('GREY-50-SPECIAL-BLOND-BLOCK safe behavior observed.');
 // === GREY-50-ADDS-00-BASE ===
 const greyBaseScenarioValues = {
     allergy: 'no',
+    scalp_sensitivity: 'normal',
     history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
     grey_percent: '70', grey_type: 'мягкая',
     root_level: '6', root_length: '1', length_level: '6', ends_level: '6', ends_condition: 'здорові',
@@ -190,6 +193,7 @@ console.log('GREY-50-ADDS-00-BASE safe behavior observed.');
 // === GREY-GLASSY-MORDONSAGE ===
 const greyGlassyScenarioValues = {
     allergy: 'no',
+    scalp_sensitivity: 'normal',
     history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
     grey_percent: '30', grey_type: 'стекловидная',
     root_level: '6', root_length: '1', length_level: '6', ends_level: '6', ends_condition: 'здорові',
@@ -206,6 +210,7 @@ console.log('GREY-GLASSY-MORDONSAGE safe behavior observed.');
 // === GREY-30-SPECIAL-BLOND-MANUAL-REQUIRED ===
 const grey30SbScenarioValues = {
     allergy: 'no',
+    scalp_sensitivity: 'normal',
     history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
     grey_percent: '30', grey_type: 'мягкая',
     root_level: '7', root_length: '1', length_level: '7', ends_level: '7', ends_condition: 'здорові',
@@ -222,6 +227,7 @@ console.log('GREY-30-SPECIAL-BLOND-MANUAL-REQUIRED safe behavior observed.');
 // === GREY-30-GLASSY-SPECIAL-BLOND-MANUAL-REQUIRED ===
 const grey30GlassySbScenarioValues = {
     allergy: 'no',
+    scalp_sensitivity: 'normal',
     history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
     grey_percent: '30', grey_type: 'стекловидная',
     root_level: '7', root_length: '1', length_level: '7', ends_level: '7', ends_condition: 'здорові',
@@ -239,6 +245,7 @@ console.log('GREY-30-GLASSY-SPECIAL-BLOND-MANUAL-REQUIRED safe behavior observed
 // === GREY-30-PERMANENT-SOFT-WARNING ===
 const grey30PermSoftValues = {
     allergy: 'no',
+    scalp_sensitivity: 'normal',
     history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
     grey_percent: '30', grey_type: 'мягкая',
     root_level: '6', root_length: '1', length_level: '6', ends_level: '6', ends_condition: 'здорові',
@@ -256,6 +263,7 @@ console.log('GREY-30-PERMANENT-SOFT-WARNING safe behavior observed.');
 // === GREY-30-PERMANENT-GLASSY-MANUAL-REQUIRED ===
 const grey30PermGlassyValues = {
     allergy: 'no',
+    scalp_sensitivity: 'normal',
     history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
     grey_percent: '30', grey_type: 'стекловидная',
     root_level: '6', root_length: '1', length_level: '6', ends_level: '6', ends_condition: 'здорові',
@@ -308,6 +316,7 @@ if (prepigUnsafeUnconditionalApproved) {
 // === PREPIG-8-4 ===
 const prepig84Values = {
     allergy: 'no',
+    scalp_sensitivity: 'normal',
     history: 'освітлені', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
     grey_percent: '0',
     root_level: '4', root_length: '1', length_level: '8', ends_level: '8', ends_condition: 'здорові',
@@ -326,6 +335,7 @@ console.log('PREPIG-8-4 safe behavior observed.');
 // === ROOT-7-4-NATURAL-NO-PREPIG-FALSE-POSITIVE ===
 const root74Values = {
     allergy: 'no',
+    scalp_sensitivity: 'normal',
     history: 'натуральні', condition: 'здоровые', thickness: 'средние', density: 'средние', length: 'средние',
     grey_percent: '0',
     root_level: '7', root_length: '1', length_level: '7', ends_level: '7', ends_condition: 'здорові',

@@ -2241,6 +2241,7 @@ function classifyEndsRecMassAllocationContract(readiness, builderResult, formula
     vm.runInContext(source, sandbox, { filename: 'www/core.js' });
 
     const scenarioValues = {
+        scalp_sensitivity: 'normal',
         history: 'натуральні',
         condition: 'здоровые',
         thickness: 'средние',
@@ -2664,6 +2665,7 @@ function assembleProductionEndsRecContractSpecLocal(readiness, builderResult, fo
     vm.runInContext(source, sandbox, { filename: 'www/core.js' });
 
     const scenarioValues = {
+        scalp_sensitivity: 'normal',
         history: 'натуральні',
         condition: 'здоровые',
         thickness: 'средние',
@@ -3044,6 +3046,7 @@ function runControlledEndsRecWiringSpecLocal(context, readiness, builderResult, 
     vm.runInContext(source, sandbox, { filename: 'www/core.js' });
 
     const scenarioValues = {
+        scalp_sensitivity: 'normal',
         history: 'натуральні',
         condition: 'здоровые',
         thickness: 'средние',
@@ -3103,6 +3106,7 @@ function runControlledEndsRecWiringSpecLocal(context, readiness, builderResult, 
     vm.runInContext(source, sandbox, { filename: 'www/core.js' });
 
     const scenarioValues = {
+        scalp_sensitivity: 'normal',
         history: 'натуральні',
         condition: 'здоровые',
         thickness: 'средние',
@@ -3147,6 +3151,7 @@ function runControlledEndsRecWiringSpecLocal(context, readiness, builderResult, 
     vm.runInContext(source, sandbox, { filename: 'www/core.js' });
 
     const scenarioValues = {
+        scalp_sensitivity: 'normal',
         history: 'натуральні',
         condition: 'здоровые',
         thickness: 'средние',
@@ -3228,6 +3233,7 @@ function runControlledEndsRecWiringSpecLocal(context, readiness, builderResult, 
     vm.runInContext(source, sandbox, { filename: 'www/core.js' });
 
     const scenarioValues = {
+        scalp_sensitivity: 'normal',
         history: 'натуральні',
         condition: 'здоровые',
         thickness: 'средние',
@@ -3684,6 +3690,7 @@ function runGuardedDiagnosticWiringSpecLocal(context, readiness, builderResult, 
     vm.runInContext(source, sandbox, { filename: 'www/core.js' });
 
     const scenarioValues = {
+        scalp_sensitivity: 'normal',
         history: 'натуральні',
         condition: 'здоровые',
         thickness: 'средние',
@@ -3742,6 +3749,7 @@ function runGuardedDiagnosticWiringSpecLocal(context, readiness, builderResult, 
     vm.runInContext(source, sandbox, { filename: 'www/core.js' });
 
     const scenarioValues = {
+        scalp_sensitivity: 'normal',
         history: 'натуральні',
         condition: 'здоровые',
         thickness: 'средние',
@@ -3785,6 +3793,7 @@ function runGuardedDiagnosticWiringSpecLocal(context, readiness, builderResult, 
     vm.runInContext(source, sandbox, { filename: 'www/core.js' });
 
     const scenarioValues = {
+        scalp_sensitivity: 'normal',
         history: 'натуральні',
         condition: 'здоровые',
         thickness: 'средние',
@@ -3866,6 +3875,7 @@ function runGuardedDiagnosticWiringSpecLocal(context, readiness, builderResult, 
     vm.runInContext(source, sandbox, { filename: 'www/core.js' });
 
     const scenarioValues = {
+        scalp_sensitivity: 'normal',
         history: 'натуральні',
         condition: 'здоровые',
         thickness: 'средние',
@@ -3940,6 +3950,7 @@ function runGuardedDiagnosticWiringSpecLocal(context, readiness, builderResult, 
 
     // Mock document values for a scenario that is eligible for diagnostic endsRec calculations
     const scenarioValues = {
+        scalp_sensitivity: 'normal',
         history: 'натуральні',
         condition: 'здоровые',
         thickness: 'средние',
@@ -4016,6 +4027,7 @@ function runGuardedDiagnosticWiringSpecLocal(context, readiness, builderResult, 
 
     // Mock document values for a scenario that is eligible for diagnostic endsRec calculations
     const scenarioValues = {
+        scalp_sensitivity: 'normal',
         history: 'натуральні',
         condition: 'здоровые',
         thickness: 'средние',

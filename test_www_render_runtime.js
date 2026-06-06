@@ -657,7 +657,8 @@ const defaultDomValues = {
     target_level: '9',
     target_direction: '1',
     elasticity: 'нормальна еластичність',
-    allergy: 'no'
+    allergy: 'no',
+    scalp_sensitivity: 'normal'
 };
 
 function runCalculateProtocolWithValues(overrides = {}, options = {}) {
@@ -1072,6 +1073,40 @@ assertIncludes(allergyNegativeHtml, 'approved-recipe');
 assertNotIncludes(allergyNegativeHtml, 'Алергічний статус не підтверджено');
 
 console.log('ALLERGY-PRODUCTION-GATE verified: yes=BLOCKED, unknown/empty=MANUAL, no=APPROVED.');
+// ===== SCALP SENSITIVITY PRODUCTION GATE (regression) =====
+// missing/absent => BLOCKED (missing critical field); unknown/sensitive => MANUAL_REQUIRED;
+// irritated => BLOCKED; normal => normal APPROVED flow. Allergy gate must remain intact.
+const scalpMissingHtml = runCalculateProtocolWithValues({}, { missingIds: ['scalp_sensitivity'] });
+assertIncludes(scalpMissingHtml, 'BLOCKED');
+assertIncludes(scalpMissingHtml, 'чутливість шкіри голови');
+assertNotIncludes(scalpMissingHtml, 'approved-recipe');
+assertNotIncludes(scalpMissingHtml, 'Фінальна формула');
+
+const scalpUnknownHtml = runCalculateProtocolWithValues({ scalp_sensitivity: 'unknown' });
+assertIncludes(scalpUnknownHtml, 'MANUAL_REQUIRED');
+assertIncludes(scalpUnknownHtml, 'Стан шкіри голови потребує оцінки');
+assertNotIncludes(scalpUnknownHtml, 'approved-recipe');
+
+const scalpSensitiveHtml = runCalculateProtocolWithValues({ scalp_sensitivity: 'sensitive' });
+assertIncludes(scalpSensitiveHtml, 'MANUAL_REQUIRED');
+assertNotIncludes(scalpSensitiveHtml, 'approved-recipe');
+
+const scalpIrritatedHtml = runCalculateProtocolWithValues({ scalp_sensitivity: 'irritated' });
+assertIncludes(scalpIrritatedHtml, 'BLOCKED');
+assertIncludes(scalpIrritatedHtml, 'шкіра голови');
+assertNotIncludes(scalpIrritatedHtml, 'approved-recipe');
+
+const scalpNormalHtml = runCalculateProtocolWithValues({ scalp_sensitivity: 'normal' });
+assertIncludes(scalpNormalHtml, 'approved-recipe');
+assertNotIncludes(scalpNormalHtml, 'Стан шкіри голови потребує оцінки');
+
+// allergy gate must still fire alongside scalp gate
+const allergyStillBlocksHtml = runCalculateProtocolWithValues({ allergy: 'yes', scalp_sensitivity: 'normal' });
+assertIncludes(allergyStillBlocksHtml, 'BLOCKED');
+assertIncludes(allergyStillBlocksHtml, 'алергія');
+assertNotIncludes(allergyStillBlocksHtml, 'approved-recipe');
+
+console.log('SCALP-SENSITIVITY-GATE verified: missing=BLOCKED, unknown/sensitive=MANUAL, irritated=BLOCKED, normal=APPROVED; allergy preserved.');
 console.log('WWW render runtime test passed');
 `;
 
