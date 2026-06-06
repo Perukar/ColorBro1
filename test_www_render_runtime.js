@@ -171,7 +171,9 @@ assertNotIncludes(approvedMissingProductionReadyHtml, 'ready-to-mix missing prod
 
 const blockedHtml = PerucarWwwRenderV1.renderStateToHtml({
     status: 'BLOCKED',
+    productionReady: true,
     blockers: ['ФАТАЛЬНО: Хна/метали'],
+    massModel: { totalMass: 60, rootMass: 24, lengthMass: 36, mode: '2-zone', endsMass: null },
     timingInfo: { totalMinutes: 40, modifierMinutes: 0 },
     rootRec: {
         process: 'Перманент',
@@ -189,6 +191,9 @@ assertIncludes(blockedHtml, 'BLOCKED');
 assertNotIncludes(blockedHtml, 'approved-recipe');
 assertNotIncludes(blockedHtml, 'Барвник 8.1');
 assertNotIncludes(blockedHtml, 'ready-to-mix blocked formula');
+const blockedMassBlockHtml = extractFirstDivBlockByHeading(blockedHtml, 'Маси');
+assertIncludes(blockedMassBlockHtml, '&quot;mixingMassesHidden&quot;: true');
+assertNotIncludes(blockedMassBlockHtml, 'totalMass');
 const blockedTimingBlockHtml = extractFirstDivBlockByHeading(blockedHtml, 'Таймінги');
 assertIncludes(blockedTimingBlockHtml, '&quot;timingStatus&quot;: &quot;blocked&quot;');
 assertIncludes(blockedTimingBlockHtml, '&quot;productionTimingHidden&quot;: true');
@@ -197,9 +202,11 @@ assertNotIncludes(blockedTimingBlockHtml, 'modifierMinutes');
 
 const manualHtml = PerucarWwwRenderV1.renderStateToHtml({
     status: 'MANUAL_REQUIRED',
+    productionReady: true,
     manualDecisions: [
         { title: 'Оцінити тест-пасмо', message: 'Потрібне рішення щодо освітлення' }
     ],
+    massModel: { totalMass: 60, rootMass: 24, lengthMass: 36, mode: '2-zone', endsMass: null },
     timingInfo: { totalMinutes: 50, modifierMinutes: 5 },
     rootRec: {
         process: 'Special Blond',
@@ -218,6 +225,9 @@ assertIncludes(manualHtml, 'Потрібне рішення щодо освіт�
 assertNotIncludes(manualHtml, 'approved-recipe');
 assertNotIncludes(manualHtml, 'S.B. 9.1');
 assertNotIncludes(manualHtml, 'ready-to-mix manual formula');
+const manualMassBlockHtml = extractFirstDivBlockByHeading(manualHtml, 'Маси');
+assertIncludes(manualMassBlockHtml, '&quot;mixingMassesHidden&quot;: true');
+assertNotIncludes(manualMassBlockHtml, 'totalMass');
 const manualTimingBlockHtml = extractFirstDivBlockByHeading(manualHtml, 'Таймінги');
 assertIncludes(manualTimingBlockHtml, '&quot;totalMinutes&quot;: 50');
 assertIncludes(manualTimingBlockHtml, '&quot;timingStatus&quot;: &quot;advisory-only&quot;');
@@ -396,7 +406,8 @@ const twoZoneContractState = {
         dye: 'Root 8.1',
         ox: '6%',
         mass: 30,
-        ratio: '1:1'
+        ratio: '1:1',
+        finalFormula: 'ready-to-mix two-zone finalFormula'
     },
     lenRec: {
         process: 'Перманент',
@@ -418,10 +429,12 @@ assertNotIncludes(twoZoneBaselineHtml, 'Діагностика кінців');
 assertIncludes(twoZoneBaselineHtml, 'approved-recipe');
 assertIncludes(twoZoneBaselineHtml, 'Root 8.1');
 assertIncludes(twoZoneBaselineHtml, 'Length 8.1');
+assertIncludes(twoZoneBaselineHtml, 'ready-to-mix two-zone finalFormula');
 assertIncludes(diagnosticDisplayHtml, 'Рецепт недоступний');
 assertNotIncludes(diagnosticDisplayHtml, 'approved-recipe');
 assertNotIncludes(diagnosticDisplayHtml, 'Root 8.1');
 assertNotIncludes(diagnosticDisplayHtml, 'Length 8.1');
+assertNotIncludes(diagnosticDisplayHtml, 'ready-to-mix two-zone finalFormula');
 assertIncludes(diagnosticDisplayBlockHtml, 'Діагностика кінців');
 assertIncludes(diagnosticDisplayBlockHtml, 'Попередній перегляд');
 assertIncludes(diagnosticDisplayBlockHtml, 'Preview only');
@@ -459,6 +472,23 @@ assertNotIncludes(diagnosticDisplayBlockHtml, 'Forbidden formula-to-mix');
 assertNotIncludes(diagnosticDisplayBlockHtml, 'third-zone production');
 assertNotIncludes(diagnosticDisplayBlockHtml, 'readyForMixing');
 assertNotIncludes(diagnosticDisplayBlockHtml, 'mixingReady');
+
+const diagnosticProductionReadyBypassHtml = PerucarWwwRenderV1.renderStateToHtml({
+    ...twoZoneContractState,
+    endsRecDiagnosticWiringCandidate: {
+        ...diagnosticDisplayCandidate,
+        productionReady: true
+    }
+});
+const diagnosticProductionReadyBypassBlockHtml = extractFirstDivBlockByHeading(diagnosticProductionReadyBypassHtml, 'Діагностика кінців');
+assertIncludes(diagnosticProductionReadyBypassHtml, 'Рецепт недоступний');
+assertNotIncludes(diagnosticProductionReadyBypassHtml, 'approved-recipe');
+assertNotIncludes(diagnosticProductionReadyBypassHtml, 'Root 8.1');
+assertNotIncludes(diagnosticProductionReadyBypassHtml, 'ready-to-mix two-zone finalFormula');
+assertIncludes(diagnosticProductionReadyBypassBlockHtml, 'notForMixing');
+assertIncludes(diagnosticProductionReadyBypassBlockHtml, 'productionReady');
+assertNotIncludes(diagnosticProductionReadyBypassBlockHtml, '<b>productionReady:</b> true');
+assertIncludes(diagnosticProductionReadyBypassBlockHtml, '<b>productionReady:</b> false');
 
 const unknownReasonHtml = PerucarWwwRenderV1.renderStateToHtml({
     status: 'MANUAL_REQUIRED',
@@ -564,11 +594,37 @@ assert.strictEqual(adapterState.phases[1].steps[0], 'alert(1)Контроль');
 
 const blockedAdapterState = buildWwwRenderState({
     status: 'BLOCKED',
-    blockers: ['ФАТАЛЬНО: stop']
+    productionReady: true,
+    blockers: ['ФАТАЛЬНО: stop'],
+    rootRec: normalizedRecipe
 });
 
 assert.strictEqual(blockedAdapterState.status, 'BLOCKED');
+assert.strictEqual(blockedAdapterState.productionReady, false);
 assert.deepStrictEqual(blockedAdapterState.blockers, ['ФАТАЛЬНО: stop']);
+
+const manualAdapterState = buildWwwRenderState({
+    status: 'MANUAL_REQUIRED',
+    productionReady: true,
+    manualDecisions: [{ title: 'Manual', message: 'Review required' }],
+    rootRec: normalizedRecipe
+});
+assert.strictEqual(manualAdapterState.status, 'MANUAL_REQUIRED');
+assert.strictEqual(manualAdapterState.productionReady, false);
+
+const diagnosticAdapterState = buildWwwRenderState({
+    status: 'APPROVED',
+    productionReady: true,
+    rootRec: normalizedRecipe,
+    endsRecDiagnosticWiringCandidate: {
+        productionReady: true,
+        notForMixing: true,
+        previewOnly: true,
+        candidateOnly: true
+    }
+});
+assert.strictEqual(diagnosticAdapterState.status, 'APPROVED');
+assert.strictEqual(diagnosticAdapterState.productionReady, false);
 
 const adapterHtml = PerucarWwwRenderV1.renderStateToHtml(adapterState);
 assertNotIncludes(adapterHtml, '<script>alert(1)</script>');

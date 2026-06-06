@@ -231,7 +231,7 @@ const pigmentMap = {
                 const safeSourceRefs = {};
                 if (candidate.sourceRefs && typeof candidate.sourceRefs === 'object') {
                     Object.entries(candidate.sourceRefs).forEach(([key, value]) => {
-                        if (!forbiddenFields.has(key)) safeSourceRefs[key] = value;
+                        if (!forbiddenFields.has(key) && key !== 'productionReady') safeSourceRefs[key] = value;
                     });
                 }
                 const items = [
@@ -239,7 +239,7 @@ const pigmentMap = {
                     { title: 'previewOnly / Preview only', message: candidate.previewOnly === true ? 'true' : 'false' },
                     { title: 'candidateOnly', message: candidate.candidateOnly === true ? 'true' : 'false' },
                     { title: 'notForMixing', message: candidate.notForMixing === true ? 'true — Не для змішування' : 'false' },
-                    { title: 'productionReady', message: candidate.productionReady === true ? 'true' : 'false' },
+                    { title: 'productionReady', message: 'false' },
                     { title: 'endsRecipeReady', message: candidate.endsRecipeReady === true ? 'true' : 'false' },
                     'Потрібна ручна перевірка',
                     'Не є фінальним рецептом',
@@ -276,12 +276,18 @@ const pigmentMap = {
             // Central gate for the final/executable salon recipe (approved-recipe).
             // Missing productionReady is unsafe by default; buildWwwRenderState must
             // explicitly mark real production-approved runtime states as ready.
-            canRenderExecutableRecipe(state) {
+            isProductionReadyState(state) {
                 return Boolean(state)
                     && state.status === 'APPROVED'
                     && state.productionReady === true
                     && Boolean(state.rootRec || state.midRec || state.lenRec)
+                    && (!Array.isArray(state.blockers) || state.blockers.length === 0)
+                    && (!Array.isArray(state.manualDecisions) || state.manualDecisions.length === 0)
                     && !this.isDiagnosticOnlyTimingState(state);
+            },
+
+            canRenderExecutableRecipe(state) {
+                return this.isProductionReadyState(state);
             },
 
             renderProductionNotReadyNotice() {
@@ -358,12 +364,7 @@ const pigmentMap = {
 
             isDiagnosticOnlyTimingState(state) {
                 const candidate = state && state.endsRecDiagnosticWiringCandidate;
-                return Boolean(candidate && (
-                    candidate.notForMixing === true ||
-                    candidate.previewOnly === true ||
-                    candidate.candidateOnly === true ||
-                    candidate.productionReady === false
-                ));
+                return Boolean(candidate);
             },
 
             sanitizeTimingInfoForRender(timingInfo, state) {
@@ -469,6 +470,18 @@ const pigmentMap = {
             return normalized;
         }
 
+        function normalizeWwwProductionReady(runtime, status, blockers, manualDecisions) {
+            const hasDiagnosticCandidate = Boolean(runtime.endsRecDiagnosticWiringCandidate);
+            const hasProductionRecipe = Boolean(runtime.rootRec || runtime.midRec || runtime.lenRec);
+            const explicitlyDenied = runtime.productionReady === false;
+            return status === 'APPROVED'
+                && blockers.length === 0
+                && manualDecisions.length === 0
+                && !hasDiagnosticCandidate
+                && hasProductionRecipe
+                && !explicitlyDenied;
+        }
+
         function buildWwwRenderState(runtime = {}) {
             const plan = Array.isArray(runtime.plan) ? runtime.plan : [];
             const phases = Array.isArray(runtime.phases) && runtime.phases.length > 0
@@ -480,16 +493,7 @@ const pigmentMap = {
             const status = runtime.status || 'APPROVED';
             const blockers = Array.isArray(runtime.blockers) ? runtime.blockers : [];
             const manualDecisions = Array.isArray(runtime.manualDecisions) ? runtime.manualDecisions : [];
-            const hasDiagnosticCandidate = Boolean(runtime.endsRecDiagnosticWiringCandidate);
-            const hasProductionRecipe = Boolean(runtime.rootRec || runtime.midRec || runtime.lenRec);
-            const inferredProductionReady = status === 'APPROVED'
-                && blockers.length === 0
-                && manualDecisions.length === 0
-                && !hasDiagnosticCandidate
-                && hasProductionRecipe;
-            const productionReady = runtime.productionReady === true
-                ? inferredProductionReady
-                : inferredProductionReady && runtime.productionReady !== false;
+            const productionReady = normalizeWwwProductionReady(runtime, status, blockers, manualDecisions);
 
             return {
                 status,
@@ -797,7 +801,7 @@ const pigmentMap = {
             if (candidate.candidateOnly !== true) missingFlags.push('candidateOnly');
             if (candidate.previewOnly !== true) missingFlags.push('previewOnly');
             if (!candidateHasNotForMixingFlag(candidate)) missingFlags.push('notForMixing');
-            if (candidate.productionReady !== false) missingFlags.push('productionReady_false');
+            if (!(candidate.productionReady === false)) missingFlags.push('productionReady_false');
             if (missingFlags.length > 0) {
                 return result('NOT_READY', 'CANDIDATE_MISSING_SAFETY_FLAGS', missingFlags, candidate);
             }
