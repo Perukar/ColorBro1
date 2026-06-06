@@ -987,6 +987,67 @@ assertIncludes(timingApprovedHtml, 'Таймінги');
 assertIncludes(timingApprovedHtml, '&quot;totalMinutes&quot;: 40');
 
 console.log('RENDER-TIMING-TOP-LEVEL safe behavior observed.');
+// ===== THIRD-ZONE SKELETON ISOLATION CONTRACT (regression) =====
+// Drive the REAL inactive production skeleton (buildProductionEndsRec) to emit its
+// productionReady:true endsRec, then wire that object directly into renderStateToHtml
+// (the exact "future edit accidentally wires a skeleton into render" scenario) and prove
+// no executable production output can leak.
+assert.strictEqual(typeof buildProductionEndsRec, 'function', 'THIRD-ZONE-ISOLATION: buildProductionEndsRec must be present');
+
+const tzSkeletonReadiness = {
+    ready: true,
+    status: 'READY',
+    productionAllowed: true,
+    productionBlocked: false,
+    reasonCode: 'READY_LOW_RISK_TONING_CANDIDATE',
+    candidateSummary: { zone: 'ends', eligibilityStatus: 'ELIGIBLE' },
+    reasons: ['READY_LOW_RISK_TONING_CANDIDATE']
+};
+const tzSkeletonBuilder = buildProductionEndsRec({}, tzSkeletonReadiness);
+assert.strictEqual(tzSkeletonBuilder.created, true, 'THIRD-ZONE-ISOLATION: skeleton builder must be CREATED for this test');
+assert.ok(tzSkeletonBuilder.endsRec, 'THIRD-ZONE-ISOLATION: skeleton must expose endsRec');
+assert.strictEqual(tzSkeletonBuilder.endsRec.productionReady, true, 'THIRD-ZONE-ISOLATION: skeleton intentionally carries productionReady:true');
+assert.strictEqual(tzSkeletonBuilder.endsRec.endsRecipeReady, false, 'THIRD-ZONE-ISOLATION: skeleton endsRecipeReady must stay false');
+
+const tzLeakHtml = PerucarWwwRenderV1.renderStateToHtml({
+    status: 'APPROVED',
+    productionReady: true,
+    target: '8.1',
+    rootRec: { process: 'Permanent', dye: 'TZ-ROOT-DYE-LEAK', ox: '6%', mass: 30, ratio: '1:1', finalFormula: 'TZ-EXEC-FORMULA-LEAK' },
+    massModel: { baseMass: 60, densityMultiplier: 1, totalMass: 60, rootMass: 24, lengthMass: 36, endsMass: null, mode: '2-zone' },
+    timingInfo: { totalMinutes: 45, modifierMinutes: 5 },
+    endsRecDiagnosticWiringCandidate: tzSkeletonBuilder.endsRec
+});
+
+// (1)(2) no approved-recipe / no executable finalFormula
+assertNotIncludes(tzLeakHtml, 'approved-recipe');
+assertNotIncludes(tzLeakHtml, 'TZ-ROOT-DYE-LEAK');
+assertNotIncludes(tzLeakHtml, 'TZ-EXEC-FORMULA-LEAK');
+assertIncludes(tzLeakHtml, 'Рецепт недоступний');
+
+// (3) no exact massModel values (sanitized)
+const tzMassBlock = extractFirstDivBlockByHeading(tzLeakHtml, 'Маси');
+assertIncludes(tzMassBlock, 'mixingMassesHidden');
+assertNotIncludes(tzMassBlock, 'baseMass');
+assertNotIncludes(tzMassBlock, 'rootMass');
+assertNotIncludes(tzMassBlock, 'totalMass');
+assertNotIncludes(tzMassBlock, '24');
+assertNotIncludes(tzMassBlock, '36');
+
+// (4) no production timing
+const tzTimingBlock = extractFirstDivBlockByHeading(tzLeakHtml, 'Таймінги');
+assertIncludes(tzTimingBlock, 'productionTimingHidden');
+assertNotIncludes(tzTimingBlock, 'totalMinutes');
+assertNotIncludes(tzTimingBlock, '45');
+
+// (5) notForMixing / safety markers visible; productionReady NOT exposed as true
+const tzDiagBlock = extractFirstDivBlockByHeading(tzLeakHtml, 'Діагностика кінців');
+assertIncludes(tzDiagBlock, 'Не наносити за цим блоком');
+assertIncludes(tzDiagBlock, 'Не є фінальним рецептом');
+assertIncludes(tzDiagBlock, '<b>productionReady:</b> false');
+assertNotIncludes(tzDiagBlock, '<b>productionReady:</b> true');
+
+console.log('THIRD-ZONE-ISOLATION skeleton render isolation verified.');
 console.log('WWW render runtime test passed');
 `;
 

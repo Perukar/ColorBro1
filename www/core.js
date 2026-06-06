@@ -890,6 +890,14 @@ const pigmentMap = {
                 reasonCode,
                 reasons: normalizeReasons(state.reasons, reasonCode),
                 endsRec: {
+                    // INACTIVE/FUTURE-ONLY skeleton flag. This productionReady:true is a
+                    // contract placeholder for a not-yet-built production feature. It must
+                    // NEVER be wired directly into a render state: the diagnostic wiring
+                    // contract rebuilds the candidate with productionReady:false, the runtime
+                    // hardcodes false, normalizeWwwProductionReady forces false whenever a
+                    // diagnostic candidate is present, and isProductionReadyState blocks the
+                    // executable recipe regardless. Do not activate without a separate, fully
+                    // tested production feature.
                     productionReady: true,
                     endsRecipeReady: false,
                     source: 'endsRecCandidatePreview',
@@ -1086,6 +1094,11 @@ const pigmentMap = {
             if (canAssemble) {
                 productionEndsRecCandidate = {
                     zone: 'ends',
+                    // INACTIVE/FUTURE-ONLY skeleton flag. Same isolation contract as
+                    // buildProductionEndsRec: this productionReady:true must never reach
+                    // renderStateToHtml. It is firewalled by the diagnostic wiring contract
+                    // (rebuilds productionReady:false), runtime hardcoding, normalizeWwwProductionReady,
+                    // and isProductionReadyState. Not wired to runtime rendering.
                     productionReady: true,
                     endsRecipeReady: false, // Must remain false (no grams calculated yet)
                     formulaReady: true,
