@@ -1492,6 +1492,7 @@ const pigmentMap = {
                 
                 let tLevel = parseInt(document.getElementById('target_level').value);
                 let tDir = document.getElementById('target_direction').value;
+                let allergy = document.getElementById('allergy').value;
 
                 let alerts = [], warnings = [], diagnostics = [], manualDecisions = [];
                 const missingCriticalFields = [];
@@ -1522,6 +1523,33 @@ const pigmentMap = {
                     });
                     document.getElementById('output').innerHTML = PerucarWwwRenderV1.renderStateToHtml(state);
                     return;
+                }
+
+                // ALLERGY PRODUCTION GATE (one gate = one commit)
+                // Safety passport: confirmed allergy => BLOCKED; unknown/undisclosed => MANUAL_REQUIRED.
+                // A negative (no) allergy answer is required before any oxidative recipe can auto-approve.
+                const allergyRaw = String(allergy || '').trim().toLowerCase();
+                const allergyPositiveSet = new Set(['yes', 'y', 'так', 'да', 'true', '1', 'positive', 'позитивно', 'present']);
+                const allergyNegativeSet = new Set(['no', 'n', 'ні', 'нет', 'false', '0', 'none', 'negative', 'немає', 'відсутня', 'не виявлено']);
+                const allergyKnownPositive = allergyPositiveSet.has(allergyRaw);
+                const allergyKnownNegative = allergyNegativeSet.has(allergyRaw);
+                const allergyUnknown = !allergyKnownPositive && !allergyKnownNegative;
+                if (allergyKnownPositive) {
+                    const state = buildWwwRenderState({
+                        status: 'BLOCKED',
+                        target: `${tLevel}.${tDir}`,
+                        blockers: ['ФАТАЛЬНО: Підтверджена алергія. Оксидаційне фарбування заборонено до медичного допуску та негативного тесту на алерген.'],
+                        warnings,
+                        diagnostics
+                    });
+                    document.getElementById('output').innerHTML = PerucarWwwRenderV1.renderStateToHtml(state);
+                    return;
+                }
+                if (allergyUnknown) {
+                    manualDecisions.push({
+                        title: 'Алергічний статус не підтверджено',
+                        message: 'Потрібен тест на алерген (PPD / парафенілендіамін) і рішення майстра перед оксидаційним фарбуванням. Рецепт не може бути автоматично затверджений.'
+                    });
                 }
 
                 if (history === 'хна / металл' && ['пористі', 'сильно поврежденные'].includes(condition)) alerts.push("ФАТАЛЬНО: Хна/метали на пошкодженому волоссі. Оксиданти заборонені.");

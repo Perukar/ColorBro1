@@ -656,7 +656,8 @@ const defaultDomValues = {
     base_type: 'Натуральна',
     target_level: '9',
     target_direction: '1',
-    elasticity: 'нормальна еластичність'
+    elasticity: 'нормальна еластичність',
+    allergy: 'no'
 };
 
 function runCalculateProtocolWithValues(overrides = {}, options = {}) {
@@ -1048,6 +1049,29 @@ assertIncludes(tzDiagBlock, '<b>productionReady:</b> false');
 assertNotIncludes(tzDiagBlock, '<b>productionReady:</b> true');
 
 console.log('THIRD-ZONE-ISOLATION skeleton render isolation verified.');
+// ===== ALLERGY PRODUCTION GATE (regression) =====
+// allergy=yes => BLOCKED (no executable recipe); unknown/empty => MANUAL_REQUIRED;
+// allergy=no => normal APPROVED still renders the recipe.
+const allergyBlockedHtml = runCalculateProtocolWithValues({ allergy: 'yes' });
+assertIncludes(allergyBlockedHtml, 'BLOCKED');
+assertIncludes(allergyBlockedHtml, 'алергія');
+assertNotIncludes(allergyBlockedHtml, 'approved-recipe');
+assertNotIncludes(allergyBlockedHtml, 'Фінальна формула');
+
+const allergyEmptyManualHtml = runCalculateProtocolWithValues({ allergy: '' });
+assertIncludes(allergyEmptyManualHtml, 'MANUAL_REQUIRED');
+assertIncludes(allergyEmptyManualHtml, 'Алергічний статус не підтверджено');
+assertNotIncludes(allergyEmptyManualHtml, 'approved-recipe');
+
+const allergyUnknownTokenHtml = runCalculateProtocolWithValues({ allergy: 'невідомо' });
+assertIncludes(allergyUnknownTokenHtml, 'MANUAL_REQUIRED');
+assertNotIncludes(allergyUnknownTokenHtml, 'approved-recipe');
+
+const allergyNegativeHtml = runCalculateProtocolWithValues({ allergy: 'no' });
+assertIncludes(allergyNegativeHtml, 'approved-recipe');
+assertNotIncludes(allergyNegativeHtml, 'Алергічний статус не підтверджено');
+
+console.log('ALLERGY-PRODUCTION-GATE verified: yes=BLOCKED, unknown/empty=MANUAL, no=APPROVED.');
 console.log('WWW render runtime test passed');
 `;
 
