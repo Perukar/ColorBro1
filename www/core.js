@@ -1995,7 +1995,20 @@ const pigmentMap = {
                     });
                 }
 
-                const hasBrandRuleMatrix = false;
+                // BRAND READINESS INVARIANT — docs/brand-data-layer-contract.md
+                // hasBrandRuleMatrix = false is intentional. It is NOT a placeholder.
+                // While false, every sensitive formula type (Special Blond, grey .00,
+                // high oxidizer >=9%, powder/lightening, toning) produces MANUAL_REQUIRED.
+                // This also covers the G1 gap: condition='пористі' + Special Blond + empty
+                // porosity field has no dedicated guard; brand gate is its current safety net.
+                //
+                // DO NOT set to true unless:
+                //   1. A validated brand entry (all required fields) exists in data.
+                //   2. Dedicated tests confirm APPROVED is reachable only with full data.
+                //   3. G1 gap is covered by a separate condition-field porous guard.
+                //   4. Full test matrix passes (test_www_business_scenarios.js et al.).
+                // See: docs/brand-data-layer-contract.md §4 for complete enabling checklist.
+                const hasBrandRuleMatrix = false; // BRAND_MATRIX_NOT_READY
                 function collectBrandSensitiveRecipeText(recipe) {
                     if (!recipe) return '';
                     return [
