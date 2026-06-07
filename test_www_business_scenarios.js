@@ -2225,6 +2225,77 @@ globalThis.__specialBlondPorosityResults = {
     nonSpecialBlond: nonSpecialBlondHighPorosityResult
 };
 
+// === G1 REGRESSION: LEGACY CONDITION='ПОРИСТІ' + SPECIAL BLOND + EMPTY POROSITY FIELD ===
+// Audit gap G1 (Core Business Logic Audit v1, 2026-06-07).
+// Scenario: condition='пористі' (main/legacy field) + Special Blond (lStep=rStep=2, levels 7→9)
+//           with porosity field intentionally EMPTY.
+// Gap: condition='пористі' alone does NOT feed hasHighPorositySignal (which reads only from the
+//      separate porosity field) and does NOT appear in legacyHighOxidizerRisk markers.
+//      There is no dedicated condition-field porous+SB guard.
+// Current safety mechanism: hasBrandRuleMatrix=false → any SB recipe → brand gate MANUAL_REQUIRED.
+// This test locks that dependency. If hasBrandRuleMatrix ever becomes conditional without adding
+// a dedicated condition-field porous guard, this test will detect the regression.
+(function () {
+    const g1Scenario = runDiagnosticScenario('G1-LEGACY-CONDITION-POROUS-SB-NO-POROSITY-FIELD-MANUAL', {
+        history: 'натуральні',
+        condition: 'пористі',                    // legacy general condition field — porous hair
+        porosity: '',                             // G1 gap: porosity field intentionally EMPTY
+        elasticity: 'нормальна еластичність',
+        root_condition: 'здоровий корінь',
+        length_condition: 'здорове полотно',
+        thickness: 'средние',
+        density: 'средние',
+        length: 'средние',
+        grey_percent: '0',
+        grey_type: 'мягкая',
+        root_level: '7',
+        root_length: '1',
+        length_level: '7',
+        ends_level: '7',
+        ends_condition: 'здорові',
+        base_type: 'Натуральна',
+        target_level: '9',                       // rStep=lStep=2 → both zones → Special Blond 9%
+        target_direction: '3',
+        ends_history: 'натуральні',
+        ends_base_type: 'натуральна'
+    });
+
+    const g1Html = g1Scenario.html;
+    const g1HtmlText = g1Html.toLowerCase();
+
+    const g1HasApproved = g1Html.includes('APPROVED');
+    const g1HasApprovedRecipe = g1Html.includes('approved-recipe');
+    const g1HasManualSignal = g1Html.includes('MANUAL_REQUIRED')
+        || g1Html.includes('Потрібне ручне рішення');
+    // Brand gate fires because SB recipe is present and hasBrandRuleMatrix=false.
+    // Output mentions "Special Blond" in the brand gate warning — confirms SB path was reached.
+    const g1HasSpecialBlondMentioned = g1HtmlText.includes('special blond');
+    const g1HasBrandGateText = g1HtmlText.includes('brand')
+        || g1HtmlText.includes('бренд')
+        || g1HtmlText.includes('brand rule');
+
+    assert.ok(!g1Scenario.error, 'G1: should not throw at runtime');
+    // SB recipe is built internally (brand gate warning references it) — confirms SB logic ran:
+    assert.ok(g1HasSpecialBlondMentioned, 'G1: Special Blond must appear in output (confirms SB path reached, not blocked upstream)');
+    // Core G1 safety contract:
+    assert.ok(!g1HasApprovedRecipe, 'G1: condition=пористі + SB + empty porosity must NOT render approved-recipe block');
+    assert.ok(g1HasManualSignal, 'G1: condition=пористі + SB + empty porosity must require manual decision (currently via brand gate)');
+    assert.ok(!g1HasApproved, 'G1: status must not be APPROVED');
+    assert.ok(g1HasBrandGateText, 'G1: safety must trace to brand gate in output — documents current G1 dependency');
+
+    console.log('G1-LEGACY-CONDITION-POROUS-SB-NO-POROSITY-FIELD-MANUAL safe behavior observed (brand gate active).');
+
+    globalThis.__g1RegressionResult = {
+        status: 'SAFE',
+        g1HasApproved,
+        g1HasApprovedRecipe,
+        g1HasManualSignal,
+        g1HasSpecialBlondMentioned,
+        g1HasBrandGateText,
+        safetyMechanism: 'brand-gate'
+    };
+})();
+
 // === ROOT DAMAGED POWDER / LIFT SAFETY CONTRACT ===
 function rootDamageGuardSignals(html) {
     const htmlText = String(html || '').toLowerCase();
