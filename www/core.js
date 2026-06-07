@@ -1460,6 +1460,90 @@ const pigmentMap = {
             return 0;
         }
 
+        // =============================================================================
+        // BRAND MATRIX READINESS HELPERS — docs/brand-data-schema.md
+        // Pure functions — no side effects — do not affect calculateProtocol behavior.
+        // hasBrandRuleMatrix (inside calculateProtocol) remains false regardless.
+        // These helpers exist for future use only: when real validated brand data
+        // is introduced they can be used to validate entries before enabling the gate.
+        // =============================================================================
+
+        /**
+         * Required fields for a brand matrix entry. All 18 must be present and non-null
+         * for an entry to be considered shape-valid. Missing any field → MANUAL_REQUIRED.
+         * See: docs/brand-data-schema.md §3
+         */
+        const REQUIRED_BRAND_MATRIX_FIELDS = [
+            'brandId', 'brandDisplayName', 'lineId', 'lineDisplayName',
+            'processCategory', 'supportedLevels', 'oxidizerCompatibility',
+            'mixRatio', 'timingRange', 'greyCoveragePolicy', 'specialBlondPolicy',
+            'powderPolicy', 'toningPolicy', 'contraindications',
+            'manualReviewTriggers', 'sourceReference', 'validationStatus',
+            'lastReviewedAt'
+        ];
+
+        /**
+         * Returns true only if matrix is a non-empty array.
+         * null, undefined, non-array, or empty array → not available.
+         * @param {*} matrix
+         * @returns {boolean}
+         */
+        function isBrandRuleMatrixAvailable(matrix) {
+            return Array.isArray(matrix) && matrix.length > 0;
+        }
+
+        /**
+         * Returns array of field names missing from a single brand entry.
+         * A field is missing if undefined or null.
+         * Empty return means all required fields present (not that entry is valid overall).
+         * @param {object|null|undefined} entry
+         * @returns {string[]}
+         */
+        function getMissingBrandMatrixFields(entry) {
+            if (entry === null || entry === undefined || typeof entry !== 'object') {
+                return REQUIRED_BRAND_MATRIX_FIELDS.slice();
+            }
+            return REQUIRED_BRAND_MATRIX_FIELDS.filter(function(field) {
+                return entry[field] === undefined || entry[field] === null;
+            });
+        }
+
+        /**
+         * Validates shape of a brand rule matrix (array of entries).
+         * Returns { ready: false, reason } unless matrix is non-empty and every entry
+         * has all 18 required fields with validationStatus === 'validated'.
+         * A placeholder/null/empty matrix always returns ready: false.
+         * @param {*} matrix
+         * @returns {{ ready: boolean, reason: string, missingFields?: string[] }}
+         */
+        function validateBrandRuleMatrixShape(matrix) {
+            if (!isBrandRuleMatrixAvailable(matrix)) {
+                return { ready: false, reason: 'matrix is null, undefined, or empty' };
+            }
+            for (var i = 0; i < matrix.length; i++) {
+                var entry = matrix[i];
+                var missing = getMissingBrandMatrixFields(entry);
+                if (missing.length > 0) {
+                    return { ready: false, reason: 'entry missing required fields', missingFields: missing };
+                }
+                if (entry.validationStatus !== 'validated') {
+                    return { ready: false, reason: 'entry validationStatus not validated: ' + entry.validationStatus };
+                }
+            }
+            return { ready: true, reason: 'all entries present and validated' };
+        }
+
+        /**
+         * Returns readiness status string for a brand rule matrix.
+         * 'NOT_READY' unless matrix fully validates per validateBrandRuleMatrixShape.
+         * Diagnostic only — does not affect calculateProtocol behavior.
+         * @param {*} matrix
+         * @returns {'NOT_READY'|'READY'}
+         */
+        function getBrandMatrixReadinessStatus(matrix) {
+            return validateBrandRuleMatrixShape(matrix).ready ? 'READY' : 'NOT_READY';
+        }
+
         function calculateProtocol() {
             try {
                 let history = document.getElementById('history').value;

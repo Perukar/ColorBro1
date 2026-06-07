@@ -3,6 +3,11 @@
 **Date:** 2026-06-07
 **HEAD at creation:** 6728e6d Harden formula correctness coverage
 **Status:** NOT READY — brand matrix unavailable
+**Schema doc:** [docs/brand-data-schema.md](brand-data-schema.md) — field definitions, validation rules, pseudo-schema, migration checklist
+
+---
+
+> **Scaffold note (2026-06-07):** Pure readiness helpers (`isBrandRuleMatrixAvailable`, `validateBrandRuleMatrixShape`, `getMissingBrandMatrixFields`, `getBrandMatrixReadinessStatus`) and `REQUIRED_BRAND_MATRIX_FIELDS` have been added to `www/core.js`. These do **not** enable the brand matrix and do **not** change safety behavior. `hasBrandRuleMatrix` remains `false` inside `calculateProtocol`. All sensitive formulas remain `MANUAL_REQUIRED`.
 
 ---
 
@@ -113,3 +118,11 @@ All of the following tests must remain passing at all times. They document the c
 | `BRAND-NORMAL-SAME-LEVEL-NO-FALSE-POSITIVE` | Same-level permanent → brand gate does NOT fire |
 | `BRAND-GENERIC-PERMANENT-6-NO-BRAND-GATE-IF-NOT-SENSITIVE` | Generic permanent 6% → brand gate does NOT fire |
 | `G1-LEGACY-CONDITION-POROUS-SB-NO-POROSITY-FIELD-MANUAL` | condition=пористі + SB + empty porosity → MANUAL\_REQUIRED via brand gate |
+| `BRAND-HELPER-NULL-MATRIX-NOT-AVAILABLE` | `isBrandRuleMatrixAvailable(null/undefined/false/{})` → `false` |
+| `BRAND-HELPER-EMPTY-MATRIX-NOT-AVAILABLE` | `isBrandRuleMatrixAvailable([])` → `false` |
+| `BRAND-HELPER-MISSING-FIELDS-REPORT` | `getMissingBrandMatrixFields` returns correct missing count |
+| `BRAND-HELPER-PARTIAL-ENTRY-NOT-READY` | `validateBrandRuleMatrixShape` with partial entry → `ready: false` |
+| `BRAND-HELPER-PENDING-STATUS-NOT-READY` | full-shape entry with `validationStatus: 'pending'` → `ready: false` |
+| `BRAND-HELPER-READINESS-STATUS-NOT-READY` | `getBrandMatrixReadinessStatus(null/[]/partial)` → `'NOT_READY'` |
+| `BRAND-HELPER-FIELDS-COUNT` | `REQUIRED_BRAND_MATRIX_FIELDS.length` === 18 |
+| `BRAND-HELPER-BEHAVIOR-PRESERVED` | All 4 helpers defined; `calculateProtocol` still accessible |

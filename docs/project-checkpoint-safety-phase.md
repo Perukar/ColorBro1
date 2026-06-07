@@ -71,20 +71,23 @@ length, density, thickness
 | `2aa62fa` | Add length density thickness production gate |
 | `f60665b` | Reject unknown hair mass enum values |
 | `6474f55` | Document input safety gates contract |
+| `225adc2` | Document safety phase checkpoint |
+| `6728e6d` | Harden formula correctness coverage (G1 regression + formula audit) |
+| `43c669b` | Document brand data layer safety contract |
 
 ---
 
 ## Remaining major completion blocks: 7
 
-| # | Block |
-|---|-------|
-| 1 | Core business logic audit |
-| 2 | Formula correctness audit |
-| 3 | Brand/product data layer |
-| 4 | User flow / UI polish |
-| 5 | Data persistence / client history |
-| 6 | Final QA / CI |
-| 7 | Release / packaging / deployment |
+| # | Block | Status |
+|---|-------|--------|
+| 1 | Core business logic audit | done — formula correctness audit clean (2026-06-07) |
+| 2 | Formula correctness audit | done — G1 regression test added (2026-06-07) |
+| 3 | Brand/product data layer | scaffold in progress — schema defined, helpers added, matrix disabled (`hasBrandRuleMatrix = false`) |
+| 4 | User flow / UI polish | pending |
+| 5 | Data persistence / client history | pending |
+| 6 | Final QA / CI | pending |
+| 7 | Release / packaging / deployment | pending |
 
 ---
 

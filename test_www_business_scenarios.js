@@ -3427,6 +3427,110 @@ globalThis.__timingResults = {
     diagnosticIsolation: { timingStatus: timingDiagInfo.timingStatus, status: 'SAFE' },
     safetyRegression: { totalMinutes: timingGreySbInfo.totalMinutes, timingStatus: timingGreySbInfo.timingStatus, status: 'SAFE' }
 };
+
+// ============================================================
+// BRAND MATRIX READINESS HELPER TESTS — docs/brand-data-schema.md
+// Tests pure helper functions added in 'Scaffold brand data layer readiness'.
+// These helpers do NOT affect calculateProtocol behavior.
+// hasBrandRuleMatrix remains false inside calculateProtocol.
+// All sensitive formulas remain MANUAL_REQUIRED (covered by existing tests above).
+// ============================================================
+
+// BRAND-HELPER-NULL-MATRIX-NOT-AVAILABLE
+(function() {
+    assert.strictEqual(isBrandRuleMatrixAvailable(null), false, 'BRAND-HELPER-NULL-MATRIX-NOT-AVAILABLE: null must not be available');
+    assert.strictEqual(isBrandRuleMatrixAvailable(undefined), false, 'BRAND-HELPER-NULL-MATRIX-NOT-AVAILABLE: undefined must not be available');
+    assert.strictEqual(isBrandRuleMatrixAvailable(false), false, 'BRAND-HELPER-NULL-MATRIX-NOT-AVAILABLE: false must not be available');
+    assert.strictEqual(isBrandRuleMatrixAvailable({}), false, 'BRAND-HELPER-NULL-MATRIX-NOT-AVAILABLE: plain object must not be available');
+    console.log('BRAND-HELPER-NULL-MATRIX-NOT-AVAILABLE: PASS');
+})();
+
+// BRAND-HELPER-EMPTY-MATRIX-NOT-AVAILABLE
+(function() {
+    assert.strictEqual(isBrandRuleMatrixAvailable([]), false, 'BRAND-HELPER-EMPTY-MATRIX-NOT-AVAILABLE: empty array must not be available');
+    console.log('BRAND-HELPER-EMPTY-MATRIX-NOT-AVAILABLE: PASS');
+})();
+
+// BRAND-HELPER-MISSING-FIELDS-REPORT
+(function() {
+    const missingFromNull = getMissingBrandMatrixFields(null);
+    assert.ok(Array.isArray(missingFromNull), 'BRAND-HELPER-MISSING-FIELDS-REPORT: null entry must return array');
+    assert.strictEqual(missingFromNull.length, 18, 'BRAND-HELPER-MISSING-FIELDS-REPORT: null entry must report all 18 fields missing');
+    const partialEntry = { brandId: 'test', brandDisplayName: 'Test Brand' };
+    const partialMissing = getMissingBrandMatrixFields(partialEntry);
+    assert.ok(partialMissing.includes('lineId'), 'BRAND-HELPER-MISSING-FIELDS-REPORT: lineId must appear in missing list');
+    assert.ok(!partialMissing.includes('brandId'), 'BRAND-HELPER-MISSING-FIELDS-REPORT: present brandId must not be in missing list');
+    assert.ok(!partialMissing.includes('brandDisplayName'), 'BRAND-HELPER-MISSING-FIELDS-REPORT: present brandDisplayName must not be in missing list');
+    assert.strictEqual(partialMissing.length, 16, 'BRAND-HELPER-MISSING-FIELDS-REPORT: 2 fields present → 16 missing');
+    console.log('BRAND-HELPER-MISSING-FIELDS-REPORT: PASS');
+})();
+
+// BRAND-HELPER-PARTIAL-ENTRY-NOT-READY
+(function() {
+    const partialMatrix = [{ brandId: 'test', brandDisplayName: 'Test', validationStatus: 'validated' }];
+    const result = validateBrandRuleMatrixShape(partialMatrix);
+    assert.strictEqual(result.ready, false, 'BRAND-HELPER-PARTIAL-ENTRY-NOT-READY: partial entry must not be ready');
+    assert.ok(Array.isArray(result.missingFields), 'BRAND-HELPER-PARTIAL-ENTRY-NOT-READY: must report missing fields array');
+    assert.ok(result.missingFields.length > 0, 'BRAND-HELPER-PARTIAL-ENTRY-NOT-READY: missing fields must be non-empty');
+    console.log('BRAND-HELPER-PARTIAL-ENTRY-NOT-READY: PASS — missing: ' + result.missingFields.join(', '));
+})();
+
+// BRAND-HELPER-PENDING-STATUS-NOT-READY
+(function() {
+    const fullShapeEntry = {
+        brandId: 'placeholder', brandDisplayName: 'Placeholder Brand', lineId: 'placeholder-line', lineDisplayName: 'Placeholder Line',
+        processCategory: 'permanent', supportedLevels: { minLevel: 1, maxLevel: 10 },
+        oxidizerCompatibility: [6], mixRatio: '1:1', timingRange: { min: 30, max: 40 },
+        greyCoveragePolicy: { supported: false, minOxidizer: null },
+        specialBlondPolicy: { supported: false, maxLiftSteps: null, porousHairAllowed: false, manualIfPorous: true },
+        powderPolicy: { supported: false, requiresPreTest: true, contraindicatedConditions: [] },
+        toningPolicy: { supported: false, dilutionRatio: null, maxOxidizer: null },
+        contraindications: [], manualReviewTriggers: [],
+        sourceReference: 'placeholder-doc-2026', validationStatus: 'pending', lastReviewedAt: '2026-06-07'
+    };
+    const result = validateBrandRuleMatrixShape([fullShapeEntry]);
+    assert.strictEqual(result.ready, false, 'BRAND-HELPER-PENDING-STATUS-NOT-READY: pending validationStatus must not be ready');
+    console.log('BRAND-HELPER-PENDING-STATUS-NOT-READY: PASS — reason: ' + result.reason);
+})();
+
+// BRAND-HELPER-READINESS-STATUS-NOT-READY
+(function() {
+    assert.strictEqual(getBrandMatrixReadinessStatus(null), 'NOT_READY', 'BRAND-HELPER-READINESS-STATUS-NOT-READY: null → NOT_READY');
+    assert.strictEqual(getBrandMatrixReadinessStatus([]), 'NOT_READY', 'BRAND-HELPER-READINESS-STATUS-NOT-READY: [] → NOT_READY');
+    assert.strictEqual(getBrandMatrixReadinessStatus([{ brandId: 'x' }]), 'NOT_READY', 'BRAND-HELPER-READINESS-STATUS-NOT-READY: partial entry → NOT_READY');
+    console.log('BRAND-HELPER-READINESS-STATUS-NOT-READY: PASS');
+})();
+
+// BRAND-HELPER-FIELDS-COUNT
+(function() {
+    assert.strictEqual(REQUIRED_BRAND_MATRIX_FIELDS.length, 18, 'BRAND-HELPER-FIELDS-COUNT: exactly 18 required fields');
+    assert.ok(REQUIRED_BRAND_MATRIX_FIELDS.includes('brandId'), 'BRAND-HELPER-FIELDS-COUNT: brandId must be required');
+    assert.ok(REQUIRED_BRAND_MATRIX_FIELDS.includes('specialBlondPolicy'), 'BRAND-HELPER-FIELDS-COUNT: specialBlondPolicy must be required');
+    assert.ok(REQUIRED_BRAND_MATRIX_FIELDS.includes('validationStatus'), 'BRAND-HELPER-FIELDS-COUNT: validationStatus must be required');
+    assert.ok(REQUIRED_BRAND_MATRIX_FIELDS.includes('lastReviewedAt'), 'BRAND-HELPER-FIELDS-COUNT: lastReviewedAt must be required');
+    console.log('BRAND-HELPER-FIELDS-COUNT: PASS — 18 fields confirmed');
+})();
+
+// BRAND-HELPER-BEHAVIOR-PRESERVED
+(function() {
+    assert.ok(typeof calculateProtocol === 'function', 'BRAND-HELPER-BEHAVIOR-PRESERVED: calculateProtocol still present');
+    assert.ok(typeof isBrandRuleMatrixAvailable === 'function', 'BRAND-HELPER-BEHAVIOR-PRESERVED: isBrandRuleMatrixAvailable defined');
+    assert.ok(typeof getMissingBrandMatrixFields === 'function', 'BRAND-HELPER-BEHAVIOR-PRESERVED: getMissingBrandMatrixFields defined');
+    assert.ok(typeof validateBrandRuleMatrixShape === 'function', 'BRAND-HELPER-BEHAVIOR-PRESERVED: validateBrandRuleMatrixShape defined');
+    assert.ok(typeof getBrandMatrixReadinessStatus === 'function', 'BRAND-HELPER-BEHAVIOR-PRESERVED: getBrandMatrixReadinessStatus defined');
+    console.log('BRAND-HELPER-BEHAVIOR-PRESERVED: PASS — helpers present, calculateProtocol untouched');
+})();
+
+globalThis.__brandHelperReadinessResults = {
+    nullMatrixNotAvailable: { status: 'SAFE' },
+    emptyMatrixNotAvailable: { status: 'SAFE' },
+    missingFieldsReport: { status: 'SAFE' },
+    partialEntryNotReady: { status: 'SAFE' },
+    pendingStatusNotReady: { status: 'SAFE' },
+    readinessStatusNotReady: { status: 'SAFE' },
+    fieldsCount: { status: 'SAFE' },
+    behaviorPreserved: { status: 'SAFE' }
+};
 `;
 
 const sandbox = {
@@ -3676,5 +3780,15 @@ assert.strictEqual(sandbox.__timingResults.diagnosticIsolation.timingStatus, 'di
 assert.strictEqual(sandbox.__timingResults.safetyRegression.status, 'SAFE');
 assert.strictEqual(sandbox.__timingResults.safetyRegression.timingStatus, 'advisory-only');
 assert.ok(sandbox.__timingResults.safetyRegression.totalMinutes > 0);
+
+// BRAND HELPER READINESS — external assertions
+assert.strictEqual(sandbox.__brandHelperReadinessResults.nullMatrixNotAvailable.status, 'SAFE');
+assert.strictEqual(sandbox.__brandHelperReadinessResults.emptyMatrixNotAvailable.status, 'SAFE');
+assert.strictEqual(sandbox.__brandHelperReadinessResults.missingFieldsReport.status, 'SAFE');
+assert.strictEqual(sandbox.__brandHelperReadinessResults.partialEntryNotReady.status, 'SAFE');
+assert.strictEqual(sandbox.__brandHelperReadinessResults.pendingStatusNotReady.status, 'SAFE');
+assert.strictEqual(sandbox.__brandHelperReadinessResults.readinessStatusNotReady.status, 'SAFE');
+assert.strictEqual(sandbox.__brandHelperReadinessResults.fieldsCount.status, 'SAFE');
+assert.strictEqual(sandbox.__brandHelperReadinessResults.behaviorPreserved.status, 'SAFE');
 
 console.log('WWW business scenario test passed');
