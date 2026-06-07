@@ -3758,6 +3758,65 @@ globalThis.__knownLimitationsResults = {
     productionMassRuntime2Zone: { status: 'SAFE' },
     powderSurchargeManualNoExactGrams: { status: 'SAFE' }
 };
+
+// UI-RENDER-APPROVED-CLEAN-PATH
+// Positive assertion: clean non-sensitive calculateProtocol() produces approved-recipe in HTML.
+// This is the only test in business_scenarios that positively asserts approved-recipe appears
+// for a clean scenario through a full calculateProtocol() run.
+// Scenario: same-level permanent (7→7), natural history, healthy conditions, no sensitive markers.
+// All safety gates pass: allergy=no, scalp_sensitivity=normal (from withDefaultScenarioValues),
+// valid enum values, target_direction set. No SB, no grey .00, no high oxidizer, no powder, no toning.
+// See: docs/ui-render-safety-contract.md §3, §12
+(function() {
+    const scenario = runDiagnosticScenario('UI-RENDER-APPROVED-CLEAN-PATH', {
+        history: 'натуральні',
+        condition: 'здоровые',
+        root_condition: neutralRootConditionValue,
+        length_condition: neutralLengthConditionValue,
+        porosity: neutralPorosityValue,
+        elasticity: neutralElasticityValue,
+        thickness: 'средние',
+        density: 'средние',
+        length: 'средние',
+        grey_percent: '0',
+        grey_type: 'мягкая',
+        root_level: '7',
+        root_length: '1',
+        length_level: '7',
+        ends_level: '7',
+        ends_condition: 'здорові',
+        base_type: 'Натуральна',
+        target_level: '7',
+        target_direction: '1',
+        ends_history: 'натуральні',
+        ends_base_type: 'натуральна'
+    });
+    assert.ok(!scenario.error, 'UI-RENDER-APPROVED-CLEAN-PATH: must not throw');
+    // Primary positive assertion: approved-recipe MUST appear for a clean scenario
+    assert.ok(
+        scenario.html.includes('approved-recipe'),
+        'UI-RENDER-APPROVED-CLEAN-PATH: clean non-sensitive calculateProtocol() must render approved-recipe'
+    );
+    // APPROVED status must be present
+    assert.ok(
+        scenario.html.includes('APPROVED'),
+        'UI-RENDER-APPROVED-CLEAN-PATH: clean scenario must have APPROVED status in HTML'
+    );
+    // No MANUAL_REQUIRED and no BLOCKED
+    assert.ok(
+        !scenario.html.includes('MANUAL_REQUIRED'),
+        'UI-RENDER-APPROVED-CLEAN-PATH: clean scenario must not produce MANUAL_REQUIRED'
+    );
+    assert.ok(
+        !scenario.html.includes('BLOCKED'),
+        'UI-RENDER-APPROVED-CLEAN-PATH: clean scenario must not produce BLOCKED'
+    );
+    console.log('UI-RENDER-APPROVED-CLEAN-PATH: PASS — clean calculateProtocol() produces approved-recipe');
+})();
+
+globalThis.__uiRenderApprovedPathResult = {
+    approvedRecipePresent: { status: 'SAFE' }
+};
 `;
 
 const sandbox = {
@@ -4033,5 +4092,8 @@ assert.strictEqual(sandbox.__inputNormResults.emptyDensityBlocked.status, 'SAFE'
 assert.strictEqual(sandbox.__inputNormResults.emptyThicknessBlocked.status, 'SAFE');
 assert.strictEqual(sandbox.__inputNormResults.emptyLengthBlocked.status, 'SAFE');
 assert.strictEqual(sandbox.__inputNormResults.conditionTrimNormalized.status, 'SAFE');
+
+// UI RENDER APPROVED PATH — external assertions
+assert.strictEqual(sandbox.__uiRenderApprovedPathResult.approvedRecipePresent.status, 'SAFE');
 
 console.log('WWW business scenario test passed');

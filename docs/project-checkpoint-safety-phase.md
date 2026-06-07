@@ -76,7 +76,8 @@ length, density, thickness
 | `43c669b` | Document brand data layer safety contract |
 | `6103656` | Scaffold brand data layer readiness (helpers + schema + tests) |
 | `ee990a6` | Harden input model normalization contract (normalization helpers + condition trim + enum gate tests + docs) |
-| pending   | Document known limitations contract (powder surcharge, endsMass, endsRec, 3-zone, brand scaffold) |
+| `e124809` | Document known limitations contract (powder surcharge, endsMass, endsRec, 3-zone, brand scaffold) |
+| pending   | Harden UI safety surface contract (render audit, contract expanded to 15 sections, positive approved-recipe regression test) |
 
 ---
 
@@ -97,6 +98,7 @@ length, density, thickness
 ## Notes for future agents
 
 - Known limitations are documented in `docs/known-limitations-contract.md` — consult before any future activation task.
+- UI render safety rules are documented in `docs/ui-render-safety-contract.md` (15 sections) — consult before any render layer change.
 - Do not change runtime logic or tests in documentation-only tasks.
 - Safety invariant (`status === 'APPROVED' && productionReady === true`) must be preserved in all future work.
 - LOCKED files: see `references/locked-files-and-git-policy.md`.

@@ -9,6 +9,7 @@ See also:
 - [docs/input-safety-gates-contract.md](input-safety-gates-contract.md) — production gate policy
 - [docs/brand-data-layer-contract.md](brand-data-layer-contract.md) — brand matrix contract
 - [docs/brand-data-schema.md](brand-data-schema.md) — brand schema definition
+- [docs/ui-render-safety-contract.md](ui-render-safety-contract.md) — render layer safety rules
 
 ---
 
