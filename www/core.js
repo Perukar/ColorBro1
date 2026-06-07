@@ -1544,10 +1544,50 @@ const pigmentMap = {
             return validateBrandRuleMatrixShape(matrix).ready ? 'READY' : 'NOT_READY';
         }
 
+        // =============================================================================
+        // INPUT NORMALIZATION HELPERS — docs/input-model-contract.md
+        // Pure functions — no side effects — do not affect formula selection.
+        // Used by calculateProtocol for consistent input normalization.
+        // =============================================================================
+
+        /**
+         * Normalizes a raw input string: trims whitespace, converts null/undefined to ''.
+         * Does NOT lowercase — callers that need case-insensitive comparison apply .toLowerCase() separately.
+         * @param {*} value
+         * @returns {string}
+         */
+        function normalizeTextInput(value) {
+            return String(value === null || value === undefined ? '' : value).trim();
+        }
+
+        /**
+         * Classifies whether a normalized input is present or missing.
+         * 'missing' = null/undefined/empty-after-trim.
+         * 'present' = non-empty after trim.
+         * @param {*} value
+         * @returns {'missing'|'present'}
+         */
+        function classifyMissingInput(value) {
+            return normalizeTextInput(value) === '' ? 'missing' : 'present';
+        }
+
+        /**
+         * Classifies a normalized string value against an allowed Set.
+         * Returns { inAllowed: boolean, normalized: string }.
+         * NEVER treats unknown values as safe — caller must BLOCK on inAllowed === false.
+         * @param {*} value
+         * @param {Set<string>} allowedSet
+         * @returns {{ inAllowed: boolean, normalized: string }}
+         */
+        function normalizeEnumInput(value, allowedSet) {
+            const normalized = normalizeTextInput(value);
+            return { normalized, inAllowed: normalized !== '' && allowedSet.has(normalized) };
+        }
+
         function calculateProtocol() {
             try {
                 let history = document.getElementById('history').value;
-                let condition = document.getElementById('condition').value;
+                let condition = normalizeTextInput(document.getElementById('condition').value);
                 const rootConditionElement = document.getElementById('root_condition');
                 const rootCondition = rootConditionElement ? String(rootConditionElement.value || '').trim() : '';
                 const lengthConditionElement = document.getElementById('length_condition');

@@ -1,6 +1,7 @@
 # Input Safety Gates Contract — PERUKAR
 
 Single source of truth for the production input validation gates in `www/core.js`.
+See also: [docs/input-model-contract.md](input-model-contract.md) — full normalization rules, field table, unknown/missing-value behavior, and migration checklist.
 PERUKAR is a safety-sensitive color-logic control system — not a recipe hint tool.
 An executable salon recipe produced from incomplete or unsafe input is a real-world
 risk. This contract must not be weakened.

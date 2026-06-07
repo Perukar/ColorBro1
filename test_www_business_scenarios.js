@@ -3531,6 +3531,160 @@ globalThis.__brandHelperReadinessResults = {
     fieldsCount: { status: 'SAFE' },
     behaviorPreserved: { status: 'SAFE' }
 };
+
+// ============================================================
+// INPUT NORMALIZATION HELPER TESTS — docs/input-model-contract.md
+// ============================================================
+
+// INPUT-HELPER-NORMALIZE-TEXT
+(function() {
+    assert.strictEqual(normalizeTextInput('  hello  '), 'hello', 'INPUT-HELPER-NORMALIZE-TEXT: trims surrounding whitespace');
+    assert.strictEqual(normalizeTextInput(''), '', 'INPUT-HELPER-NORMALIZE-TEXT: empty stays empty');
+    assert.strictEqual(normalizeTextInput(null), '', 'INPUT-HELPER-NORMALIZE-TEXT: null → empty string');
+    assert.strictEqual(normalizeTextInput(undefined), '', 'INPUT-HELPER-NORMALIZE-TEXT: undefined → empty string');
+    assert.strictEqual(normalizeTextInput(' пористі '), 'пористі', 'INPUT-HELPER-NORMALIZE-TEXT: Ukrainian text trimmed');
+    assert.strictEqual(normalizeTextInput('\tсередній\n'), 'середній', 'INPUT-HELPER-NORMALIZE-TEXT: tab/newline trimmed');
+    console.log('INPUT-HELPER-NORMALIZE-TEXT: PASS');
+})();
+
+// INPUT-HELPER-CLASSIFY-MISSING
+(function() {
+    assert.strictEqual(classifyMissingInput(''), 'missing', 'INPUT-HELPER-CLASSIFY-MISSING: empty → missing');
+    assert.strictEqual(classifyMissingInput('   '), 'missing', 'INPUT-HELPER-CLASSIFY-MISSING: whitespace-only → missing');
+    assert.strictEqual(classifyMissingInput(null), 'missing', 'INPUT-HELPER-CLASSIFY-MISSING: null → missing');
+    assert.strictEqual(classifyMissingInput(undefined), 'missing', 'INPUT-HELPER-CLASSIFY-MISSING: undefined → missing');
+    assert.strictEqual(classifyMissingInput('натуральні'), 'present', 'INPUT-HELPER-CLASSIFY-MISSING: non-empty → present');
+    assert.strictEqual(classifyMissingInput(' x '), 'present', 'INPUT-HELPER-CLASSIFY-MISSING: whitespace+content → present');
+    console.log('INPUT-HELPER-CLASSIFY-MISSING: PASS');
+})();
+
+// INPUT-HELPER-NORMALIZE-ENUM
+(function() {
+    const allowed = new Set(['средние', 'редкие', 'густые']);
+    const r1 = normalizeEnumInput('средние', allowed);
+    assert.strictEqual(r1.inAllowed, true, 'INPUT-HELPER-NORMALIZE-ENUM: known value → inAllowed true');
+    assert.strictEqual(r1.normalized, 'средние', 'INPUT-HELPER-NORMALIZE-ENUM: normalized preserved');
+    const r2 = normalizeEnumInput('  средние  ', allowed);
+    assert.strictEqual(r2.inAllowed, true, 'INPUT-HELPER-NORMALIZE-ENUM: trimmed value matches');
+    const r3 = normalizeEnumInput('unknown_val', allowed);
+    assert.strictEqual(r3.inAllowed, false, 'INPUT-HELPER-NORMALIZE-ENUM: unknown → inAllowed false');
+    const r4 = normalizeEnumInput('', allowed);
+    assert.strictEqual(r4.inAllowed, false, 'INPUT-HELPER-NORMALIZE-ENUM: empty → inAllowed false');
+    const r5 = normalizeEnumInput(null, allowed);
+    assert.strictEqual(r5.inAllowed, false, 'INPUT-HELPER-NORMALIZE-ENUM: null → inAllowed false');
+    console.log('INPUT-HELPER-NORMALIZE-ENUM: PASS');
+})();
+
+// ============================================================
+// ENUM GATE REGRESSION TESTS — docs/input-model-contract.md §8.2
+// Unknown or empty density/thickness/length must produce BLOCKED.
+// ============================================================
+
+const baseValidValues = {
+    history: 'натуральні', condition: 'здоровые', grey_percent: '0', grey_type: 'мягкая',
+    root_level: '6', root_length: '1', length_level: '6', base_type: 'Натуральна',
+    target_level: '8', target_direction: '3',
+    ends_level: '6', ends_condition: 'здорові', ends_history: 'натуральні', ends_base_type: 'натуральна'
+};
+
+// INPUT-ENUM-UNKNOWN-DENSITY-BLOCKED
+(function() {
+    const scenario = runDiagnosticScenario('INPUT-ENUM-UNKNOWN-DENSITY-BLOCKED', Object.assign({}, baseValidValues, {
+        density: 'UNKNOWN_DENSITY_VALUE', thickness: 'средние', length: 'средние'
+    }));
+    assert.ok(!scenario.error, 'INPUT-ENUM-UNKNOWN-DENSITY-BLOCKED: must not throw');
+    assert.ok(scenario.html.includes('BLOCKED'), 'INPUT-ENUM-UNKNOWN-DENSITY-BLOCKED: unknown density must produce BLOCKED');
+    assert.ok(!scenario.html.includes('APPROVED'), 'INPUT-ENUM-UNKNOWN-DENSITY-BLOCKED: must not produce APPROVED');
+    console.log('INPUT-ENUM-UNKNOWN-DENSITY-BLOCKED: PASS');
+})();
+
+// INPUT-ENUM-UNKNOWN-THICKNESS-BLOCKED
+(function() {
+    const scenario = runDiagnosticScenario('INPUT-ENUM-UNKNOWN-THICKNESS-BLOCKED', Object.assign({}, baseValidValues, {
+        density: 'средние', thickness: 'UNKNOWN_THICKNESS_VALUE', length: 'средние'
+    }));
+    assert.ok(!scenario.error, 'INPUT-ENUM-UNKNOWN-THICKNESS-BLOCKED: must not throw');
+    assert.ok(scenario.html.includes('BLOCKED'), 'INPUT-ENUM-UNKNOWN-THICKNESS-BLOCKED: unknown thickness must produce BLOCKED');
+    assert.ok(!scenario.html.includes('APPROVED'), 'INPUT-ENUM-UNKNOWN-THICKNESS-BLOCKED: must not produce APPROVED');
+    console.log('INPUT-ENUM-UNKNOWN-THICKNESS-BLOCKED: PASS');
+})();
+
+// INPUT-ENUM-UNKNOWN-LENGTH-BLOCKED
+(function() {
+    const scenario = runDiagnosticScenario('INPUT-ENUM-UNKNOWN-LENGTH-BLOCKED', Object.assign({}, baseValidValues, {
+        density: 'средние', thickness: 'средние', length: 'UNKNOWN_LENGTH_VALUE'
+    }));
+    assert.ok(!scenario.error, 'INPUT-ENUM-UNKNOWN-LENGTH-BLOCKED: must not throw');
+    assert.ok(scenario.html.includes('BLOCKED'), 'INPUT-ENUM-UNKNOWN-LENGTH-BLOCKED: unknown length must produce BLOCKED');
+    assert.ok(!scenario.html.includes('APPROVED'), 'INPUT-ENUM-UNKNOWN-LENGTH-BLOCKED: must not produce APPROVED');
+    console.log('INPUT-ENUM-UNKNOWN-LENGTH-BLOCKED: PASS');
+})();
+
+// INPUT-ENUM-EMPTY-DENSITY-BLOCKED
+(function() {
+    const scenario = runDiagnosticScenario('INPUT-ENUM-EMPTY-DENSITY-BLOCKED', Object.assign({}, baseValidValues, {
+        density: '', thickness: 'средние', length: 'средние'
+    }));
+    assert.ok(!scenario.error, 'INPUT-ENUM-EMPTY-DENSITY-BLOCKED: must not throw');
+    assert.ok(scenario.html.includes('BLOCKED'), 'INPUT-ENUM-EMPTY-DENSITY-BLOCKED: empty density must produce BLOCKED (missing critical)');
+    assert.ok(!scenario.html.includes('APPROVED'), 'INPUT-ENUM-EMPTY-DENSITY-BLOCKED: must not produce APPROVED');
+    console.log('INPUT-ENUM-EMPTY-DENSITY-BLOCKED: PASS');
+})();
+
+// INPUT-ENUM-EMPTY-THICKNESS-BLOCKED
+(function() {
+    const scenario = runDiagnosticScenario('INPUT-ENUM-EMPTY-THICKNESS-BLOCKED', Object.assign({}, baseValidValues, {
+        density: 'средние', thickness: '', length: 'средние'
+    }));
+    assert.ok(!scenario.error, 'INPUT-ENUM-EMPTY-THICKNESS-BLOCKED: must not throw');
+    assert.ok(scenario.html.includes('BLOCKED'), 'INPUT-ENUM-EMPTY-THICKNESS-BLOCKED: empty thickness must produce BLOCKED (missing critical)');
+    assert.ok(!scenario.html.includes('APPROVED'), 'INPUT-ENUM-EMPTY-THICKNESS-BLOCKED: must not produce APPROVED');
+    console.log('INPUT-ENUM-EMPTY-THICKNESS-BLOCKED: PASS');
+})();
+
+// INPUT-ENUM-EMPTY-LENGTH-BLOCKED
+(function() {
+    const scenario = runDiagnosticScenario('INPUT-ENUM-EMPTY-LENGTH-BLOCKED', Object.assign({}, baseValidValues, {
+        density: 'средние', thickness: 'средние', length: ''
+    }));
+    assert.ok(!scenario.error, 'INPUT-ENUM-EMPTY-LENGTH-BLOCKED: must not throw');
+    assert.ok(scenario.html.includes('BLOCKED'), 'INPUT-ENUM-EMPTY-LENGTH-BLOCKED: empty length must produce BLOCKED (missing critical)');
+    assert.ok(!scenario.html.includes('APPROVED'), 'INPUT-ENUM-EMPTY-LENGTH-BLOCKED: must not produce APPROVED');
+    console.log('INPUT-ENUM-EMPTY-LENGTH-BLOCKED: PASS');
+})();
+
+// INPUT-NORM-CONDITION-TRIM
+// After Part E hardening: condition is normalized (trimmed) at read time.
+// condition='пористі ' (trailing space) must still trigger the porous diagnostic.
+(function() {
+    const scenario = runDiagnosticScenario('INPUT-NORM-CONDITION-TRIM', Object.assign({}, baseValidValues, {
+        density: 'средние', thickness: 'средние', length: 'средние',
+        condition: ' пористі ',   // trailing/leading whitespace — must still be recognized
+        root_level: '7', length_level: '7', target_level: '9', target_direction: '3'
+    }));
+    assert.ok(!scenario.error, 'INPUT-NORM-CONDITION-TRIM: must not throw');
+    assert.ok(!scenario.html.includes('APPROVED') || scenario.html.includes('MANUAL_REQUIRED'),
+        'INPUT-NORM-CONDITION-TRIM: trimmed condition=пористі must not produce clean APPROVED');
+    // The porous diagnostic must fire (condition='пористі' triggers diagnostics/brand gate)
+    assert.ok(
+        scenario.html.includes('MANUAL_REQUIRED') || scenario.html.includes('Потрібне ручне рішення'),
+        'INPUT-NORM-CONDITION-TRIM: trimmed condition=пористі + SB scenario must require manual decision (brand gate)'
+    );
+    console.log('INPUT-NORM-CONDITION-TRIM: PASS — whitespace-padded condition still correctly normalized');
+})();
+
+globalThis.__inputNormResults = {
+    helperNormalizeText: { status: 'SAFE' },
+    helperClassifyMissing: { status: 'SAFE' },
+    helperNormalizeEnum: { status: 'SAFE' },
+    unknownDensityBlocked: { status: 'SAFE' },
+    unknownThicknessBlocked: { status: 'SAFE' },
+    unknownLengthBlocked: { status: 'SAFE' },
+    emptyDensityBlocked: { status: 'SAFE' },
+    emptyThicknessBlocked: { status: 'SAFE' },
+    emptyLengthBlocked: { status: 'SAFE' },
+    conditionTrimNormalized: { status: 'SAFE' }
+};
 `;
 
 const sandbox = {
@@ -3790,5 +3944,17 @@ assert.strictEqual(sandbox.__brandHelperReadinessResults.pendingStatusNotReady.s
 assert.strictEqual(sandbox.__brandHelperReadinessResults.readinessStatusNotReady.status, 'SAFE');
 assert.strictEqual(sandbox.__brandHelperReadinessResults.fieldsCount.status, 'SAFE');
 assert.strictEqual(sandbox.__brandHelperReadinessResults.behaviorPreserved.status, 'SAFE');
+
+// INPUT NORMALIZATION — external assertions
+assert.strictEqual(sandbox.__inputNormResults.helperNormalizeText.status, 'SAFE');
+assert.strictEqual(sandbox.__inputNormResults.helperClassifyMissing.status, 'SAFE');
+assert.strictEqual(sandbox.__inputNormResults.helperNormalizeEnum.status, 'SAFE');
+assert.strictEqual(sandbox.__inputNormResults.unknownDensityBlocked.status, 'SAFE');
+assert.strictEqual(sandbox.__inputNormResults.unknownThicknessBlocked.status, 'SAFE');
+assert.strictEqual(sandbox.__inputNormResults.unknownLengthBlocked.status, 'SAFE');
+assert.strictEqual(sandbox.__inputNormResults.emptyDensityBlocked.status, 'SAFE');
+assert.strictEqual(sandbox.__inputNormResults.emptyThicknessBlocked.status, 'SAFE');
+assert.strictEqual(sandbox.__inputNormResults.emptyLengthBlocked.status, 'SAFE');
+assert.strictEqual(sandbox.__inputNormResults.conditionTrimNormalized.status, 'SAFE');
 
 console.log('WWW business scenario test passed');

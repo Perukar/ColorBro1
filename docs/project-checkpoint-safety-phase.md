@@ -74,6 +74,8 @@ length, density, thickness
 | `225adc2` | Document safety phase checkpoint |
 | `6728e6d` | Harden formula correctness coverage (G1 regression + formula audit) |
 | `43c669b` | Document brand data layer safety contract |
+| `6103656` | Scaffold brand data layer readiness (helpers + schema + tests) |
+| pending   | Harden input model normalization contract (normalization helpers + condition trim + enum gate tests + docs) |
 
 ---
 
@@ -83,7 +85,7 @@ length, density, thickness
 |---|-------|--------|
 | 1 | Core business logic audit | done — formula correctness audit clean (2026-06-07) |
 | 2 | Formula correctness audit | done — G1 regression test added (2026-06-07) |
-| 3 | Brand/product data layer | scaffold in progress — schema defined, helpers added, matrix disabled (`hasBrandRuleMatrix = false`) |
+| 3 | Brand/product data layer | scaffold done — schema defined, helpers added (Task 5), input normalization hardened (Task 6), matrix disabled |
 | 4 | User flow / UI polish | pending |
 | 5 | Data persistence / client history | pending |
 | 6 | Final QA / CI | pending |
