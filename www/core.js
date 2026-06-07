@@ -1922,8 +1922,12 @@ const pigmentMap = {
                     rMass = Math.round(rMass * 1.6);
                     if (rMass < 40) rMass = 40;
                     rootRec.mass = rMass;
-                    // Синхронізуємо massModel.rootMass після powder surcharge.
-                    // massModel.rootMass відображає фактичну масу рецепта (post-surcharge).
+                    // KNOWN LIMITATION — docs/known-limitations-contract.md §5:
+                    // massModel.rootMass оновлюється до фактичної post-surcharge маси.
+                    // massModel.totalMass залишається номінальним (pre-surcharge базовий розрахунок).
+                    // Після сюрчарджу: rootMass + lengthMass ≠ totalMass — це очікувана поведінка.
+                    // Порошок завжди тригерить brand gate → MANUAL_REQUIRED, тому divergence
+                    // не потрапляє в approved recipe. Тест: LIMITATION-POWDER-SURCHARGE-MANUAL-NO-EXACT-GRAMS.
                     massModel = Object.assign({}, massModel, { rootMass: rMass });
                 }
 

@@ -3685,6 +3685,79 @@ globalThis.__inputNormResults = {
     emptyLengthBlocked: { status: 'SAFE' },
     conditionTrimNormalized: { status: 'SAFE' }
 };
+
+// ============================================================
+// KNOWN LIMITATIONS REGRESSION TESTS — docs/known-limitations-contract.md
+// ============================================================
+
+// LIMITATION-PRODUCTION-MASS-RUNTIME-2-ZONE
+// Verify that a full calculateProtocol() run produces HTML that contains
+// "mode": "2-zone" and "endsMass": null — confirming production stays 2-zone.
+(function() {
+    const scenario = runDiagnosticScenario('LIMITATION-PRODUCTION-MASS-RUNTIME-2-ZONE', {
+        history: 'натуральні', condition: 'здоровые', thickness: 'средние',
+        density: 'средние', length: 'средние',
+        grey_percent: '0', grey_type: 'мягкая',
+        root_level: '6', root_length: '1', length_level: '6',
+        ends_level: '6', ends_condition: 'здорові', base_type: 'Натуральна',
+        target_level: '8', target_direction: '3',
+        ends_history: 'натуральні', ends_base_type: 'натуральна'
+    });
+    assert.ok(!scenario.error, 'LIMITATION-PRODUCTION-MASS-RUNTIME-2-ZONE: must not throw');
+    // Production mass model must show mode=2-zone and endsMass=null in rendered debug block
+    assert.ok(
+        scenario.html.includes('"mode": "2-zone"') || scenario.html.includes('&quot;mode&quot;: &quot;2-zone&quot;'),
+        'LIMITATION-PRODUCTION-MASS-RUNTIME-2-ZONE: HTML must contain mode:2-zone'
+    );
+    assert.ok(
+        scenario.html.includes('"endsMass": null') || scenario.html.includes('&quot;endsMass&quot;: null'),
+        'LIMITATION-PRODUCTION-MASS-RUNTIME-2-ZONE: HTML must contain endsMass:null'
+    );
+    // Must not contain 3-zone mode
+    assert.ok(
+        !scenario.html.includes('"mode": "3-zone"') && !scenario.html.includes('&quot;mode&quot;: &quot;3-zone&quot;'),
+        'LIMITATION-PRODUCTION-MASS-RUNTIME-2-ZONE: HTML must NOT contain mode:3-zone'
+    );
+    console.log('LIMITATION-PRODUCTION-MASS-RUNTIME-2-ZONE: PASS — production runtime stays 2-zone, endsMass=null');
+})();
+
+// LIMITATION-POWDER-SURCHARGE-MANUAL-NO-EXACT-GRAMS
+// Powder scenario (rLevel=4, tLevel=7) triggers brand gate → MANUAL_REQUIRED.
+// Verify: no APPROVED, no dyeMass/oxidizerMass/exact grams in HTML.
+// Confirms: powder surcharge is applied but does not leak through to an approved recipe.
+(function() {
+    const scenario = runDiagnosticScenario('LIMITATION-POWDER-SURCHARGE-MANUAL-NO-EXACT-GRAMS', {
+        history: 'натуральні', condition: 'здоровые', thickness: 'средние',
+        density: 'средние', length: 'средние',
+        grey_percent: '0', grey_type: 'мягкая',
+        root_level: '4', root_length: '1', length_level: '4',
+        base_type: 'Натуральна',
+        target_level: '7', target_direction: '3',
+        ends_level: '4', ends_condition: 'здорові',
+        ends_history: 'натуральні', ends_base_type: 'натуральна'
+    });
+    assert.ok(!scenario.error, 'LIMITATION-POWDER-SURCHARGE-MANUAL-NO-EXACT-GRAMS: must not throw');
+    // Powder triggers brand gate → must be MANUAL_REQUIRED, not APPROVED
+    assert.ok(
+        scenario.html.includes('MANUAL_REQUIRED') || scenario.html.includes('Потрібне ручне рішення'),
+        'LIMITATION-POWDER-SURCHARGE-MANUAL-NO-EXACT-GRAMS: powder without brand matrix must produce MANUAL_REQUIRED'
+    );
+    assert.ok(!scenario.html.includes('APPROVED'),
+        'LIMITATION-POWDER-SURCHARGE-MANUAL-NO-EXACT-GRAMS: must not produce APPROVED');
+    // No exact grams leak in manual/diagnostic state
+    assert.ok(!scenario.html.includes('dyeMass'),
+        'LIMITATION-POWDER-SURCHARGE-MANUAL-NO-EXACT-GRAMS: dyeMass must not appear in HTML');
+    assert.ok(!scenario.html.includes('oxidizerMass'),
+        'LIMITATION-POWDER-SURCHARGE-MANUAL-NO-EXACT-GRAMS: oxidizerMass must not appear in HTML');
+    assert.ok(!scenario.html.includes('exactGrams'),
+        'LIMITATION-POWDER-SURCHARGE-MANUAL-NO-EXACT-GRAMS: exactGrams must not appear in HTML');
+    console.log('LIMITATION-POWDER-SURCHARGE-MANUAL-NO-EXACT-GRAMS: PASS — powder → MANUAL_REQUIRED, no exact grams');
+})();
+
+globalThis.__knownLimitationsResults = {
+    productionMassRuntime2Zone: { status: 'SAFE' },
+    powderSurchargeManualNoExactGrams: { status: 'SAFE' }
+};
 `;
 
 const sandbox = {
@@ -3944,6 +4017,10 @@ assert.strictEqual(sandbox.__brandHelperReadinessResults.pendingStatusNotReady.s
 assert.strictEqual(sandbox.__brandHelperReadinessResults.readinessStatusNotReady.status, 'SAFE');
 assert.strictEqual(sandbox.__brandHelperReadinessResults.fieldsCount.status, 'SAFE');
 assert.strictEqual(sandbox.__brandHelperReadinessResults.behaviorPreserved.status, 'SAFE');
+
+// KNOWN LIMITATIONS — external assertions
+assert.strictEqual(sandbox.__knownLimitationsResults.productionMassRuntime2Zone.status, 'SAFE');
+assert.strictEqual(sandbox.__knownLimitationsResults.powderSurchargeManualNoExactGrams.status, 'SAFE');
 
 // INPUT NORMALIZATION — external assertions
 assert.strictEqual(sandbox.__inputNormResults.helperNormalizeText.status, 'SAFE');

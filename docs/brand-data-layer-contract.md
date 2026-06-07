@@ -4,6 +4,7 @@
 **HEAD at creation:** 6728e6d Harden formula correctness coverage
 **Status:** NOT READY — brand matrix unavailable
 **Schema doc:** [docs/brand-data-schema.md](brand-data-schema.md) — field definitions, validation rules, pseudo-schema, migration checklist
+**Limitations doc:** [docs/known-limitations-contract.md](known-limitations-contract.md) §10 — brand matrix current limitation and activation checklist
 
 ---
 
