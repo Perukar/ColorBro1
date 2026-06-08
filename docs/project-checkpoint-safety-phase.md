@@ -79,7 +79,8 @@ length, density, thickness
 | `e124809` | Document known limitations contract (powder surcharge, endsMass, endsRec, 3-zone, brand scaffold) |
 | `54c0763` | Harden UI safety surface contract (render audit, contract expanded to 15 sections, positive approved-recipe regression test) |
 | `a187cee` | Harden runtime fail-safe behavior (isFiniteNumber helper, NaN guards in mass model, buildWwwRenderState fail-closed default, 8 regression tests, docs/runtime-failsafe-contract.md) |
-| pending   | Harden state persistence safety (safeParseJson helper, storage key constants, 7 PERSIST regression tests, docs/state-persistence-safety-contract.md) |
+| `511f97b` | Harden state persistence safety (safeParseJson helper, storage key constants, 7 PERSIST regression tests, docs/state-persistence-safety-contract.md) |
+| pending   | Add browser smoke safety contract (32 Node-VM smoke tests, docs/browser-smoke-contract.md) |
 
 ---
 

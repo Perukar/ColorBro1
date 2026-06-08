@@ -11,6 +11,7 @@ See also:
 - [docs/known-limitations-contract.md](known-limitations-contract.md) — production boundary limitations
 - [docs/brand-data-layer-contract.md](brand-data-layer-contract.md) — brand matrix safety contract
 - [docs/state-persistence-safety-contract.md](state-persistence-safety-contract.md) — browser storage safety: safeParseJson, stale APPROVED result policy, hydration rules
+- [docs/browser-smoke-contract.md](browser-smoke-contract.md) — browser smoke safety contract: page structure, gate smoke paths, manual checklist
 
 ---
 
