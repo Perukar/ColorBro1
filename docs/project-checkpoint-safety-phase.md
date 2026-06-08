@@ -77,7 +77,8 @@ length, density, thickness
 | `6103656` | Scaffold brand data layer readiness (helpers + schema + tests) |
 | `ee990a6` | Harden input model normalization contract (normalization helpers + condition trim + enum gate tests + docs) |
 | `e124809` | Document known limitations contract (powder surcharge, endsMass, endsRec, 3-zone, brand scaffold) |
-| pending   | Harden UI safety surface contract (render audit, contract expanded to 15 sections, positive approved-recipe regression test) |
+| `54c0763` | Harden UI safety surface contract (render audit, contract expanded to 15 sections, positive approved-recipe regression test) |
+| pending   | Harden runtime fail-safe behavior (isFiniteNumber helper, NaN guards in mass model, buildWwwRenderState fail-closed default, 8 regression tests, docs/runtime-failsafe-contract.md) |
 
 ---
 

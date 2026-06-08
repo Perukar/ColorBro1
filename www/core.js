@@ -344,7 +344,19 @@ const pigmentMap = {
             },
 
             sanitizeMassModelForRender(massModel, state) {
-                if (!massModel || this.canRenderExecutableRecipe(state)) return massModel;
+                // For production-ready approved states, guard critical mass fields against NaN/Infinity.
+                // NaN/Infinity in totalMass/rootMass/lengthMass must not render as grams in the approved recipe.
+                if (!massModel) return massModel;
+                if (this.canRenderExecutableRecipe(state)) {
+                    const criticalFields = ['totalMass', 'rootMass', 'lengthMass'];
+                    for (const field of criticalFields) {
+                        if (Object.prototype.hasOwnProperty.call(massModel, field) && !isFiniteNumber(massModel[field])) {
+                            // Mass model has non-finite value in a critical field — fail closed: treat as no mass model.
+                            return null;
+                        }
+                    }
+                    return massModel;
+                }
                 const safeModel = {};
                 if (Object.prototype.hasOwnProperty.call(massModel, 'mode')) {
                     safeModel.mode = massModel.mode;
@@ -490,7 +502,9 @@ const pigmentMap = {
                     phaseName: `Етап ${index + 1}`,
                     steps: [stripWwwHtmlText(item)]
                 })).filter((phase) => phase.steps[0] !== '');
-            const status = runtime.status || 'APPROVED';
+            // Fail-closed default: if status is missing/falsy, treat as BLOCKED — never default to APPROVED.
+            // All callers in calculateProtocol() provide an explicit status; this default is a defense-in-depth guard.
+            const status = runtime.status || 'BLOCKED';
             const blockers = Array.isArray(runtime.blockers) ? runtime.blockers : [];
             const manualDecisions = Array.isArray(runtime.manualDecisions) ? runtime.manualDecisions : [];
             const productionReady = normalizeWwwProductionReady(runtime, status, blockers, manualDecisions);
@@ -556,7 +570,8 @@ const pigmentMap = {
          * @returns {{ baseMass, densityMultiplier, totalMass, rootMass, lengthMass, endsMass, mode, split } | null}
          */
         function buildThreeZoneMassCandidate(length, density, split) {
-            if (!split || typeof split.rootPct !== 'number' || typeof split.endsPct !== 'number') {
+            // typeof NaN === 'number', so Number.isFinite is required — typeof alone does not catch NaN pcts.
+            if (!split || !Number.isFinite(split.rootPct) || !Number.isFinite(split.endsPct)) {
                 return null;
             }
 
@@ -1542,6 +1557,21 @@ const pigmentMap = {
          */
         function getBrandMatrixReadinessStatus(matrix) {
             return validateBrandRuleMatrixShape(matrix).ready ? 'READY' : 'NOT_READY';
+        }
+
+        // =============================================================================
+        // NUMERIC SAFETY HELPERS — docs/runtime-failsafe-contract.md
+        // Pure functions — no side effects.
+        // =============================================================================
+
+        /**
+         * Returns true only if value is a finite number (not NaN, not Infinity, not non-number).
+         * Use wherever numeric fields must be validated before use in mass/timing/render operations.
+         * @param {*} value
+         * @returns {boolean}
+         */
+        function isFiniteNumber(value) {
+            return typeof value === 'number' && Number.isFinite(value);
         }
 
         // =============================================================================

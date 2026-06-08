@@ -3543,7 +3543,7 @@ globalThis.__brandHelperReadinessResults = {
     assert.strictEqual(normalizeTextInput(null), '', 'INPUT-HELPER-NORMALIZE-TEXT: null → empty string');
     assert.strictEqual(normalizeTextInput(undefined), '', 'INPUT-HELPER-NORMALIZE-TEXT: undefined → empty string');
     assert.strictEqual(normalizeTextInput(' пористі '), 'пористі', 'INPUT-HELPER-NORMALIZE-TEXT: Ukrainian text trimmed');
-    assert.strictEqual(normalizeTextInput('\tсередній\n'), 'середній', 'INPUT-HELPER-NORMALIZE-TEXT: tab/newline trimmed');
+    assert.strictEqual(normalizeTextInput('\\tсередній\\n'), 'середній', 'INPUT-HELPER-NORMALIZE-TEXT: tab/newline trimmed');
     console.log('INPUT-HELPER-NORMALIZE-TEXT: PASS');
 })();
 

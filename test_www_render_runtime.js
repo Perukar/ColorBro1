@@ -1178,6 +1178,125 @@ assertIncludes(ldtAllValidHtml, 'approved-recipe');
 assertNotIncludes(ldtAllValidHtml, 'Нерозпізнані критичні значення');
 
 console.log('LENGTH-DENSITY-THICKNESS-UNRECOGNIZED-GATE verified: each unknown value=BLOCKED (no MANUAL_REQUIRED, no silent default).');
+// ===== RUNTIME FAIL-SAFE REGRESSION TESTS =====
+// docs/runtime-failsafe-contract.md — regression coverage for all 8 hardened fail-safe paths.
+
+// FAILSAFE-STATUS-DEFAULT-BLOCKED
+(function() {
+    const noStatusState = buildWwwRenderState({});
+    assert.strictEqual(noStatusState.status, 'BLOCKED', 'FAILSAFE-STATUS-DEFAULT-BLOCKED: missing status must default to BLOCKED');
+    assert.strictEqual(noStatusState.productionReady, false, 'FAILSAFE-STATUS-DEFAULT-BLOCKED: productionReady must be false');
+    const noStatusHtml = PerucarWwwRenderV1.renderStateToHtml(noStatusState);
+    assertNotIncludes(noStatusHtml, 'approved-recipe');
+    assertNotIncludes(noStatusHtml, 'Фінальна формула');
+    console.log('FAILSAFE-STATUS-DEFAULT-BLOCKED safe behavior verified.');
+})();
+
+// FAILSAFE-STATUS-NULL-BLOCKED
+(function() {
+    const nullStatusState = buildWwwRenderState({ status: null });
+    assert.strictEqual(nullStatusState.status, 'BLOCKED', 'FAILSAFE-STATUS-NULL-BLOCKED: null status must become BLOCKED');
+    assert.strictEqual(nullStatusState.productionReady, false, 'FAILSAFE-STATUS-NULL-BLOCKED: productionReady must be false');
+    const nullStatusHtml = PerucarWwwRenderV1.renderStateToHtml(nullStatusState);
+    assertNotIncludes(nullStatusHtml, 'approved-recipe');
+    console.log('FAILSAFE-STATUS-NULL-BLOCKED safe behavior verified.');
+})();
+
+// FAILSAFE-ISFINITE-HELPER
+(function() {
+    assert.strictEqual(isFiniteNumber(42), true, 'FAILSAFE-ISFINITE: 42 is finite');
+    assert.strictEqual(isFiniteNumber(0), true, 'FAILSAFE-ISFINITE: 0 is finite');
+    assert.strictEqual(isFiniteNumber(-1.5), true, 'FAILSAFE-ISFINITE: -1.5 is finite');
+    assert.strictEqual(isFiniteNumber(NaN), false, 'FAILSAFE-ISFINITE: NaN is not finite');
+    assert.strictEqual(isFiniteNumber(Infinity), false, 'FAILSAFE-ISFINITE: Infinity is not finite');
+    assert.strictEqual(isFiniteNumber(-Infinity), false, 'FAILSAFE-ISFINITE: -Infinity is not finite');
+    assert.strictEqual(isFiniteNumber(null), false, 'FAILSAFE-ISFINITE: null is not finite');
+    assert.strictEqual(isFiniteNumber(undefined), false, 'FAILSAFE-ISFINITE: undefined is not finite');
+    assert.strictEqual(isFiniteNumber('42'), false, 'FAILSAFE-ISFINITE: string "42" is not finite');
+    console.log('FAILSAFE-ISFINITE-HELPER safe behavior verified.');
+})();
+
+// FAILSAFE-NAN-PCT-MASS-CANDIDATE
+(function() {
+    const nanRootResult = buildThreeZoneMassCandidate('средние', 'средние', { rootPct: NaN, endsPct: 0.2 });
+    assert.strictEqual(nanRootResult, null, 'FAILSAFE-NAN-PCT: NaN rootPct must return null');
+    const infRootResult = buildThreeZoneMassCandidate('средние', 'средние', { rootPct: Infinity, endsPct: 0.2 });
+    assert.strictEqual(infRootResult, null, 'FAILSAFE-NAN-PCT: Infinity rootPct must return null');
+    const nanEndsResult = buildThreeZoneMassCandidate('средние', 'средние', { rootPct: 0.8, endsPct: NaN });
+    assert.strictEqual(nanEndsResult, null, 'FAILSAFE-NAN-PCT: NaN endsPct must return null');
+    const missingPctResult = buildThreeZoneMassCandidate('средние', 'средние', {});
+    assert.strictEqual(missingPctResult, null, 'FAILSAFE-NAN-PCT: missing pct fields must return null');
+    const noSplitResult = buildThreeZoneMassCandidate('средние', 'средние', null);
+    assert.strictEqual(noSplitResult, null, 'FAILSAFE-NAN-PCT: null split must return null');
+    console.log('FAILSAFE-NAN-PCT-MASS-CANDIDATE safe behavior verified.');
+})();
+
+// FAILSAFE-NAN-MASS-APPROVED-SANITIZE
+(function() {
+    const nanMassHtml = PerucarWwwRenderV1.renderStateToHtml({
+        status: 'APPROVED',
+        productionReady: true,
+        target: '8.1',
+        rootRec: { process: 'Перманент', dye: 'FAILSAFE-DYE', ox: '6%', mass: 30, ratio: '1:1', finalFormula: 'FAILSAFE-FORMULA' },
+        massModel: { totalMass: NaN, rootMass: 24, lengthMass: 36, mode: '2-zone', endsMass: null }
+    });
+    const nanMassMassBlock = extractFirstDivBlockByHeading(nanMassHtml, 'Маси');
+    assertNotIncludes(nanMassMassBlock, 'totalMass');
+    assertNotIncludes(nanMassMassBlock, 'rootMass');
+    assertNotIncludes(nanMassMassBlock, 'lengthMass');
+    assertNotIncludes(nanMassMassBlock, '24');
+    assertNotIncludes(nanMassMassBlock, '36');
+
+    const infMassHtml = PerucarWwwRenderV1.renderStateToHtml({
+        status: 'APPROVED',
+        productionReady: true,
+        target: '8.1',
+        rootRec: { process: 'Перманент', dye: 'FAILSAFE-DYE', ox: '6%', mass: 30, ratio: '1:1', finalFormula: 'FAILSAFE-FORMULA' },
+        massModel: { totalMass: Infinity, rootMass: 24, lengthMass: 36, mode: '2-zone', endsMass: null }
+    });
+    const infMassMassBlock = extractFirstDivBlockByHeading(infMassHtml, 'Маси');
+    assertNotIncludes(infMassMassBlock, 'totalMass');
+    assertNotIncludes(infMassMassBlock, '24');
+    console.log('FAILSAFE-NAN-MASS-APPROVED-SANITIZE safe behavior verified.');
+})();
+
+// FAILSAFE-CALCULATE-PROTOCOL-MALFORMED
+(function() {
+    const emptyRootHtml = runCalculateProtocolWithValues({ root_level: '' });
+    assertIncludes(emptyRootHtml, 'BLOCKED');
+    assertNotIncludes(emptyRootHtml, 'approved-recipe');
+
+    const emptyTargetHtml = runCalculateProtocolWithValues({ target_level: '' });
+    assertIncludes(emptyTargetHtml, 'BLOCKED');
+    assertNotIncludes(emptyTargetHtml, 'approved-recipe');
+
+    const emptyHistoryHtml = runCalculateProtocolWithValues({ history: '' });
+    assertIncludes(emptyHistoryHtml, 'BLOCKED');
+    assertNotIncludes(emptyHistoryHtml, 'approved-recipe');
+
+    console.log('FAILSAFE-CALCULATE-PROTOCOL-MALFORMED safe behavior verified.');
+})();
+
+// FAILSAFE-ENDSREC-NULL-RUNTIME
+(function() {
+    assertNotIncludes(approvedOutputHtml, '<h3>Кінці</h3>');
+    assertNotIncludes(approvedOutputHtml, 'endsRecipeReady: true');
+    assertNotIncludes(approvedOutputHtml, 'dyeMass');
+    assertNotIncludes(approvedOutputHtml, 'oxidizerMass');
+    console.log('FAILSAFE-ENDSREC-NULL-RUNTIME safe behavior verified.');
+})();
+
+// FAILSAFE-BRAND-MATRIX-INACTIVE
+(function() {
+    assert.strictEqual(typeof isBrandRuleMatrixAvailable, 'function', 'FAILSAFE-BRAND-MATRIX: isBrandRuleMatrixAvailable must exist');
+    assert.strictEqual(isBrandRuleMatrixAvailable(null), false, 'FAILSAFE-BRAND-MATRIX: null not available');
+    assert.strictEqual(isBrandRuleMatrixAvailable(undefined), false, 'FAILSAFE-BRAND-MATRIX: undefined not available');
+    assert.strictEqual(isBrandRuleMatrixAvailable([]), false, 'FAILSAFE-BRAND-MATRIX: empty array not available');
+    assert.strictEqual(isBrandRuleMatrixAvailable({}), false, 'FAILSAFE-BRAND-MATRIX: plain object not available');
+    assert.strictEqual(isBrandRuleMatrixAvailable('string'), false, 'FAILSAFE-BRAND-MATRIX: string not available');
+    console.log('FAILSAFE-BRAND-MATRIX-INACTIVE safe behavior verified.');
+})();
+
 console.log('WWW render runtime test passed');
 `;
 

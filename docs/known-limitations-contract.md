@@ -5,6 +5,7 @@
 **Status:** ACTIVE — documents current intentional limitations
 
 See also:
+- [docs/runtime-failsafe-contract.md](runtime-failsafe-contract.md) — runtime fail-safe rules and migration checklist (§15) for activating any limitation listed here
 - [docs/input-model-contract.md](input-model-contract.md) — input normalization rules
 - [docs/input-safety-gates-contract.md](input-safety-gates-contract.md) — production gate policy
 - [docs/brand-data-layer-contract.md](brand-data-layer-contract.md) — brand matrix contract
