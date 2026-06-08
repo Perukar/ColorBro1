@@ -80,7 +80,8 @@ length, density, thickness
 | `54c0763` | Harden UI safety surface contract (render audit, contract expanded to 15 sections, positive approved-recipe regression test) |
 | `a187cee` | Harden runtime fail-safe behavior (isFiniteNumber helper, NaN guards in mass model, buildWwwRenderState fail-closed default, 8 regression tests, docs/runtime-failsafe-contract.md) |
 | `511f97b` | Harden state persistence safety (safeParseJson helper, storage key constants, 7 PERSIST regression tests, docs/state-persistence-safety-contract.md) |
-| pending   | Add browser smoke safety contract (32 Node-VM smoke tests, docs/browser-smoke-contract.md) |
+| `d419973` | Add browser smoke safety contract (32 Node-VM smoke tests, docs/browser-smoke-contract.md, test_www_browser_smoke.js) |
+| pending   | Add production readiness index (30-domain matrix, docs/production-readiness-index.md, test_www_production_readiness_index.js) |
 
 ---
 
@@ -105,4 +106,5 @@ length, density, thickness
 - Do not change runtime logic or tests in documentation-only tasks.
 - Safety invariant (`status === 'APPROVED' && productionReady === true`) must be preserved in all future work.
 - LOCKED files: see `references/locked-files-and-git-policy.md`.
-- Full test matrix must pass before any commit: `test_www_render_runtime.js`, `test_www_business_scenarios.js`, `test_www_mass_model.js`, `test_www_mapping.js`.
+- Full test matrix must pass before any commit: `test_www_render_runtime.js`, `test_www_business_scenarios.js`, `test_www_mass_model.js`, `test_www_mapping.js`, `test_www_browser_smoke.js`, `test_www_production_readiness_index.js`.
+- Production readiness domain matrix is documented in `docs/production-readiness-index.md` (30 domains, 9 status codes) — consult before any activation task.

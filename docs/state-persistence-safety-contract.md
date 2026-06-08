@@ -10,6 +10,7 @@ See also:
 - [docs/input-safety-gates-contract.md](input-safety-gates-contract.md) — input validation gates
 - [docs/input-model-contract.md](input-model-contract.md) — normalization rules
 - [docs/known-limitations-contract.md](known-limitations-contract.md) — production boundary limitations
+- [docs/production-readiness-index.md](production-readiness-index.md) — full domain readiness matrix: production status, active vs diagnostic, known limitations summary, release checklist
 
 ---
 

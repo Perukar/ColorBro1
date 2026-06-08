@@ -12,6 +12,7 @@ See also:
 - [docs/brand-data-layer-contract.md](brand-data-layer-contract.md) — brand matrix safety contract
 - [docs/state-persistence-safety-contract.md](state-persistence-safety-contract.md) — browser storage safety: stale APPROVED result policy, render output persistence rules
 - [docs/browser-smoke-contract.md](browser-smoke-contract.md) — browser smoke safety contract: page structure, gate smoke paths, manual checklist
+- [docs/production-readiness-index.md](production-readiness-index.md) — full domain readiness matrix: production status, active vs diagnostic, known limitations summary, release checklist
 
 ---
 

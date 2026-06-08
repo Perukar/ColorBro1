@@ -5,6 +5,7 @@
 **Status:** ACTIVE — normalization layer hardened
 
 See also: [docs/input-safety-gates-contract.md](input-safety-gates-contract.md) — production gate policy.
+See also: [docs/production-readiness-index.md](production-readiness-index.md) — full domain readiness matrix: production status, active vs diagnostic, known limitations summary, release checklist.
 
 ---
 

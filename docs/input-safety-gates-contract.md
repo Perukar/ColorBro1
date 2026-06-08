@@ -3,6 +3,7 @@
 Single source of truth for the production input validation gates in `www/core.js`.
 See also: [docs/input-model-contract.md](input-model-contract.md) — full normalization rules, field table, unknown/missing-value behavior, and migration checklist.
 See also: [docs/known-limitations-contract.md](known-limitations-contract.md) — powder surcharge, endsMass, endsRec, 3-zone, brand scaffold limitations.
+See also: [docs/production-readiness-index.md](production-readiness-index.md) — full domain readiness matrix: production status, active vs diagnostic, known limitations summary, release checklist.
 PERUKAR is a safety-sensitive color-logic control system — not a recipe hint tool.
 An executable salon recipe produced from incomplete or unsafe input is a real-world
 risk. This contract must not be weakened.

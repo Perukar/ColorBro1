@@ -11,6 +11,7 @@ See also:
 - [docs/brand-data-layer-contract.md](brand-data-layer-contract.md) — brand matrix contract
 - [docs/brand-data-schema.md](brand-data-schema.md) — brand schema definition
 - [docs/ui-render-safety-contract.md](ui-render-safety-contract.md) — render layer safety rules
+- [docs/production-readiness-index.md](production-readiness-index.md) — full domain readiness matrix: production status, active vs diagnostic, known limitations summary, release checklist
 
 ---
 

@@ -5,6 +5,7 @@
 **Status:** NOT READY — brand matrix unavailable
 **Schema doc:** [docs/brand-data-schema.md](brand-data-schema.md) — field definitions, validation rules, pseudo-schema, migration checklist
 **Limitations doc:** [docs/known-limitations-contract.md](known-limitations-contract.md) §10 — brand matrix current limitation and activation checklist
+**Readiness index:** [docs/production-readiness-index.md](production-readiness-index.md) — full domain readiness matrix: production status, active vs diagnostic, known limitations summary, release checklist
 
 ---
 
