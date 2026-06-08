@@ -78,7 +78,8 @@ length, density, thickness
 | `ee990a6` | Harden input model normalization contract (normalization helpers + condition trim + enum gate tests + docs) |
 | `e124809` | Document known limitations contract (powder surcharge, endsMass, endsRec, 3-zone, brand scaffold) |
 | `54c0763` | Harden UI safety surface contract (render audit, contract expanded to 15 sections, positive approved-recipe regression test) |
-| pending   | Harden runtime fail-safe behavior (isFiniteNumber helper, NaN guards in mass model, buildWwwRenderState fail-closed default, 8 regression tests, docs/runtime-failsafe-contract.md) |
+| `a187cee` | Harden runtime fail-safe behavior (isFiniteNumber helper, NaN guards in mass model, buildWwwRenderState fail-closed default, 8 regression tests, docs/runtime-failsafe-contract.md) |
+| pending   | Harden state persistence safety (safeParseJson helper, storage key constants, 7 PERSIST regression tests, docs/state-persistence-safety-contract.md) |
 
 ---
 
@@ -90,7 +91,7 @@ length, density, thickness
 | 2 | Formula correctness audit | done — G1 regression test added (2026-06-07) |
 | 3 | Brand/product data layer | scaffold done — schema defined, helpers added (Task 5), input normalization hardened (Task 6), matrix disabled |
 | 4 | User flow / UI polish | pending |
-| 5 | Data persistence / client history | pending |
+| 5 | Data persistence / client history | pending — state persistence safety contract and helpers added (2026-06-08); no active persistence yet |
 | 6 | Final QA / CI | pending |
 | 7 | Release / packaging / deployment | pending |
 

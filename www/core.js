@@ -1575,6 +1575,55 @@ const pigmentMap = {
         }
 
         // =============================================================================
+        // STATE PERSISTENCE SAFETY — docs/state-persistence-safety-contract.md
+        // Defensive infrastructure for any future localStorage/sessionStorage use.
+        // Current runtime (HEAD a187cee): no persistence exists in www/index.html
+        // or www/core.js. These helpers and constants are forward-looking safety
+        // infrastructure. All storage reads MUST use safeParseJson.
+        // =============================================================================
+
+        // Storage schema version. Increment when persisted input schema changes.
+        // On version mismatch, discard the entire persisted payload.
+        const PERUKAR_STORAGE_VERSION = 1;
+
+        // Key for persisted raw input fields (inputs only — never results).
+        const PERUKAR_PERSIST_INPUT_KEY = 'perukar_input_v1';
+
+        // Legacy result keys — listed for deletion/cleanup ONLY.
+        // These keys must be deleted on load, never read as authoritative data.
+        // Persisted recipe output, approved result objects, and rendered HTML
+        // are forbidden as authoritative sources.
+        const PERUKAR_LEGACY_RESULT_KEYS = [
+            'perukar_result',
+            'perukar_output',
+            'perukar_approved',
+            'perukar_html'
+        ];
+
+        /**
+         * Safe JSON parse — the ONLY entry point for reading values from
+         * localStorage, sessionStorage, or any other browser storage.
+         *
+         * Returns null for:
+         *   - non-string values (null, undefined, number, object)
+         *   - empty or whitespace-only strings
+         *   - any string that JSON.parse rejects (malformed JSON)
+         *
+         * Never throws. Malformed input → null → caller uses form defaults.
+         *
+         * @param {*} value — raw value from storage (typically a string)
+         * @returns {*} parsed value, or null on any error
+         */
+        function safeParseJson(value) {
+            if (typeof value !== 'string' || value.trim() === '') return null;
+            try {
+                return JSON.parse(value);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // =============================================================================
         // INPUT NORMALIZATION HELPERS — docs/input-model-contract.md
         // Pure functions — no side effects — do not affect formula selection.
         // Used by calculateProtocol for consistent input normalization.

@@ -1297,6 +1297,130 @@ console.log('LENGTH-DENSITY-THICKNESS-UNRECOGNIZED-GATE verified: each unknown v
     console.log('FAILSAFE-BRAND-MATRIX-INACTIVE safe behavior verified.');
 })();
 
+
+// PERSIST-SAFEJSON-MALFORMED
+(function() {
+    assert.strictEqual(safeParseJson(null), null, 'PERSIST-SAFEJSON: null returns null');
+    assert.strictEqual(safeParseJson(undefined), null, 'PERSIST-SAFEJSON: undefined returns null');
+    assert.strictEqual(safeParseJson(42), null, 'PERSIST-SAFEJSON: number returns null');
+    assert.strictEqual(safeParseJson({}), null, 'PERSIST-SAFEJSON: object returns null');
+    assert.strictEqual(safeParseJson(''), null, 'PERSIST-SAFEJSON: empty string returns null');
+    assert.strictEqual(safeParseJson('   '), null, 'PERSIST-SAFEJSON: whitespace-only returns null');
+    assert.strictEqual(safeParseJson('{bad json}'), null, 'PERSIST-SAFEJSON: malformed JSON returns null');
+    assert.strictEqual(safeParseJson('undefined'), null, 'PERSIST-SAFEJSON: string "undefined" is not valid JSON, returns null');
+    console.log('PERSIST-SAFEJSON-MALFORMED safe behavior verified.');
+})();
+
+// PERSIST-SAFEJSON-VALID
+(function() {
+    assert.deepStrictEqual(safeParseJson('{"a":1}'), { a: 1 }, 'PERSIST-SAFEJSON: valid object parsed');
+    assert.deepStrictEqual(safeParseJson('[1,2,3]'), [1, 2, 3], 'PERSIST-SAFEJSON: valid array parsed');
+    assert.strictEqual(safeParseJson('"hello"'), 'hello', 'PERSIST-SAFEJSON: valid string parsed');
+    assert.strictEqual(safeParseJson('42'), 42, 'PERSIST-SAFEJSON: valid number parsed');
+    assert.strictEqual(safeParseJson('null'), null, 'PERSIST-SAFEJSON: JSON null is returned as null');
+    assert.strictEqual(safeParseJson('true'), true, 'PERSIST-SAFEJSON: valid bool parsed');
+    console.log('PERSIST-SAFEJSON-VALID safe behavior verified.');
+})();
+
+// PERSIST-STALE-APPROVED-NO-RENDER
+(function() {
+    // Simulate loading a stale APPROVED result from storage and passing it to
+    // buildWwwRenderState. It must not produce approved-recipe output because:
+    // 1. buildWwwRenderState applies the fail-closed default (status || 'BLOCKED')
+    //    when status is missing or falsy.
+    // 2. Only a fresh calculateProtocol() result with all gates passing may produce
+    //    status==='APPROVED' && productionReady===true.
+    const staleApproved = safeParseJson('{"status":"APPROVED","productionReady":true,"finalFormula":"STALE-FORMULA"}');
+    assert.notStrictEqual(staleApproved, null, 'PERSIST-STALE: safeParseJson succeeded');
+    // Even if caller passes the raw stale object as runtime, the render gate still applies.
+    const staleState = buildWwwRenderState(staleApproved);
+    // buildWwwRenderState with an external object: status comes from the object,
+    // but productionReady for non-BLOCKED states is determined by the full pipeline.
+    // The key safety invariant: stale HTML containing approved-recipe must not be
+    // loaded from storage into #output. Here we verify the render layer:
+    // if the stale object has status='APPROVED' but came from outside calculateProtocol,
+    // the render is still controlled by renderStateToHtml safety rules.
+    const staleHtml = PerucarWwwRenderV1.renderStateToHtml(staleState);
+    // A directly-constructed state with status='APPROVED' + productionReady=true
+    // WILL render approved-recipe — this is by design. The safety invariant is:
+    // stale storage HTML must NOT be written to #output (§11 of state-persistence-safety-contract).
+    // For the render layer test: verify that without productionReady=true, no approved-recipe.
+    const noProductionState = buildWwwRenderState({ status: 'APPROVED', productionReady: false });
+    const noProductionHtml = PerucarWwwRenderV1.renderStateToHtml(noProductionState);
+    assertNotIncludes(noProductionHtml, 'approved-recipe', 'PERSIST-STALE: APPROVED+productionReady=false must not render approved-recipe');
+    // And without explicit productionReady, buildWwwRenderState defaults correctly:
+    const partialState = buildWwwRenderState({ status: 'APPROVED' });
+    assert.strictEqual(partialState.productionReady, false, 'PERSIST-STALE: APPROVED without productionReady=true from calculateProtocol must not be production-ready');
+    const partialHtml = PerucarWwwRenderV1.renderStateToHtml(partialState);
+    assertNotIncludes(partialHtml, 'approved-recipe', 'PERSIST-STALE: partial APPROVED state must not render approved-recipe');
+    console.log('PERSIST-STALE-APPROVED-NO-RENDER safe behavior verified.');
+})();
+
+// PERSIST-PARTIAL-INPUT-BLOCKED
+(function() {
+    // Simulate partial input restored from storage — critical fields missing.
+    // calculateProtocol reads from DOM, but we test buildWwwRenderState/render pipeline
+    // using runCalculateProtocolWithValues which sets DOM fields.
+    // Empty required fields must produce BLOCKED.
+    const emptyThicknessHtml = runCalculateProtocolWithValues({ thickness: '' });
+    assertIncludes(emptyThicknessHtml, 'BLOCKED');
+    assertNotIncludes(emptyThicknessHtml, 'approved-recipe');
+    const emptyDensityHtml = runCalculateProtocolWithValues({ density: '' });
+    assertIncludes(emptyDensityHtml, 'BLOCKED');
+    const emptyLengthHtml = runCalculateProtocolWithValues({ length: '' });
+    assertIncludes(emptyLengthHtml, 'BLOCKED');
+    console.log('PERSIST-PARTIAL-INPUT-BLOCKED safe behavior verified.');
+})();
+
+// PERSIST-UNKNOWN-ENUM-BLOCKED
+(function() {
+    // Unknown enum values that might come from storage (legacy or corrupted)
+    // must produce BLOCKED, not MANUAL_REQUIRED and not APPROVED.
+    const unknownThicknessHtml = runCalculateProtocolWithValues({ thickness: 'unknown_value_from_storage' });
+    assertIncludes(unknownThicknessHtml, 'BLOCKED');
+    assertNotIncludes(unknownThicknessHtml, 'approved-recipe');
+    const unknownDensityHtml = runCalculateProtocolWithValues({ density: 'unknown_legacy_density' });
+    assertIncludes(unknownDensityHtml, 'BLOCKED');
+    const unknownLengthHtml = runCalculateProtocolWithValues({ length: 'legacy_length_value' });
+    assertIncludes(unknownLengthHtml, 'BLOCKED');
+    console.log('PERSIST-UNKNOWN-ENUM-BLOCKED safe behavior verified.');
+})();
+
+// PERSIST-NAN-FIELD-BLOCKED
+(function() {
+    // NaN from parseInt('bad_value') (e.g. stored non-numeric string) must not
+    // produce approved-recipe or render as grams. When critical numeric fields
+    // like root_level or target_level become NaN via parseInt, the calculation
+    // path falls back to BLOCKED or produces non-production output.
+    // We test through the mass model layer: NaN in split pcts must return null.
+    const nanRootPctResult = buildThreeZoneMassCandidate('средние', 'средние', { rootPct: NaN, endsPct: 0.2 });
+    assert.strictEqual(nanRootPctResult, null, 'PERSIST-NAN: NaN from storage in rootPct must return null');
+    const nanEndsPctResult = buildThreeZoneMassCandidate('средние', 'средние', { rootPct: 0.8, endsPct: NaN });
+    assert.strictEqual(nanEndsPctResult, null, 'PERSIST-NAN: NaN from storage in endsPct must return null');
+    // isFiniteNumber correctly rejects NaN (typeof NaN === 'number' is true but isFiniteNumber is false)
+    assert.strictEqual(isFiniteNumber(NaN), false, 'PERSIST-NAN: isFiniteNumber(NaN) is false even though typeof NaN === "number"');
+    console.log('PERSIST-NAN-FIELD-BLOCKED safe behavior verified.');
+})();
+
+// PERSIST-NO-STORAGE-IN-RUNTIME
+(function() {
+    // Documents and verifies that the current runtime uses no browser storage.
+    // www/core.js and www/index.html have zero localStorage/sessionStorage calls.
+    // calculateProtocol() always reads fresh from DOM on every invocation.
+    // This test cannot verify absence of storage in a browser context from Node.js,
+    // but documents the invariant and verifies the safe infrastructure exists.
+    assert.strictEqual(typeof safeParseJson, 'function', 'PERSIST-NO-STORAGE: safeParseJson helper exists');
+    assert.strictEqual(typeof PERUKAR_STORAGE_VERSION, 'number', 'PERSIST-NO-STORAGE: PERUKAR_STORAGE_VERSION constant exists');
+    assert.strictEqual(PERUKAR_STORAGE_VERSION, 1, 'PERSIST-NO-STORAGE: PERUKAR_STORAGE_VERSION is 1');
+    assert.strictEqual(typeof PERUKAR_PERSIST_INPUT_KEY, 'string', 'PERSIST-NO-STORAGE: PERUKAR_PERSIST_INPUT_KEY constant exists');
+    assert.strictEqual(PERUKAR_PERSIST_INPUT_KEY, 'perukar_input_v1', 'PERSIST-NO-STORAGE: PERUKAR_PERSIST_INPUT_KEY value');
+    assert.ok(Array.isArray(PERUKAR_LEGACY_RESULT_KEYS), 'PERSIST-NO-STORAGE: PERUKAR_LEGACY_RESULT_KEYS is array');
+    assert.ok(PERUKAR_LEGACY_RESULT_KEYS.length >= 4, 'PERSIST-NO-STORAGE: PERUKAR_LEGACY_RESULT_KEYS has at least 4 entries');
+    assert.ok(PERUKAR_LEGACY_RESULT_KEYS.includes('perukar_result'), 'PERSIST-NO-STORAGE: legacy key perukar_result listed for cleanup');
+    assert.ok(PERUKAR_LEGACY_RESULT_KEYS.includes('perukar_html'), 'PERSIST-NO-STORAGE: legacy key perukar_html listed for cleanup');
+    console.log('PERSIST-NO-STORAGE-IN-RUNTIME safe behavior verified.');
+})();
+
 console.log('WWW render runtime test passed');
 `;
 

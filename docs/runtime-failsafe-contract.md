@@ -10,6 +10,7 @@ See also:
 - [docs/input-model-contract.md](input-model-contract.md) — normalization rules
 - [docs/known-limitations-contract.md](known-limitations-contract.md) — production boundary limitations
 - [docs/brand-data-layer-contract.md](brand-data-layer-contract.md) — brand matrix safety contract
+- [docs/state-persistence-safety-contract.md](state-persistence-safety-contract.md) — browser storage safety: safeParseJson, stale APPROVED result policy, hydration rules
 
 ---
 
@@ -233,8 +234,4 @@ In all other cases: BLOCKED, MANUAL_REQUIRED, or FATAL_ERROR.
 Never APPROVED by default. Never executable recipe by default.
 ```
 
-Current production boundaries (as of HEAD 54c0763):
-- Two-zone mass model only (`endsMass === null`)
-- No production endsRec
-- No production third-zone
-- Brand matrix disabled (`hasBrandRuleMatrix = false`)
+Current production boundaries (as

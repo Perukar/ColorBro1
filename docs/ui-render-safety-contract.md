@@ -10,6 +10,7 @@ See also:
 - [docs/input-model-contract.md](input-model-contract.md) — normalization rules
 - [docs/known-limitations-contract.md](known-limitations-contract.md) — production boundary limitations
 - [docs/brand-data-layer-contract.md](brand-data-layer-contract.md) — brand matrix safety contract
+- [docs/state-persistence-safety-contract.md](state-persistence-safety-contract.md) — browser storage safety: stale APPROVED result policy, render output persistence rules
 
 ---
 
