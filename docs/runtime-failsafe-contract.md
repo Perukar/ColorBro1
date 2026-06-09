@@ -247,6 +247,7 @@ Current production boundaries (as of HEAD d501069):
   ALLOW_3ZONE diagnostic preview — renders 3-zone fields for inspection; not for mixing
 
   Tests enforcing these boundaries:
+    test_www_input_boundary_fuzz.js  — boundary/fuzz: 7 groups, NaN/enum/injection/coercion
     test_www_business_scenarios.js   — formula correctness + gate decisions
     test_www_mass_model.js           — 2-zone gram calculations + NaN guards
     test_www_mapping.js              — level-to-tone + oxidizer selection

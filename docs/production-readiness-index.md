@@ -324,6 +324,7 @@ These test files must all pass before any commit that touches safety domains:
 
 | Test file | Domain coverage |
 |---|---|
+| `test_www_input_boundary_fuzz.js` | Boundary/fuzz: numeric level NaN-coercing, enum unknown/object/array, localized input, injection, prototype safety, render NaN/Infinity, clean control regression |
 | `test_www_render_runtime.js` | Runtime fail-safe, UI render, input gates, allergy, scalp, target_direction, length/density/thickness, third-zone isolation, FAILSAFE-*, PERSIST-* |
 | `test_www_business_scenarios.js` | End-to-end business scenarios: henna/metals BLOCKED, Special Blond MANUAL_REQUIRED, grey coverage, damage signals, approved clean path |
 | `test_www_mass_model.js` | 2-zone mass model, powder surcharge, buildThreeZoneMassCandidate diagnostic isolation, NaN guards |

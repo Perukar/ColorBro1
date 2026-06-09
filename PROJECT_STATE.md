@@ -1,14 +1,14 @@
 # PROJECT_STATE — PERUKAR
 
 **Last updated:** 2026-06-09
-**Updated by:** RALFBOT — AUTONOMOUS_BOUNDED_DOC_SYNC (Roadmap and project state sync v1)
+**Updated by:** RALFBOT — AUTONOMOUS_BOUNDED_TEST_COVERAGE (Input boundary fuzz v1)
 
 ---
 
 ## 0. Current HEAD
 
-**HEAD:** `d501069 Expand render forbidden-field coverage`
-**origin/main:** `d501069` (in sync)
+**HEAD:** `5bd506a Sync roadmap and project state` (pre-fuzz-task commit; pending commit for this task)
+**origin/main:** `5bd506a` (in sync)
 **Branch:** `main`
 
 ---
@@ -41,7 +41,8 @@ The safety foundation phase is **in progress**. All committed work is on `main`.
 | `b2645ef` | Add production readiness index |
 | `94a6b23` | Add real browser smoke test (Playwright Chromium) |
 | `413ced8` | Fix real browser smoke internal field handling (render sanitization) |
-| `d501069` | Expand render forbidden-field coverage (Node render-runtime regression tests) |
+| `5bd506a` | Sync roadmap and project state |
+| *(pending)* | Add input boundary fuzz coverage (target_direction enum gate fix + fuzz test) |
 
 ### Recently completed blocks
 
@@ -52,6 +53,7 @@ The safety foundation phase is **in progress**. All committed work is on `main`.
 5. Real browser Playwright smoke — 8 end-to-end Chromium scenarios
 6. Internal field render sanitization — buildWwwRenderState narrow reasons guard
 7. Render forbidden-field coverage expansion — 6 Node render-runtime regression tests
+8. Input boundary fuzz coverage — target_direction enum gate fix + test_www_input_boundary_fuzz.js (7 groups)
 
 ---
 

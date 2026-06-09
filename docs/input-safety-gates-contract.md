@@ -19,6 +19,8 @@ Input safety gate series: **PASS**. Full test matrix green on all four test suit
 - `1ef1fd5` Require target direction for production gate
 - `2aa62fa` Add length density thickness production gate
 - `f60665b` Reject unknown hair mass enum values
+- `5bd506a` Sync roadmap and project state (HEAD before boundary fuzz task)
+- *(pending)* Add input boundary fuzz coverage + target_direction enum gate
 
 ## System identity
 
@@ -79,13 +81,29 @@ that allows a missing field to reach an `APPROVED + productionReady=true` state.
 
 ## Target direction gate
 
-| `target_direction` value | Behavior   |
-|--------------------------|------------|
-| missing / empty          | `BLOCKED`  |
-| present and valid        | May continue |
+| `target_direction` value               | Behavior   |
+|----------------------------------------|------------|
+| missing / empty                        | `BLOCKED`  |
+| present and in allowed set (see below) | May continue |
+| present but NOT in allowed set         | `BLOCKED`  |
 
 A production recipe requires an explicit target direction. No direction means no
-executable recipe.
+executable recipe. Any non-empty value that is not in the allowed set is treated as
+unrecognized critical input and produces `BLOCKED` — not `MANUAL_REQUIRED`, not a
+silent default.
+
+### Allowed target_direction values (production enum)
+
+`'0'`, `'1'`, `'11'`, `'16'`, `'2'`, `'3'`, `'32'`, `'4'`, `'5'`, `'6'`, `'7'`, `'81'`, `'89'`
+
+These correspond to tonal directions defined in `www/index.html`. Any value outside
+this set (including free-text, emoji, or arbitrary strings) must produce `BLOCKED`.
+
+**Confirmed fail-open defect fixed (boundary fuzz task):** Before this fix,
+`target_direction='invalid_xyz'` produced `approved-recipe` output. The missing-field
+check only tested for empty string, so any non-empty garbage string passed through
+and produced an APPROVED recipe with a nonsensical color code (e.g., `9.invalid_xyz`).
+The enum gate now guards this.
 
 ## Hair mass input gates (length / density / thickness)
 
@@ -124,6 +142,24 @@ status === 'APPROVED' && productionReady === true
 as the final condition before any executable output is rendered. Both layers must
 remain independently enforced.
 
+## Input coercion behavior (documented, not a gate failure)
+
+The following coercions are **documented expected behavior**, not fail-open defects.
+They produce valid parsed values and may result in APPROVED output for a clean fixture.
+Do NOT add blocking gates for these — they are valid paths.
+
+| Raw input | `parseInt()` result | Level | Notes |
+|-----------|-------------------|-------|-------|
+| `'7,5'`   | 7                 | Valid | Decimal comma; parseInt stops at comma |
+| `'7.5'`   | 7                 | Valid | Decimal dot; parseInt stops at dot |
+| `' 7 '`   | 7                 | Valid | Whitespace trimmed by parseInt |
+| `'07'`    | 7                 | Valid | Leading zero; base-10 parse |
+| `['7']`   | 7                 | Valid | Array coerces to `'7'` via String |
+
+For enum fields (density, thickness, length, target_direction), `String([])` = `''`
+(empty, treated as missing → BLOCKED) and `String({})` = `'[object Object]'`
+(non-empty, treated as unrecognized → BLOCKED). These are also expected behaviors.
+
 ## What must never be produced for unsafe input states
 
 - `approved-recipe` (recipe block / CSS class)
@@ -137,6 +173,11 @@ or missing required fields.
 
 ## Tests protecting this contract
 
+- `test_www_input_boundary_fuzz.js` — **boundary and fuzz coverage** (added in
+  boundary fuzz task). Seven groups: numeric level boundaries, enum boundaries,
+  localized input, object/array injection, prototype-ish key pollution, render
+  NaN/Infinity, canonical clean control. Includes regression for target_direction
+  enum gate. Must be run as part of the full test matrix.
 - `test_www_render_runtime.js` — render gates, production readiness, input gate
   behavior at the render layer.
 - `test_www_business_scenarios.js` — end-to-end `calculateProtocol` scenarios
@@ -160,13 +201,15 @@ The full test matrix must pass before any such change is committed:
 
 ```
 node --check www/core.js
-node --check test_www_render_runtime.js
+node --check test_www_input_boundary_fuzz.js
 node --check test_www_business_scenarios.js
 node --check test_www_mass_model.js
 node --check test_www_mapping.js
-node test_www_render_runtime.js
+node --check test_www_render_runtime.js
+node test_www_input_boundary_fuzz.js
 node test_www_business_scenarios.js
 node test_www_mass_model.js
 node test_www_mapping.js
+node test_www_render_runtime.js
 git diff --check
 ```

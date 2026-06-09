@@ -299,3 +299,25 @@ Before changing any input field name, removing a legacy field, or changing how a
 | `INPUT-HELPER-NORMALIZE-TEXT` | `normalizeTextInput` trims whitespace correctly |
 | `INPUT-HELPER-CLASSIFY-MISSING` | `classifyMissingInput` identifies empty/present correctly |
 | `INPUT-HELPER-NORMALIZE-ENUM` | `normalizeEnumInput` matches allowed set correctly |
+
+### Tests added in boundary fuzz task (test_www_input_boundary_fuzz.js)
+
+Fuzz test groups and invariants:
+
+| Group | Coverage |
+|---|---|
+| GROUP 1: Numeric level boundaries | NaN-coercing inputs (abc, null, [], {}) → BLOCKED; coercion-to-valid (7,5 → 7) documented; out-of-range (-1, 0, 11, 99) → MANUAL_REQUIRED |
+| GROUP 2: Enum boundary values | Unknown/object/array for density/thickness/length → BLOCKED; allergy unknown → MANUAL_REQUIRED; scalp irritated → BLOCKED |
+| GROUP 3: Localized/whitespace input | Non-breaking space, tab, newline in enum fields → BLOCKED; decimal comma/dot levels → coercion documented |
+| GROUP 4: Object/array injection | Object/array for level fields (NaN-coercing only) → BLOCKED; BLOCKED diagnostic messages may quote `[object Object]` |
+| GROUP 5: Prototype-ish key pollution | Suspicious field names do not pollute Object.prototype |
+| GROUP 6: Render NaN/Infinity | NaN/±Infinity mass values do not produce `approved-recipe` or render as literal text |
+| GROUP 7: Canonical clean control | 7→7 with target_direction=1 produces APPROVED (regression guard) |
+| REGRESSION | target_direction='invalid_xyz' (previously APPROVED) now BLOCKED |
+
+**Coercion behaviors documented in GROUP 1/3 (not gated, not fail-open):**
+- `'7,5'` → parseInt → 7 (valid level; decimal comma coercion)
+- `'7.5'` → parseInt → 7 (valid level; decimal dot coercion)
+- `' 7 '` → parseInt → 7 (whitespace; parseInt trims)
+- `'07'` → parseInt → 7 (leading zero; base-10)
+- `['7']` → String → `'7'` → parseInt → 7 (single-element array coercion)

@@ -1751,16 +1751,20 @@ const pigmentMap = {
                     return;
                 }
 
-                // LENGTH / DENSITY / THICKNESS UNRECOGNIZED-VALUE GATE (one grouped gate = one commit)
-                // Policy: present-but-unrecognized values for length, density, thickness MUST produce BLOCKED,
+                // LENGTH / DENSITY / THICKNESS / TARGET_DIRECTION UNRECOGNIZED-VALUE GATE
+                // Policy: present-but-unrecognized values for these fields MUST produce BLOCKED,
                 // never MANUAL_REQUIRED and never a silent default. These are required production fields;
                 // an out-of-enum value is treated as invalid critical production input, not as a safe default.
+                // target_direction is now guarded here: unknown non-empty tDir must not silently produce
+                // an APPROVED recipe with a nonsensical color code.
                 const allowedLengthValues = new Set(['короткие', 'средние', 'длинные']);
                 const allowedDensityValues = new Set(['редкие', 'средние', 'густые']);
                 const allowedThicknessValues = new Set(['тонкие', 'средние', 'толстые']);
+                const allowedTargetDirectionValues = new Set(['0', '1', '11', '16', '2', '3', '32', '4', '5', '6', '7', '81', '89']);
                 const lengthTrimmed = String(length || '').trim();
                 const densityTrimmed = String(density || '').trim();
                 const thicknessTrimmed = String(thickness || '').trim();
+                const tDirTrimmed = String(tDir || '').trim();
                 const unrecognizedCriticalFields = [];
                 if (lengthTrimmed && !allowedLengthValues.has(lengthTrimmed)) {
                     unrecognizedCriticalFields.push('довжина волосся: "' + lengthTrimmed + '"');
@@ -1771,6 +1775,9 @@ const pigmentMap = {
                 if (thicknessTrimmed && !allowedThicknessValues.has(thicknessTrimmed)) {
                     unrecognizedCriticalFields.push('товщина волосся: "' + thicknessTrimmed + '"');
                 }
+                if (tDirTrimmed && !allowedTargetDirectionValues.has(tDirTrimmed)) {
+                    unrecognizedCriticalFields.push('бажаний відтінок: "' + tDirTrimmed + '"');
+                }
                 if (unrecognizedCriticalFields.length > 0) {
                     const state = buildWwwRenderState({
                         status: 'BLOCKED',
@@ -1779,10 +1786,10 @@ const pigmentMap = {
                             'Нерозпізнані критичні значення (поза дозволеним переліком): ' + unrecognizedCriticalFields.join(', ') + '.'
                         ],
                         warnings: [
-                            'Фінальний рецепт не може бути підтверджений з нерозпізнаними значеннями довжини, густоти або товщини.'
+                            'Фінальний рецепт не може бути підтверджений з нерозпізнаними значеннями довжини, густоти, товщини або бажаного відтінку.'
                         ],
                         diagnostics: [
-                            'Оберіть лише дозволені варіанти для довжини, густоти та товщини. Значення поза переліком не приймається як безпечне за замовчуванням.'
+                            'Оберіть лише дозволені варіанти. Значення поза переліком не приймається як безпечне за замовчуванням.'
                         ],
                         reasons: {
                             unrecognized_critical_inputs: true,

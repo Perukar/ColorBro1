@@ -33,7 +33,7 @@ The following are fully implemented and active in production:
 | Allergy gate | **ACTIVE** — `yes` → BLOCKED; unknown/empty → MANUAL_REQUIRED |
 | Scalp sensitivity gate | **ACTIVE** — `irritated` → BLOCKED; non-normal → MANUAL_REQUIRED |
 | Length/density/thickness enum gate | **ACTIVE** — missing or unrecognized → BLOCKED |
-| Target direction gate | **ACTIVE** — missing/empty → BLOCKED |
+| Target direction gate | **ACTIVE** — missing/empty → BLOCKED; unrecognized non-empty value → BLOCKED (enum gate added in boundary fuzz task) |
 | Powder surcharge | **ACTIVE** — rootMass × 1.6 applied post-mass-model, min 40g |
 | Brand gate | **ACTIVE** — `hasBrandRuleMatrix = false` → sensitive formulas MANUAL_REQUIRED |
 | Input normalization | **ACTIVE** — `normalizeTextInput()` trims condition at read time |
