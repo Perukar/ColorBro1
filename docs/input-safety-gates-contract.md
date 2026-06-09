@@ -130,6 +130,24 @@ production readiness. No silent fallback may produce an executable recipe.
 Any value outside these allowed sets must result in `BLOCKED` — not `MANUAL_REQUIRED`,
 not a default substitution, and not a silent pass-through.
 
+### Parameter roles (mass vs timing)
+
+Beyond gating, the three fields have distinct production roles, locked by
+`test_www_hair_parameter_contract.js`:
+
+- `density` — mass multiplier (0.7 / 1.0 / 1.5); does NOT affect timing.
+- `length` — base mass (30 / 60 / 120 g); does NOT affect timing.
+- `thickness` — timing modifier / diagnostic only; does NOT affect mass.
+
+### Absent parameters: structure / curl
+
+`structure` and `curl` are NOT part of the current contract: not gathered, not
+normalized, not read by `calculateProtocol()`, not gated, not rendered. This
+absence is tested as current implementation reality (see the contract test
+below, group 8). Future implementation requires an explicit product/design
+contract and dedicated tests first, and does not by itself equal full
+salon-ready logic.
+
 ## Relationship to render safety contract
 
 Input gates and render gates are complementary layers. Even if input gate logic were
@@ -185,6 +203,9 @@ or missing required fields.
 - `test_www_mass_model.js` — mass model gate: length/density/thickness required,
   unknown enum values blocked, NaN-free paths.
 - `test_www_mapping.js` — render-state mapping.
+- `test_www_hair_parameter_contract.js` — **hair parameter contract** (density/
+  length mass, thickness timing, structure/curl absence). Integration-level, 10
+  reported groups. Must be run as part of the full test matrix.
 
 ## Do not change without tests
 

@@ -300,6 +300,23 @@ Before changing any input field name, removing a legacy field, or changing how a
 | `INPUT-HELPER-CLASSIFY-MISSING` | `classifyMissingInput` identifies empty/present correctly |
 | `INPUT-HELPER-NORMALIZE-ENUM` | `normalizeEnumInput` matches allowed set correctly |
 
+### Tests added in hair parameter contract task (test_www_hair_parameter_contract.js)
+
+Integration-level contract test loading the real `www/core.js`. Ten reported groups:
+
+| Group | What it locks |
+|---|---|
+| 1. density mass | density drives the mass multiplier (0.7 / 1.0 / 1.5) |
+| 2. length mass | length drives the base mass (30 / 60 / 120) |
+| 3. density×length matrix | full 3×3 product of rendered recipe masses |
+| 4. thickness timing | thickness adjusts the timing diagnostic (тонкие → скорочено, толстые → збільшено) |
+| 5. thickness not mass | thickness never changes recipe mass |
+| 6. density/length not timing | density/length never add a timing-adjustment diagnostic |
+| 7. unknown gates | empty and out-of-enum density/thickness/length → BLOCKED, field named |
+| 8. structure/curl absence | structure/curl absent at mapping, runtime DOM read, and source level |
+| 9. UI/core alignment | gather + normalize preserve/trim the three fields; calculateProtocol reads the same ids |
+| 10. clean control | valid baseline → APPROVED with a mass-bearing recipe, no spurious gate |
+
 ### Tests added in boundary fuzz task (test_www_input_boundary_fuzz.js)
 
 Fuzz test groups and invariants:
@@ -321,3 +338,27 @@ Fuzz test groups and invariants:
 - `' 7 '` → parseInt → 7 (whitespace; parseInt trims)
 - `'07'` → parseInt → 7 (leading zero; base-10)
 - `['7']` → String → `'7'` → parseInt → 7 (single-element array coercion)
+
+---
+
+## 16. Hair parameter roles and absent parameters (structure / curl)
+
+### 16.1 Roles of density / length / thickness
+
+These three required enum fields have distinct, non-overlapping effects on the production output. The split is locked by `test_www_hair_parameter_contract.js`:
+
+| Field | Effect | Not |
+|---|---|---|
+| `density` | Mass multiplier in `buildMassModel()` — 0.7 / 1.0 / 1.5 | Does NOT affect timing |
+| `length` | Base mass in `buildMassModel()` — 30 / 60 / 120 g | Does NOT affect timing |
+| `thickness` | Timing modifier / diagnostic only (тонкие → shorten, толстые → increase) | Does NOT affect mass |
+
+**Rule:** `density` and `length` are mass-bearing and timing-neutral. `thickness` is timing-only and mass-neutral. Future work must not couple `thickness` into the mass model or `density`/`length` into timing without updating this contract and its test.
+
+### 16.2 structure / curl are absent (current implementation reality)
+
+`structure` and `curl` (and `texture` / `wave`) are **not part of the current UI/core contract**. They are not gathered by `PerucarWwwMappingV1`, not present in `wwwValues` / `rawInput`, not read by `calculateProtocol()`, not gated, and not rendered.
+
+This absence is now an explicitly tested current-implementation reality (`test_www_hair_parameter_contract.js`, group 8: mapping keys, runtime DOM reads, and source-level `getWwwValue`/`getElementById` checks). The test exists so that any future introduction of these parameters is a deliberate, test-visible contract change rather than silent drift.
+
+**Future activation of structure/curl requires an explicit product/design contract and dedicated tests before any code wires them.** Adding these parameters does NOT, by itself, equal full salon-ready coloristic logic — it is one input dimension, not a substitute for expert judgment.

@@ -262,6 +262,7 @@ must not be silently removed or glossed over in future work:
 | Powder surcharge accuracy | Ratio ×1.6 applied, min 40g; accuracy depends on brand-specific data | Over/under-dosing risk if used with premium powder brands without brand matrix |
 | G1 gap dependency | `condition='пористі'` does not independently feed `hasHighPorositySignal`; safety relies on brand gate | If brand matrix enabled without adding standalone `condition` porous + SB guard, G1 gap re-opens |
 | No production endsRec mass allocation | `classifyProductionEndsRecMassAllocationContract` exists but cannot return READY | Future activation requires `validateProductionEndsRecReadiness()` to pass (currently impossible) |
+| structure / curl absent | Not gathered, normalized, read, gated, or rendered; tested as absent (`test_www_hair_parameter_contract.js` group 8) | Activating requires explicit product/design contract + dedicated tests; does not equal full salon-ready logic |
 
 ---
 
@@ -329,6 +330,7 @@ These test files must all pass before any commit that touches safety domains:
 | `test_www_business_scenarios.js` | End-to-end business scenarios: henna/metals BLOCKED, Special Blond MANUAL_REQUIRED, grey coverage, damage signals, approved clean path |
 | `test_www_mass_model.js` | 2-zone mass model, powder surcharge, buildThreeZoneMassCandidate diagnostic isolation, NaN guards |
 | `test_www_mapping.js` | Formula/oxidizer mapping correctness |
+| `test_www_hair_parameter_contract.js` | Hair parameter contract: density/length mass-bearing, thickness timing-only, density/length timing-neutral, structure/curl absence (integration-level, 10 groups) |
 | `test_www_browser_smoke.js` | Browser page structure, global wiring, gate smoke paths, persistence infrastructure (32 tests) |
 | `test_www_production_readiness_index.js` | Readiness index document existence, required section presence, key invariant strings |
 

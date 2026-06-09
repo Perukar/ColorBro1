@@ -472,3 +472,47 @@ In the Linux sandbox (RALFBOT, CI environments with network restriction), Chromi
 ### Tests
 
 - `test_www_real_browser_smoke.js` (Playwright Chromium, 8 scenarios, Windows only)
+
+---
+
+## 17. Absent input parameters: structure / curl
+
+### Current reality
+
+`structure` and `curl` (hair structure / curl pattern) are **not implemented** in
+the current UI/core contract. They are:
+
+- not gathered by `PerucarWwwMappingV1.gatherWwwFormData()`
+- not present in `wwwValues` or `rawInput`
+- not read by `calculateProtocol()` (no `getElementById('structure'|'curl')`)
+- not gated, and not rendered
+
+This is a deliberate boundary, not a bug — the system currently models hair
+quantity (density, length, thickness) but not hair structure or curl pattern.
+
+### Hair parameter roles (for contrast)
+
+| Field | Role | Mass | Timing |
+|---|---|---|---|
+| `density` | mass multiplier 0.7 / 1.0 / 1.5 | yes | no |
+| `length` | base mass 30 / 60 / 120 g | yes | no |
+| `thickness` | timing modifier / diagnostic | no | yes |
+| `structure` / `curl` | — | absent | absent |
+
+`thickness` affects timing only and never mass; `density`/`length` affect mass
+only and never timing. structure/curl affect nothing because they do not exist.
+
+### Tested as current implementation reality
+
+`test_www_hair_parameter_contract.js` (group 8) locks the structure/curl absence
+at three layers: mapping output keys, runtime DOM reads, and source-level
+`getWwwValue`/`getElementById` checks. Any future code that wires these fields
+will fail this group — by design.
+
+### Activation condition (future-forbidden without contract + tests)
+
+Future implementation of structure/curl requires an **explicit product/design
+contract** defining their coloristic effect, followed by dedicated regression
+tests, before any code wires them. Adding these parameters does NOT by itself
+equal full salon-ready coloristic logic — it would be one additional input
+dimension, not a substitute for expert judgment.

@@ -43,6 +43,7 @@ The safety foundation phase is **in progress**. All committed work is on `main`.
 | `413ced8` | Fix real browser smoke internal field handling (render sanitization) |
 | `5bd506a` | Sync roadmap and project state |
 | *(pending)* | Add input boundary fuzz coverage (target_direction enum gate fix + fuzz test) |
+| *(pending)* | Add hair parameter contract tests v1 (density/length mass, thickness timing, structure/curl absence) — test-only + docs sync, no runtime change |
 
 ### Recently completed blocks
 
@@ -54,6 +55,7 @@ The safety foundation phase is **in progress**. All committed work is on `main`.
 6. Internal field render sanitization — buildWwwRenderState narrow reasons guard
 7. Render forbidden-field coverage expansion — 6 Node render-runtime regression tests
 8. Input boundary fuzz coverage — target_direction enum gate fix + test_www_input_boundary_fuzz.js (7 groups)
+9. Hair parameter contract v1 — test_www_hair_parameter_contract.js (10 groups, integration-level): density/length mass-bearing, thickness timing-only, density/length timing-neutral, structure/curl absence. Test-only; no runtime change. Docs synced (input-model, input-safety-gates, known-limitations §17, production-readiness-index).
 
 ---
 
@@ -121,12 +123,14 @@ node --check test_www_render_runtime.js
 node --check test_www_browser_smoke.js
 node --check test_www_production_readiness_index.js
 node --check test_www_real_browser_smoke.js
+node --check test_www_hair_parameter_contract.js
 node test_www_business_scenarios.js
 node test_www_mass_model.js
 node test_www_mapping.js
 node test_www_render_runtime.js
 node test_www_browser_smoke.js
 node test_www_production_readiness_index.js
+node test_www_hair_parameter_contract.js
 git diff --check
 ```
 
