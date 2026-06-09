@@ -264,6 +264,62 @@ const GROUPS = [
         assertManualOrBlocked(getOutputHtml(CORE, SB), 'SB MANUAL'); assertNoExactGrams(getOutputHtml(CORE, SB), 'SB');
         // Baseline timing total for clean 7->7 stays 40 (permanent, tMod 0) — unchanged by refactor.
         assert.strictEqual(timingTotal(getOutputHtml(CORE, makeFixture())), 40, 'baseline timing unchanged');
+    }],
+
+    ['16. grey .00 base-validity uses structured metadata (process label rename)', function () {
+        // grey>=50 at 6%: brand-sensitivity fires via meta.usesDoubleNaturalBase, which is
+        // set only when the grey base-validity check passes. Renaming the "Перманент"
+        // display label must NOT disable it (meta.processCategory drives it).
+        const GREY = makeFixture({ root_level: '6', length_level: '6', target_level: '7', target_direction: '1', grey_percent: '50', grey_type: 'мягкая' });
+        assertManualOrBlocked(getOutputHtml(CORE, GREY), 'grey normal');
+        assertIncludes(getOutputHtml(CORE, GREY), 'Brand rule matrix', 'grey normal must cite brand gate (.00 base)');
+        const MUT = mutate('process: "Перманент"', 'process: "Permanent"');
+        const h = getOutputHtml(MUT, GREY);
+        assertManualOrBlocked(h, 'grey perm-label renamed');
+        assertNoApproved(h, 'grey perm-label renamed');
+        assertNoExactGrams(h, 'grey perm-label renamed');
+        assertIncludes(h, 'Brand rule matrix', 'grey brand gate must hold via meta.processCategory after label rename');
+    }],
+
+    ['17. grey ox classification uses structured oxidizer percent', function () {
+        // Decorate the ox display text; meta.oxidizerPercent (6/9) must keep grey validity.
+        const GREY = makeFixture({ root_level: '6', length_level: '6', target_level: '7', target_direction: '1', grey_percent: '50', grey_type: 'мягкая' });
+        const MUT = mutate('ox: oxChoice', 'ox: ("OX:" + oxChoice)');
+        const h = getOutputHtml(MUT, GREY);
+        assertManualOrBlocked(h, 'grey ox-decorated');
+        assertNoApproved(h, 'grey ox-decorated');
+        assertIncludes(h, 'Brand rule matrix', 'grey brand gate must hold via meta.oxidizerPercent after ox label decoration');
+        for (const f of META_FIELDS) assertNotIncludes(h, f, 'grey ox-decorated meta must not leak');
+    }],
+
+    ['18. fallback remains compatible (legacy recipe without meta)', function () {
+        // A legacy-style permanent recipe lacking meta but with old text still classifies
+        // as grey-valid via the text fallback. Exercise getBaseProcessTiming + the grey
+        // validity path indirectly through the render layer on a hand-built state is not
+        // possible here; instead assert the source keeps an OR text fallback for both
+        // process and ox in the grey-validity expression.
+        assert.ok(/processCategory === 'permanent'\) \|\| String\(rootRec\.process\)\.includes\("Перманент"\)/.test(CORE),
+            'grey validity must keep permanent text fallback');
+        assert.ok(/indexOf\(rootRec\.meta\.oxidizerPercent\) !== -1\) \|\| \["6%", "9%", "12%"\]\.includes\(rootRec\.ox\)/.test(CORE),
+            'grey validity must keep ox text fallback');
+    }],
+
+    ['19. behavior regression control (grey)', function () {
+        const GREY = makeFixture({ root_level: '6', length_level: '6', target_level: '7', target_direction: '1', grey_percent: '50', grey_type: 'мягкая' });
+        const h = getOutputHtml(CORE, GREY);
+        assertManualOrBlocked(h, 'grey>=50 still gated');
+        assertNoExactGrams(h, 'grey>=50');
+        assertIncludes(h, '.00', 'grey>=50 still injects .00 base');
+        assert.strictEqual(status(getOutputHtml(CORE, makeFixture())).split(' ')[0], 'APPROVED', 'clean 7->7 APPROVED');
+        // production mass model remains 2-zone in a rendered mass block (MANUAL grey shows mode 2-zone)
+        assertIncludes(h, '&quot;mode&quot;: &quot;2-zone&quot;', 'mass model remains 2-zone');
+    }],
+
+    ['20. no meta leak (grey states)', function () {
+        const GREY = makeFixture({ root_level: '6', length_level: '6', target_level: '7', target_direction: '1', grey_percent: '50', grey_type: 'мягкая' });
+        for (const h of [getOutputHtml(CORE, GREY), getOutputHtml(CORE, makeFixture()), getOutputHtml(CORE, makeFixture({ allergy: 'yes' }))]) {
+            for (const f of META_FIELDS) assertNotIncludes(h, f, 'meta must not leak (grey)');
+        }
     }]
 ];
 

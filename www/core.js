@@ -2044,7 +2044,7 @@ const pigmentMap = {
                     else if (grey >= 50) {
                         warnings.push("⚠️ ЗАБОРОНА SPECIAL BLOND: Сивина >= 50%. Призначено класичний перманент по довжині для щільного покриття.");
                         let oxChoice = lStep >= 3 ? "9%" : "6%";
-                        lenRec = withMeta('permanent', null, {process: "Перманент", dye: `Барвник ${tDye}`, ox: oxChoice, mass: lMass, ratio: "1:1"});
+                        lenRec = withMeta('permanent', lStep >= 3 ? 9 : 6, {process: "Перманент", dye: `Барвник ${tDye}`, ox: oxChoice, mass: lMass, ratio: "1:1"});
                     }
                     else if (lStep >= 4) lenRec = withMeta('special_blond', 12, {process: "Special Blond", dye: `S.B. ${tDye}`, ox: "12%", mass: lMass, ratio: "1:2"});
                     else if (lStep >= 2) lenRec = withMeta('special_blond', 9, {process: "Special Blond", dye: `S.B. ${tDye}`, ox: "9%", mass: lMass, ratio: "1:2"});
@@ -2059,7 +2059,7 @@ const pigmentMap = {
                     } else if (grey >= 50) {
                         warnings.push("⚠️ ЗАБОРОНА SPECIAL BLOND: Сивина >= 50%. Призначено класичний перманент для щільного покриття.");
                         let oxChoice = rStep >= 3 ? "9%" : "6%";
-                        rootRec = withMeta('permanent', null, {process: "Перманент", dye: `Барвник ${tDye}`, ox: oxChoice, mass: rMass, ratio: "1:1"});
+                        rootRec = withMeta('permanent', rStep >= 3 ? 9 : 6, {process: "Перманент", dye: `Барвник ${tDye}`, ox: oxChoice, mass: rMass, ratio: "1:1"});
                     } else if (rStep >= 4) {
                         rootRec = withMeta('special_blond', 12, {process: "Special Blond", dye: `S.B. ${tDye}`, ox: "12%", mass: rMass, ratio: "1:2"});
                     } else if (rStep >= 2) {
@@ -2088,8 +2088,8 @@ const pigmentMap = {
 
                 // ПАТЧ: Попередження для 30% сивини
                 if (grey >= 30 && grey < 50) {
-                    let isValidRootGrey = rootRec && String(rootRec.process).includes("Перманент") && ["6%", "9%", "12%"].includes(rootRec.ox);
-                    let isValidLenGrey = lenRec && String(lenRec.process).includes("Перманент") && ["6%", "9%", "12%"].includes(lenRec.ox);
+                    let isValidRootGrey = rootRec && ((rootRec.meta && rootRec.meta.processCategory === 'permanent') || String(rootRec.process).includes("Перманент")) && ((rootRec.meta && [6, 9, 12].indexOf(rootRec.meta.oxidizerPercent) !== -1) || ["6%", "9%", "12%"].includes(rootRec.ox));
+                    let isValidLenGrey = lenRec && ((lenRec.meta && lenRec.meta.processCategory === 'permanent') || String(lenRec.process).includes("Перманент")) && ((lenRec.meta && [6, 9, 12].indexOf(lenRec.meta.oxidizerPercent) !== -1) || ["6%", "9%", "12%"].includes(lenRec.ox));
 
                     if (isValidRootGrey || isValidLenGrey) {
                         warnings.push("⚠️ СИВИНА 30-49%: Система не додає базу .00 автоматично. Можлива прозорість або недостатнє покриття. За потреби, додайте базу самостійно (напр. 1/4 маси).");
@@ -2108,8 +2108,8 @@ const pigmentMap = {
 
                     // Перевіряємо, чи це справжній перманент здатний розпушити сивину (6%, 9% або 12%)
                     // Якщо це тонування на 1.9%, 3% або 4% — додавання бази .00 заборонено (сивина або знебарвлена, або не візьметься)
-                    let isValidRootGrey = rootRec && String(rootRec.process).includes("Перманент") && ["6%", "9%", "12%"].includes(rootRec.ox);
-                    let isValidLenGrey = lenRec && String(lenRec.process).includes("Перманент") && ["6%", "9%", "12%"].includes(lenRec.ox);
+                    let isValidRootGrey = rootRec && ((rootRec.meta && rootRec.meta.processCategory === 'permanent') || String(rootRec.process).includes("Перманент")) && ((rootRec.meta && [6, 9, 12].indexOf(rootRec.meta.oxidizerPercent) !== -1) || ["6%", "9%", "12%"].includes(rootRec.ox));
+                    let isValidLenGrey = lenRec && ((lenRec.meta && lenRec.meta.processCategory === 'permanent') || String(lenRec.process).includes("Перманент")) && ((lenRec.meta && [6, 9, 12].indexOf(lenRec.meta.oxidizerPercent) !== -1) || ["6%", "9%", "12%"].includes(lenRec.ox));
 
                     if (isValidRootGrey || isValidLenGrey) {
                         diagnostics.push(`Сивина >=50%. Впроваджено базу ${dLevel}.00 (Тільки для Перманенту >= 6%).`);

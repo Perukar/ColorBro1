@@ -564,11 +564,12 @@ localizing a recipe label (`process` / `dye` / `ox`) cannot silently disable a g
   `getBaseProcessTiming` (process base minutes) now read `recipe.meta` first
   (text fallback retained). A process-label rename no longer changes corrector
   neutralisation or base timing for internally-built recipes.
-- **Remaining text dependence (low risk, non-safety-block):** the grey `>=50`
-  base-`.00` validity check still reads `process.includes("Перманент")` + the ox
-  display set to decide base injection. The grey brand gate it feeds is already
-  meta-driven (`usesDoubleNaturalBase`); a rename there would skip base injection,
-  not produce an unsafe approved recipe. Candidate for a future pass.
+- **Grey base-validity now meta-first:** the grey `>=50` base-`.00` validity check
+  reads `meta.processCategory === 'permanent'` and numeric `meta.oxidizerPercent`
+  (∈ {6,9,12}) first; the grey-perm recipe now carries a numeric `oxidizerPercent`
+  (6/9). Display `process`/`ox` text is fallback only. Renaming a label no longer
+  disables grey base injection / grey brand sensitivity. Locked by
+  `test_www_structured_safety_flags.js` groups 16–20.
 - This refactor added no formula/mass/timing production change, did not enable the
   brand matrix, and left 3-zone / endsRec / `endsMass: null` unchanged.
 

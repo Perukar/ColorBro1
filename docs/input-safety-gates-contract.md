@@ -156,7 +156,9 @@ formula-assembly branch), not user-facing display strings:
 
 - `meta.isPowder` / `isSpecialBlond` / `isToning` / `usesDoubleNaturalBase` —
   gate the brand-sensitive MANUAL_REQUIRED decision and the powder mass surcharge.
-- `meta.oxidizerPercent` (numeric) — drives the high-oxidizer (≥9%) gate.
+- `meta.oxidizerPercent` (numeric) — drives the high-oxidizer (≥9%) gate and the
+  grey `.00` base-validity check (permanent + oxidizer ∈ {6,9,12}); display labels
+  are fallback only.
 - Display labels (`recipe.process` / `recipe.dye` / `recipe.ox`) are **not**
   safety-critical inputs: renaming/localizing a label cannot silently disable a gate.
 - A legacy text-marker check remains only as a fallback when `meta` is absent;
