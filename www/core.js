@@ -424,8 +424,18 @@ const pigmentMap = {
             renderStatusHeader(state) {
                 if (!state) return '';
                 const status = state.status || 'UNKNOWN';
+                // Honesty gloss: APPROVED means the calculation passed software gates,
+                // NOT that the result is chemically/medically safe or cleared to apply.
+                const gloss = (status === 'APPROVED') ? ' — розрахунок дозволено (не гарантія безпеки)' : '';
                 const target = state.target ? ` | Ціль: ${this.escapeHtml(typeof state.target === 'string' ? state.target : JSON.stringify(state.target))}` : '';
-                return `<div class="status-header"><h2>${this.escapeHtml(status)}${target}</h2></div>`;
+                return `<div class="status-header"><h2>${this.escapeHtml(status)}${gloss}${target}</h2></div>`;
+            },
+
+            // Honesty caveat rendered only on the production-ready APPROVED path,
+            // directly alongside the executable recipe. Output text only — no logic.
+            renderApprovedCaveat(state) {
+                if (!this.canRenderExecutableRecipe(state)) return '';
+                return '<div class="approved-caveat"><p><b>⚠️ APPROVED = розрахунок пройшов програмні перевірки.</b> Це НЕ гарантія хімічної або медичної безпеки і НЕ дозвіл наносити без тесту-пасма, тесту на алерген і рішення майстра. Дотримуйтесь інструкцій виробника барвника та окисника.</p></div>';
             },
 
             renderStateToHtml(state) {
@@ -437,6 +447,7 @@ const pigmentMap = {
                     this.renderManualDecisions(state.manualDecisions),
                     this.renderWarnings(state.warnings),
                     this.renderStatusHeader(state),
+                    this.renderApprovedCaveat(state),
                     this.renderRecipes(state),
                     this.renderEndsDiagnosticDisplay(state.endsRecDiagnosticWiringCandidate),
                     hasPhases ? this.renderPhases(state.phases) : this.renderProtocolText(state.protocolText),

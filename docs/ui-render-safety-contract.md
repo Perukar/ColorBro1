@@ -57,9 +57,10 @@ When this gate passes:
 - `renderRecipes` calls `renderRecipe` with `{ approved: true }` → emits `class="recipe approved-recipe"` and includes `Фінальна формула`
 - `sanitizeMassModelForRender` returns the full massModel (exact masses visible)
 - `sanitizeTimingInfoForRender` returns production timing
+- `renderApprovedCaveat` emits an `approved-caveat` block: APPROVED is **not** a chemical/medical safety guarantee and **not** permission to apply without strand test, allergy test, and master's decision; manufacturer instructions still apply. Rendered only on the production-ready APPROVED path. Locked by `test_www_output_honesty_copy.js`
 
 **What APPROVED renders:**
-- Status header: `<h2>APPROVED | Ціль: X.X</h2>`
+- Status header: `<h2>APPROVED — розрахунок дозволено (не гарантія безпеки) | Ціль: X.X</h2>` — the gloss makes explicit that APPROVED means the calculation passed software gates, not that the result is chemically/medically safe or cleared to apply
 - Recipe blocks with `approved-recipe` CSS class
 - Process, dye, oxidizer, mass, ratio, mixtone, finalFormula
 - Mass model with exact rootMass, lengthMass, totalMass

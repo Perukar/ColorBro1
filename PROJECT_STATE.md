@@ -44,6 +44,7 @@ The safety foundation phase is **in progress**. All committed work is on `main`.
 | `5bd506a` | Sync roadmap and project state |
 | *(pending)* | Add input boundary fuzz coverage (target_direction enum gate fix + fuzz test) |
 | *(pending)* | Add hair parameter contract tests v1 (density/length mass, thickness timing, structure/curl absence) — test-only + docs sync, no runtime change |
+| *(pending)* | Output honesty copy fix v1 (UI header/Block-1 wording + APPROVED gloss & safety caveat) + test_www_output_honesty_copy.js — render/UI text only, no formula change |
 
 ### Recently completed blocks
 
@@ -56,6 +57,7 @@ The safety foundation phase is **in progress**. All committed work is on `main`.
 7. Render forbidden-field coverage expansion — 6 Node render-runtime regression tests
 8. Input boundary fuzz coverage — target_direction enum gate fix + test_www_input_boundary_fuzz.js (7 groups)
 9. Hair parameter contract v1 — test_www_hair_parameter_contract.js (10 groups, integration-level): density/length mass-bearing, thickness timing-only, density/length timing-neutral, structure/curl absence. Test-only; no runtime change. Docs synced (input-model, input-safety-gates, known-limitations §17, production-readiness-index).
+10. Output honesty copy fix v1 — UI header "Colorist Auto-Pilot" → "Колорист-калькулятор (помічник майстра)"; Block 1 "Структура" → "Стан і параметри волосся"; APPROVED status gloss "розрахунок дозволено (не гарантія безпеки)" + renderApprovedCaveat block on the production-ready path. Render/UI text only — no formula/gating change. Locked by test_www_output_honesty_copy.js (6 groups). DOM/render touched → run real browser smoke on Windows before deploy.
 
 ---
 
@@ -124,6 +126,7 @@ node --check test_www_browser_smoke.js
 node --check test_www_production_readiness_index.js
 node --check test_www_real_browser_smoke.js
 node --check test_www_hair_parameter_contract.js
+node --check test_www_output_honesty_copy.js
 node test_www_business_scenarios.js
 node test_www_mass_model.js
 node test_www_mapping.js
@@ -131,6 +134,7 @@ node test_www_render_runtime.js
 node test_www_browser_smoke.js
 node test_www_production_readiness_index.js
 node test_www_hair_parameter_contract.js
+node test_www_output_honesty_copy.js
 git diff --check
 ```
 

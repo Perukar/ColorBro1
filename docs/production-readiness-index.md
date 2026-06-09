@@ -331,6 +331,7 @@ These test files must all pass before any commit that touches safety domains:
 | `test_www_mass_model.js` | 2-zone mass model, powder surcharge, buildThreeZoneMassCandidate diagnostic isolation, NaN guards |
 | `test_www_mapping.js` | Formula/oxidizer mapping correctness |
 | `test_www_hair_parameter_contract.js` | Hair parameter contract: density/length mass-bearing, thickness timing-only, density/length timing-neutral, structure/curl absence (integration-level, 10 groups) |
+| `test_www_output_honesty_copy.js` | Output honesty copy: no "Auto-Pilot" claim, honest Block 1 title, APPROVED gloss + safety caveat present on approved path and absent elsewhere, gating/mass unchanged (6 groups) |
 | `test_www_browser_smoke.js` | Browser page structure, global wiring, gate smoke paths, persistence infrastructure (32 tests) |
 | `test_www_production_readiness_index.js` | Readiness index document existence, required section presence, key invariant strings |
 
