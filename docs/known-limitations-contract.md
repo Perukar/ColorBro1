@@ -516,3 +516,34 @@ contract** defining their coloristic effect, followed by dedicated regression
 tests, before any code wires them. Adding these parameters does NOT by itself
 equal full salon-ready coloristic logic — it would be one additional input
 dimension, not a substitute for expert judgment.
+
+---
+
+## 18. Output honesty contract (all states)
+
+Output honesty is now locked across every user-facing state, not just the clean
+APPROVED path:
+
+- **APPROVED** carries an explicit caveat: passed software gates ≠ chemical/
+  medical safety guarantee and ≠ permission to apply without strand test,
+  allergy test, and master's decision; manufacturer instructions still apply.
+- **BLOCKED / MANUAL_REQUIRED / unknown-enum / brand-missing / ends-diagnostic**
+  render no `approved-recipe`, no exact recipe grams (`Маса:`), no
+  `dyeMass`/`oxidizerMass`, and no executable final formula.
+- **No apply-permission wording** ("можна наносити", "готово до нанесення",
+  "safe to apply", "без перевірки", "без рішення майстра", …) appears in any
+  state.
+- **No brand-specific formula** is claimed while `hasBrandRuleMatrix = false`;
+  no production 3-zone / endsRec recipe; `endsMass` stays null.
+- **Stale/persisted output** is never rendered as authoritative on load
+  (`#output` empty until a fresh `calculateProtocol()`); structure/curl are not
+  evaluated and not claimed to be.
+
+Exact grams remain approved-path only; unsafe/manual/diagnostic states are
+non-executable. This is an output-honesty guarantee — it still does **not** mean
+the system is full salon-ready coloristic logic.
+
+### Tests
+
+- `test_www_output_honesty_contract.js` (12 groups)
+- `test_www_output_honesty_copy.js` (6 groups)
