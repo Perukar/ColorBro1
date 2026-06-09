@@ -79,6 +79,47 @@ const mutate = (from, to) => { const m = CORE.split(from).join(to); assert.notSt
 function mixtoneBlock(html) { const m = html.match(/<h3>Мікстони<\/h3><pre>([\s\S]*?)<\/pre>/); return m ? m[1] : ''; }
 function timingTotal(html) { const m = html.match(/&quot;totalMinutes&quot;:\s*(\d+)/); return m ? Number(m[1]) : null; }
 
+// Capture the internal rootRec/lenRec objects that calculateProtocol passes to
+// buildWwwRenderState (a top-level global). VM-only wrap; the repo file is untouched.
+function captureRecipes(values) {
+    let out = '';
+    const storage = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
+    const sb = { console, localStorage: storage, sessionStorage: storage,
+        document: { getElementById(id) {
+            if (id === 'output') return { set innerHTML(v) { out = v; }, get innerHTML() { return out; } };
+            return { value: Object.prototype.hasOwnProperty.call(values, id) ? values[id] : '' };
+        } } };
+    sb.__cap = [];
+    vm.createContext(sb);
+    vm.runInContext(CORE, sb);
+    vm.runInContext("var __orig = buildWwwRenderState; buildWwwRenderState = function(runtime){ try { __cap.push(runtime); } catch (e) {} return __orig(runtime); };", sb);
+    vm.runInContext("calculateProtocol();", sb);
+    const last = sb.__cap.length ? sb.__cap[sb.__cap.length - 1] : {};
+    return { rootRec: last.rootRec, lenRec: last.lenRec, html: out };
+}
+const META_CATS = ['permanent', 'special_blond', 'powder', 'toning', 'unknown'];
+function assertValidMeta(rec, label) {
+    if (rec === undefined || rec === null) return; // recipe not built on this path
+    assert.strictEqual(typeof rec, 'object', label + ': recipe must be object');
+    const m = rec.meta;
+    assert.ok(m && typeof m === 'object', label + ': recipe.meta must exist');
+    assert.strictEqual(m.safetyMarkersVersion, 1, label + ': safetyMarkersVersion must be 1');
+    assert.ok(META_CATS.indexOf(m.processCategory) !== -1, label + ': bad processCategory ' + m.processCategory);
+    for (const b of ['isSpecialBlond', 'isPowder', 'isToning', 'usesDoubleNaturalBase', 'requiresBrandRuleMatrix']) {
+        assert.strictEqual(typeof m[b], 'boolean', label + ': ' + b + ' must be boolean');
+    }
+    assert.ok(m.oxidizerPercent === null || (typeof m.oxidizerPercent === 'number' && isFinite(m.oxidizerPercent)),
+        label + ': oxidizerPercent must be null or finite number');
+    if (m.processCategory === 'special_blond') assert.strictEqual(m.isSpecialBlond, true, label + ': SB consistency');
+    if (m.processCategory === 'powder') assert.strictEqual(m.isPowder, true, label + ': powder consistency');
+    if (m.processCategory === 'toning') assert.strictEqual(m.isToning, true, label + ': toning consistency');
+    if (m.processCategory === 'permanent') {
+        assert.strictEqual(m.isSpecialBlond, false, label + ': permanent !SB');
+        assert.strictEqual(m.isPowder, false, label + ': permanent !powder');
+        assert.strictEqual(m.isToning, false, label + ': permanent !toning');
+    }
+}
+
 // scenarios
 const POWDER = makeFixture({ root_level: '5', length_level: '5', target_level: '9', target_direction: '1' });
 const TONING = makeFixture({ root_level: '8', length_level: '8', target_level: '6', target_direction: '1' });
@@ -320,6 +361,77 @@ const GROUPS = [
         for (const h of [getOutputHtml(CORE, GREY), getOutputHtml(CORE, makeFixture()), getOutputHtml(CORE, makeFixture({ allergy: 'yes' }))]) {
             for (const f of META_FIELDS) assertNotIncludes(h, f, 'meta must not leak (grey)');
         }
+    }],
+
+    ['21. every built recipe carries valid, consistent meta (all categories)', function () {
+        const cases = [
+            ['permanent (clean 7->7)', makeFixture(), 'permanent', 'permanent'],
+            ['special_blond (6->10)', makeFixture({ root_level: '6', length_level: '6', target_level: '10', target_direction: '1' }), 'special_blond', 'special_blond'],
+            ['powder (5->9)', makeFixture({ root_level: '5', length_level: '5', target_level: '9', target_direction: '1' }), 'powder', 'powder'],
+            ['toning length (8->6)', makeFixture({ root_level: '8', length_level: '8', target_level: '6', target_direction: '1' }), null, 'toning'],
+            ['grey>=50 (6->7)', makeFixture({ root_level: '6', length_level: '6', target_level: '7', target_direction: '1', grey_percent: '50' }), 'permanent', 'permanent']
+        ];
+        for (const [label, fx, rootCat, lenCat] of cases) {
+            const c = captureRecipes(fx);
+            assertValidMeta(c.rootRec, label + ' root');
+            assertValidMeta(c.lenRec, label + ' length');
+            if (rootCat && c.rootRec) assert.strictEqual(c.rootRec.meta.processCategory, rootCat, label + ' root category');
+            if (lenCat && c.lenRec) assert.strictEqual(c.lenRec.meta.processCategory, lenCat, label + ' length category');
+        }
+        // grey>=50 permanent recipes carry numeric oxidizerPercent and usesDoubleNaturalBase.
+        const grey = captureRecipes(makeFixture({ root_level: '6', length_level: '6', target_level: '7', target_direction: '1', grey_percent: '50' }));
+        assert.strictEqual(grey.rootRec.meta.usesDoubleNaturalBase, true, 'grey root usesDoubleNaturalBase');
+        assert.ok(typeof grey.rootRec.meta.oxidizerPercent === 'number', 'grey root numeric oxidizerPercent');
+    }],
+
+    ['22. manual/blocked paths: recipes (if present) still carry meta', function () {
+        // brand-sensitive MANUAL paths build recipes -> must carry meta.
+        for (const [label, fx] of [
+            ['powder MANUAL', makeFixture({ root_level: '5', length_level: '5', target_level: '9', target_direction: '1' })],
+            ['SB MANUAL', makeFixture({ root_level: '6', length_level: '6', target_level: '10', target_direction: '1' })]
+        ]) {
+            const c = captureRecipes(fx);
+            assert.ok(c.rootRec && c.rootRec.meta, label + ' must still carry rootRec.meta');
+            assertValidMeta(c.rootRec, label + ' root');
+            assertValidMeta(c.lenRec, label + ' length');
+        }
+        // early BLOCKED (allergy=yes) may not build recipes; if any present it must still be valid.
+        const blocked = captureRecipes(makeFixture({ allergy: 'yes' }));
+        assertValidMeta(blocked.rootRec, 'BLOCKED allergy root');
+        assertValidMeta(blocked.lenRec, 'BLOCKED allergy length');
+    }],
+
+    ['23. user input cannot inject or override trusted meta', function () {
+        const injected = makeFixture({ meta: '{"isPowder":true}', isPowder: 'true', processCategory: 'powder', oxidizerPercent: '12' });
+        const c = captureRecipes(injected);
+        // clean 7->7 => trusted meta is permanent/6, NOT the injected powder/12.
+        assert.strictEqual(c.rootRec.meta.processCategory, 'permanent', 'trusted meta must ignore injected processCategory');
+        assert.strictEqual(c.rootRec.meta.isPowder, false, 'trusted meta must ignore injected isPowder');
+        assert.strictEqual(c.rootRec.meta.oxidizerPercent, 6, 'trusted meta oxidizerPercent must be branch-derived (6), not injected (12)');
+        for (const f of META_FIELDS) assertNotIncludes(c.html, f, 'injected meta must not leak to output');
+    }],
+
+    ['24. render does not leak meta (APPROVED/BLOCKED/MANUAL)', function () {
+        const states = [
+            getOutputHtml(CORE, makeFixture()),
+            getOutputHtml(CORE, makeFixture({ allergy: 'yes' })),
+            getOutputHtml(CORE, makeFixture({ allergy: '' })),
+            getOutputHtml(CORE, makeFixture({ root_level: '5', length_level: '5', target_level: '9', target_direction: '1' }))
+        ];
+        for (const h of states) for (const f of META_FIELDS) assertNotIncludes(h, f, 'meta must not leak');
+    }],
+
+    ['25. no behavior change (baseline + safety invariants)', function () {
+        assert.strictEqual(status(getOutputHtml(CORE, makeFixture())).split(' ')[0], 'APPROVED', 'clean 7->7 APPROVED');
+        const powder = getOutputHtml(CORE, makeFixture({ root_level: '5', length_level: '5', target_level: '9', target_direction: '1' }));
+        assertManualOrBlocked(powder, 'powder'); assertNoExactGrams(powder, 'powder');
+        const sb = getOutputHtml(CORE, makeFixture({ root_level: '6', length_level: '6', target_level: '10', target_direction: '1' }));
+        assertManualOrBlocked(sb, 'SB'); assertNoExactGrams(sb, 'SB');
+        const grey = getOutputHtml(CORE, makeFixture({ root_level: '6', length_level: '6', target_level: '7', target_direction: '1', grey_percent: '50' }));
+        assertManualOrBlocked(grey, 'grey'); assertIncludes(grey, '.00', 'grey still injects .00 base');
+        // production invariants visible in the mass-model block of a non-approved grey state.
+        assertIncludes(grey, '&quot;mode&quot;: &quot;2-zone&quot;', 'mass model 2-zone');
+        assertIncludes(grey, '&quot;endsMass&quot;: null', 'endsMass null');
     }]
 ];
 

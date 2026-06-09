@@ -164,6 +164,13 @@ formula-assembly branch), not user-facing display strings:
 - A legacy text-marker check remains only as a fallback when `meta` is absent;
   the current builder always attaches `meta`.
 - `meta` is internal: it is never rendered to the UI and is never set from user input.
+- **Meta-presence invariant:** every production recipe object (`rootRec` / `lenRec`)
+  built by `calculateProtocol()` carries trusted `recipe.meta` with
+  `safetyMarkersVersion === 1`, a valid `processCategory`, boolean flags, and a
+  null-or-numeric `oxidizerPercent` — verified across permanent / Special Blond /
+  powder / toning / grey / high-ox / manual / blocked paths. The legacy text
+  fallback is compatibility-only and is not the active classifier for any
+  internally-built recipe. Locked by `test_www_structured_safety_flags.js` groups 21-25.
 - Advisory `calcMixtone` (tonal corrector) and `getBaseProcessTiming` (process
   base minutes) are ALSO routed to `recipe.meta` (powder/SB/toning/permanent),
   with display text kept only as fallback. Renaming a process label no longer

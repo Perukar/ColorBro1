@@ -333,7 +333,7 @@ These test files must all pass before any commit that touches safety domains:
 | `test_www_hair_parameter_contract.js` | Hair parameter contract: density/length mass-bearing, thickness timing-only, density/length timing-neutral, structure/curl absence (integration-level, 10 groups) |
 | `test_www_output_honesty_copy.js` | Output honesty copy: no "Auto-Pilot" claim, honest Block 1 title, APPROVED gloss + safety caveat present on approved path and absent elsewhere, gating/mass unchanged (6 groups) |
 | `test_www_output_honesty_contract.js` | Output honesty across ALL states: APPROVED caveat; BLOCKED/MANUAL/unknown-enum/brand-missing/ends-diagnostic show no recipe, no exact grams, no apply-permission wording; brand-formula + 3-zone overclaim absent; stale/persisted output not authoritative; structure/curl not evaluated (12 groups) |
-| `test_www_structured_safety_flags.js` | Safety gates + advisory mixtone/timing + grey base-validity use structured `recipe.meta` (powder/SB/toning/grey/high-ox) not display text; robust to label/ox rename; meta never rendered; user cannot inject meta (20 groups) |
+| `test_www_structured_safety_flags.js` | Safety gates + advisory mixtone/timing + grey base-validity use structured `recipe.meta` (powder/SB/toning/grey/high-ox) not display text; robust to label/ox rename; every built recipe carries valid consistent meta; meta never rendered; user cannot inject meta (25 groups) |
 | `test_www_browser_smoke.js` | Browser page structure, global wiring, gate smoke paths, persistence infrastructure (32 tests) |
 | `test_www_production_readiness_index.js` | Readiness index document existence, required section presence, key invariant strings |
 
