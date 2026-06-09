@@ -107,3 +107,42 @@ When critical inputs are missing, invalid, or explicitly unsafe, `calculateProto
 - Missing critical fields: `"Недостатньо критичних даних для безпечного рецепта: ..."`
 - Unrecognized enum values: `"Нерозпізнані критичні значення (поза дозволеним переліком): ..."`
 - Allergy confirmed:
+
+---
+
+## 6. Render-layer internal field sanitization (commit 413ced8)
+
+`buildWwwRenderState` applies a narrow reasons sanitization before passing data to `renderStateToHtml`:
+
+- **Arrays** (reason-code lists from gate results): passed through unchanged. This is the normal path for BLOCKED/MANUAL states that use `normalizeReasons()`.
+- **Non-array `reasons` object with `threeZoneGateDecision === 'ALLOW_3_ZONE'`**: passed through to the render layer — `normalizeReasonsToItems` intentionally renders 3-zone diagnostic evidence (e.g. `threeZonePreviewEligible`, `threeZonePreviewOnly`, `threeZoneGateDecision`).
+- **All other non-array `reasons` objects**: sanitized to `[]`. The 50+ key plain diagnostic object from `calculateProtocol`'s internal `reasons` context must not be dumped via `normalizeReasonsToItems` into user-visible HTML for normal APPROVED / MANUAL / BLOCKED paths.
+
+**Fields that must NOT appear in normal APPROVED output:**
+
+| Field | Why forbidden |
+|---|---|
+| `threeZonePreviewOnly` | Internal 3-zone diagnostic flag |
+| `threeZonePreviewEligible` | Internal 3-zone diagnostic flag |
+| `threeZoneGateDecision` | Internal gate decision (only visible in ALLOW_3_ZONE diagnostic scenario) |
+| `endsRecipeReady` | Internal ends-recipe state flag |
+| `notForMixing` | Candidate guard flag (only visible in diagnostic candidate display) |
+| `productionReady` | Candidate guard flag (only visible in diagnostic candidate display) |
+| `dyeMass` | Internal mass calculation — never for direct display |
+| `oxidizerMass` | Internal mass calculation — never for direct display |
+| `rootOxPercent` | Internal oxidizer percentage — internal calculation only |
+| `lengthOxPercent` | Internal oxidizer percentage — internal calculation only |
+| `finalFormula` | Internal formula object — never for direct display |
+
+**Note on `endsMass`:** `endsMass: null` legitimately appears in the 2-zone mass model JSON block (rendered by `renderMassModel`). This is expected behavior. The invariant is that `endsMass` is `null` — never a production gram value.
+
+**ALLOW_3_ZONE diagnostic-preview:** The 3-zone preview diagnostic scenario (`threeZoneGateDecision === 'ALLOW_3_ZONE'`) intentionally renders diagnostic evidence including `threeZonePreviewOnly: true`, `threeZonePreviewEligible: true`, and the candidate mass model. This is a diagnostic-only path: `productionReady: false`, `notForMixing: true`, `candidateOnly: true`. The contract is locked by `THREE-ZONE-PREVIEW-ALLOW-CREATES-CANDIDATE` in `test_www_business_scenarios.js`.
+
+**Node-level regression coverage:** `test_www_render_runtime.js` contains the following tests that enforce these invariants at the Node VM layer (cheaper than real browser smoke):
+
+- `RENDER-FORBIDDEN-FIELDS-APPROVED-CLEAN-PATH`
+- `RENDER-FORBIDDEN-FIELDS-BLOCKED-PATH`
+- `RENDER-FORBIDDEN-FIELDS-MANUAL-PATH`
+- `RENDER-ALLOW-3ZONE-DIAGNOSTIC-PREVIEW-PRESERVED`
+- `RENDER-REASONS-OBJECT-NOT-DUMPED-BY-DEFAULT`
+- `RENDER-REASONS-ARRAY-PRESERVED`

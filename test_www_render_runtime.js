@@ -1421,6 +1421,161 @@ console.log('LENGTH-DENSITY-THICKNESS-UNRECOGNIZED-GATE verified: each unknown v
     console.log('PERSIST-NO-STORAGE-IN-RUNTIME safe behavior verified.');
 })();
 
+// ============================================================
+// RENDER-FORBIDDEN-FIELDS-* : Internal field leak regression (413ced8)
+// These tests lock the invariant that normal APPROVED / BLOCKED / MANUAL output
+// must never expose internal diagnostic flags or mixing-formula fields.
+// ============================================================
+
+// RENDER-FORBIDDEN-FIELDS-APPROVED-CLEAN-PATH
+(function() {
+    // Safe 7->7 same-level permanent fixture.
+    // Mirrors UI-RENDER-APPROVED-CLEAN-PATH (test_www_business_scenarios.js)
+    // and SMOKE-FORBIDDEN-FIELDS-NOT-IN-OUTPUT (test_www_real_browser_smoke.js).
+    // WHY 7->7: 5->9 = 4-level lift -> high oxidizer -> brand gate -> MANUAL_REQUIRED.
+    const html = runCalculateProtocolWithValues({
+        root_level: '7', length_level: '7', ends_level: '7', target_level: '7',
+        target_direction: '1', base_type: 'Натуральна',
+        allergy: 'no', scalp_sensitivity: 'normal',
+        ends_condition: 'здорові', ends_history: 'натуральні', ends_base_type: 'натуральна'
+    });
+    assertIncludes(html, 'approved-recipe');
+    const forbiddenInApproved = [
+        'threeZonePreviewOnly', 'threeZonePreviewEligible', 'threeZoneGateDecision',
+        'endsRecipeReady', 'notForMixing', 'productionReady',
+        'dyeMass', 'oxidizerMass', 'rootOxPercent', 'lengthOxPercent',
+        'finalFormula'
+    ];
+    for (const field of forbiddenInApproved) {
+        assertNotIncludes(html, field);
+    }
+    // endsMass legitimately appears as null in the 2-zone mass-model JSON block.
+    // The invariant is that it is null (no production ends mass), not absent.
+    assert.ok(
+        !html.includes('endsMass') || html.includes('endsMass&quot;: null'),
+        'RENDER-FORBIDDEN-FIELDS-APPROVED-CLEAN-PATH: endsMass must be null in 2-zone mass model, not a production gram value'
+    );
+    console.log('RENDER-FORBIDDEN-FIELDS-APPROVED-CLEAN-PATH safe.');
+})();
+
+// RENDER-FORBIDDEN-FIELDS-BLOCKED-PATH
+(function() {
+    // allergy=yes must produce BLOCKED and must not expose mixing-formula fields.
+    const html = runCalculateProtocolWithValues({ allergy: 'yes' });
+    assertIncludes(html, 'BLOCKED');
+    assertNotIncludes(html, 'approved-recipe');
+    const forbiddenInBlocked = ['dyeMass', 'oxidizerMass', 'finalFormula', 'endsMass'];
+    for (const field of forbiddenInBlocked) {
+        assertNotIncludes(html, field);
+    }
+    console.log('RENDER-FORBIDDEN-FIELDS-BLOCKED-PATH safe.');
+})();
+
+// RENDER-FORBIDDEN-FIELDS-MANUAL-PATH
+(function() {
+    // allergy='' (unknown) must produce MANUAL_REQUIRED and must not expose mixing-formula fields.
+    const html = runCalculateProtocolWithValues({ allergy: '' });
+    assertNotIncludes(html, 'approved-recipe');
+    assert.ok(
+        html.includes('MANUAL') || html.includes('needs_confirmation') || html.includes('MANUAL_REQUIRED'),
+        'RENDER-FORBIDDEN-FIELDS-MANUAL-PATH: expected MANUAL/MANUAL_REQUIRED signal in output'
+    );
+    const forbiddenInManual = ['dyeMass', 'oxidizerMass', 'finalFormula'];
+    for (const field of forbiddenInManual) {
+        assertNotIncludes(html, field);
+    }
+    // endsMass may appear as null in the mass-model JSON for MANUAL output.
+    // The invariant is that it must be null, not a production gram value.
+    assert.ok(
+        !html.includes('endsMass') || html.includes('endsMass&quot;: null'),
+        'RENDER-FORBIDDEN-FIELDS-MANUAL-PATH: endsMass must be null if present'
+    );
+    console.log('RENDER-FORBIDDEN-FIELDS-MANUAL-PATH safe.');
+})();
+
+// RENDER-ALLOW-3ZONE-DIAGNOSTIC-PREVIEW-PRESERVED
+(function() {
+    // ALLOW_3_ZONE scenario: ends_level differs from root_level -> 3-zone gate fires.
+    // Diagnostic evidence must remain visible (this is intentional per contract),
+    // but production mixing fields must still be absent.
+    const html = runCalculateProtocolWithValues({
+        root_level: '6', length_level: '6', ends_level: '8',
+        target_level: '6', target_direction: '1', base_type: 'Натуральна',
+        ends_condition: 'здорові', ends_history: 'натуральні', ends_base_type: 'натуральна',
+        allergy: 'no', scalp_sensitivity: 'normal'
+    });
+    // Diagnostic evidence must remain (contract: THREE-ZONE-PREVIEW-ALLOW-CREATES-CANDIDATE)
+    assertIncludes(html, 'threeZonePreviewEligible');
+    assertIncludes(html, 'threeZoneGateDecision');
+    assertIncludes(html, 'threeZonePreviewOnly');
+    // Production mixing fields must still be absent
+    const forbiddenInAllow3Zone = ['dyeMass', 'oxidizerMass', 'finalFormula'];
+    for (const field of forbiddenInAllow3Zone) {
+        assertNotIncludes(html, field);
+    }
+    // endsMass may appear as null in the 2-zone mass-model JSON — that is correct.
+    assert.ok(
+        !html.includes('endsMass') || html.includes('endsMass&quot;: null'),
+        'RENDER-ALLOW-3ZONE: endsMass must be null if present in mass model'
+    );
+    // Production-ready ends recipe must not be activated
+    assertNotIncludes(html, '"productionReady":true');
+    assertNotIncludes(html, 'productionReady&quot;:true');
+    console.log('RENDER-ALLOW-3ZONE-DIAGNOSTIC-PREVIEW-PRESERVED safe.');
+})();
+
+// RENDER-REASONS-OBJECT-NOT-DUMPED-BY-DEFAULT
+(function() {
+    // Directly test buildWwwRenderState: a non-array reasons object that does
+    // NOT have threeZoneGateDecision === 'ALLOW_3_ZONE' must be sanitized to [].
+    // This is the direct unit test of the 413ced8 narrow sanitization fix.
+    const syntheticRuntime = {
+        status: 'APPROVED',
+        reasons: {
+            rootOxPercent: 3,
+            rootHighOxidizer: false,
+            threeZonePreviewOnly: true,
+            sensitiveInternalFlag: 'private_value',
+            anotherKey: 42
+        }
+    };
+    const state = buildWwwRenderState(syntheticRuntime);
+    assert.deepStrictEqual(
+        state.reasons, [],
+        'RENDER-REASONS-OBJECT-NOT-DUMPED: non-ALLOW_3ZONE object must be sanitized to []'
+    );
+    const html = PerucarWwwRenderV1.renderStateToHtml(state);
+    const mustNotDump = ['rootOxPercent', 'rootHighOxidizer', 'threeZonePreviewOnly', 'sensitiveInternalFlag', 'anotherKey'];
+    for (const key of mustNotDump) {
+        assertNotIncludes(html, key);
+    }
+    console.log('RENDER-REASONS-OBJECT-NOT-DUMPED-BY-DEFAULT safe.');
+})();
+
+// RENDER-REASONS-ARRAY-PRESERVED
+(function() {
+    // Arrays of reason items (the normal path from gate results / normalizeReasons())
+    // must pass through buildWwwRenderState unchanged — the sanitizer must not
+    // accidentally break the normal blocked/manual reason display.
+    const reasonArray = [
+        { title: 'Алергія', message: 'Фарбування заборонено при активній алергії.' },
+        { title: 'Шкіра голови', message: 'Подразнена шкіра потребує перевірки.' }
+    ];
+    const state = buildWwwRenderState({
+        status: 'BLOCKED',
+        blockers: [{ title: 'тест', message: 'заблоковано' }],
+        reasons: reasonArray
+    });
+    assert.deepStrictEqual(
+        state.reasons, reasonArray,
+        'RENDER-REASONS-ARRAY-PRESERVED: array reasons must pass through unchanged'
+    );
+    const html = PerucarWwwRenderV1.renderStateToHtml(state);
+    assertIncludes(html, 'Алергія');
+    assertIncludes(html, 'Шкіра голови');
+    console.log('RENDER-REASONS-ARRAY-PRESERVED safe.');
+})();
+
 console.log('WWW render runtime test passed');
 `;
 
