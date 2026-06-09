@@ -547,3 +547,26 @@ the system is full salon-ready coloristic logic.
 
 - `test_www_output_honesty_contract.js` (12 groups)
 - `test_www_output_honesty_copy.js` (6 groups)
+
+---
+
+## 19. Safety gates use structured flags, not display text
+
+Powder / Special Blond / toning / grey-`.00` / high-oxidizer safety decisions read
+structured `recipe.meta` flags set at the formula-assembly branch
+(`buildRecipeMeta` / `withMeta`), not user-facing display strings. Renaming or
+localizing a recipe label (`process` / `dye` / `ox`) cannot silently disable a gate.
+
+- `meta` is internal: never rendered, never set from user input.
+- A legacy text-marker check remains only as a fallback if `meta` is absent; the
+  current builder always attaches `meta`.
+- **Residual text dependence (non-safety):** `calcMixtone` (tonal corrector
+  amount) and timing display still key on process text. These are diagnostic/
+  advisory only — they never produce an approved recipe or exact mixing grams, so
+  a label change there cannot create an unsafe approved output.
+- This refactor added no formula/mass/timing production change, did not enable the
+  brand matrix, and left 3-zone / endsRec / `endsMass: null` unchanged.
+
+### Tests
+
+- `test_www_structured_safety_flags.js` (10 groups)

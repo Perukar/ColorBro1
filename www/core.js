@@ -1,23 +1,23 @@
 const pigmentMap = {
-            '0': 'Натуральний', '1': 'Голубий', '11': 'Інтенсивно-голубий', 
-            '2': 'Блідо-фіолетовий', '3': 'Жовтий (золотистий)', '4': 'Оранжевий', 
-            '5': 'Червоно-фіолетовий', '6': 'Червоний', '7': 'Фіолетовий', 
-            '8': 'Коричневий', '9': 'Синьо-зелений', '16': 'Фіолетово-голубий', 
+            '0': 'Натуральний', '1': 'Голубий', '11': 'Інтенсивно-голубий',
+            '2': 'Блідо-фіолетовий', '3': 'Жовтий (золотистий)', '4': 'Оранжевий',
+            '5': 'Червоно-фіолетовий', '6': 'Червоний', '7': 'Фіолетовий',
+            '8': 'Коричневий', '9': 'Синьо-зелений', '16': 'Фіолетово-голубий',
             '32': 'Жовто-фіолетовий', '81': 'Сріблястий', '89': 'Жемчужно-сандре'
         };
 
         function calcMixtone(tLevel, tDir, processType, mass, condition) {
             let pType = String(processType).toLowerCase();
-            if (pType.includes('порошок') || pType.includes('powder')) 
+            if (pType.includes('порошок') || pType.includes('powder'))
                 return "Не додається (Нейтралізація на етапі тонування)";
-            
+
             let color = pigmentMap[tDir] || "Коректор";
-            if (tLevel == 8 && ['1', '11', '9', '81'].includes(tDir)) 
+            if (tLevel == 8 && ['1', '11', '9', '81'].includes(tDir))
                 return "⚠️ ЗАБОРОНА: Пепел/Холод на 8-му рівні дасть ЗЕЛЕНЬ!";
-            
+
             let rule11 = 11 - tLevel;
             if (rule11 <= 0) return `Не потрібен (Рівень ${tLevel})`;
-            
+
             let grams = (rule11 / 2.0) * (mass / 30.0);
             grams = Math.round(grams * 10) / 10;
             let resStr = "";
@@ -626,7 +626,7 @@ const pigmentMap = {
          * PRODUCTION HELPER — Production 3-zone activation gate.
          * Pure function. НЕ викликається з calculateProtocol().
          */
-        
+
         function classifyEndsRecEligibility(context) {
             const ends_level = context.ends_level;
             const ends_condition = context.ends_condition;
@@ -657,7 +657,7 @@ const pigmentMap = {
             const needsLift = target_level > ends_level;
             const isCosmeticLift = needsLift && (isCosmeticHistory || isCosmeticBase);
             const isDamagedLift = needsLift && isDamaged;
-            
+
             if (isHennaMetals) {
                 return { status: "BLOCKED", reason: "Henna or metals present", requiredFieldsMissing: missing, riskFlags: ["henna_metals"], allowedProcess: null };
             }
@@ -670,7 +670,7 @@ const pigmentMap = {
             if (eHist.includes('змивка') || eHist.includes('remover')) {
                 return { status: "BLOCKED", reason: "After remover", requiredFieldsMissing: missing, riskFlags: ["after_remover"], allowedProcess: null };
             }
-            
+
             if (missing.length > 0) {
                 return { status: "MANUAL_REQUIRED", reason: "Missing critical fields", requiredFieldsMissing: missing, riskFlags: ["missing_fields"], allowedProcess: null };
             }
@@ -704,7 +704,7 @@ const pigmentMap = {
                 root_level: typeof context.root_level === 'string' && context.root_level.trim() !== '' ? Number(context.root_level) : context.root_level
             });
             const eligibility = classifyEndsRecEligibility(normalizedContext);
-            
+
             let decisionStr = 'UNKNOWN';
             if (typeof context.threeZoneGateDecision === 'string') {
                 decisionStr = context.threeZoneGateDecision;
@@ -1298,19 +1298,19 @@ const pigmentMap = {
         function classifyThreeZoneActivation(input) {
             const { ends_level, length_level, root_level, ends_condition, ends_history, ends_base_type, target_level } = input;
             const normalizedEndsHistory = normalizeEndsHistoryForDiagnostic(ends_history);
-            
+
             if (!ends_level || ends_level === length_level) {
                 return {
                     decision: 'KEEP_2_ZONE', reason: 'ENDS_SAME_AS_LENGTH',
                     warnings: [], requiredFields: [], missingFields: [], mode: '3-zone-gate-only'
                 };
             }
-            
+
             const missing = [];
             if (!ends_condition) missing.push('ends_condition');
             if (!ends_history) missing.push('ends_history');
             if (!ends_base_type) missing.push('ends_base_type');
-            
+
             if (missing.length > 0) {
                 return {
                     decision: 'MANUAL_REQUIRED', reason: 'MISSING_FIELDS',
@@ -1340,7 +1340,7 @@ const pigmentMap = {
                     warnings: [], requiredFields: [], missingFields: [], mode: '3-zone-gate-only'
                 };
             }
-            
+
             if (target_level !== undefined && target_level !== null) {
                 if ((target_level > ends_level && target_level < length_level) ||
                     (target_level < ends_level && target_level > length_level)) {
@@ -1351,7 +1351,7 @@ const pigmentMap = {
                 }
             }
 
-            if ((ends_condition === 'healthy' || ends_condition === 'normal' || ends_condition === 'здорові' || ends_condition === 'нормальні') && 
+            if ((ends_condition === 'healthy' || ends_condition === 'normal' || ends_condition === 'здорові' || ends_condition === 'нормальні') &&
                 (normalizedEndsHistory === 'natural' || normalizedEndsHistory === 'clear' || normalizedEndsHistory === 'none' || normalizedEndsHistory === 'натуральна' || normalizedEndsHistory === 'чиста') &&
                 (ends_base_type === 'natural' || ends_base_type === 'натуральна')) {
                 return {
@@ -1583,6 +1583,38 @@ const pigmentMap = {
         }
 
         // =============================================================================
+        // STRUCTURED RECIPE SAFETY METADATA — docs/input-safety-gates-contract.md
+        // Internal, trusted metadata set at the formula-assembly branch (NOT parsed
+        // from user-facing display text). Safety gates read these structured flags so
+        // that renaming/localizing a display label (recipe.process / recipe.dye) can
+        // never silently disable a powder / Special Blond / toning / grey / high-ox gate.
+        // meta is NEVER rendered to the user and is NEVER set from user input.
+        // =============================================================================
+        function buildRecipeMeta(processCategory, oxidizerPercent) {
+            var cat = ['permanent', 'special_blond', 'powder', 'toning'].indexOf(processCategory) >= 0 ? processCategory : 'unknown';
+            var oxNum = (typeof oxidizerPercent === 'number' && isFinite(oxidizerPercent)) ? oxidizerPercent : null;
+            return {
+                processCategory: cat,
+                isSpecialBlond: cat === 'special_blond',
+                isPowder: cat === 'powder',
+                isToning: cat === 'toning',
+                usesDoubleNaturalBase: false,
+                requiresBrandRuleMatrix: cat === 'special_blond' || cat === 'powder' || cat === 'toning' || (oxNum !== null && oxNum >= 9),
+                oxidizerPercent: oxNum,
+                safetyMarkersVersion: 1
+            };
+        }
+
+        // Attaches structured safety meta to a recipe object built by a trusted
+        // internal formula branch. Returns the same recipe (for inline use).
+        function withMeta(processCategory, oxidizerPercent, recipe) {
+            if (recipe && typeof recipe === 'object') {
+                recipe.meta = buildRecipeMeta(processCategory, oxidizerPercent);
+            }
+            return recipe;
+        }
+
+        // =============================================================================
         // NUMERIC SAFETY HELPERS — docs/runtime-failsafe-contract.md
         // Pure functions — no side effects.
         // =============================================================================
@@ -1704,7 +1736,7 @@ const pigmentMap = {
                 let length = lengthElement ? lengthElement.value : '';
                 let grey = parseInt(document.getElementById('grey_percent').value);
                 let greyType = document.getElementById('grey_type').value;
-                
+
                 let rLevel = parseInt(document.getElementById('root_level').value);
                 let rootLength = parseInt(document.getElementById('root_length').value);
                 let lLevel = parseInt(document.getElementById('length_level').value);
@@ -1718,7 +1750,7 @@ const pigmentMap = {
                 const endsBaseTypeElement = document.getElementById('ends_base_type');
                 const endsBaseType = endsBaseTypeElement ? String(endsBaseTypeElement.value).trim() : '';
                 let bType = document.getElementById('base_type').value;
-                
+
                 let tLevel = parseInt(document.getElementById('target_level').value);
                 const tDirElement = document.getElementById('target_direction');
                 let tDir = tDirElement ? tDirElement.value : '';
@@ -1866,7 +1898,7 @@ const pigmentMap = {
 
                 if (history === 'хна / металл' && ['пористі', 'сильно поврежденные'].includes(condition)) alerts.push("ФАТАЛЬНО: Хна/метали на пошкодженому волоссі. Оксиданти заборонені.");
                 if (condition === 'сильно поврежденные') warnings.push("⚠️ КРИТИЧНИЙ СТАН: Блондування порошком ЗАБОРОНЕНО. Тільки пастельне тонування.");
-                
+
                 if (grey > 0) {
                     if (greyType === 'стекловидная') diagnostics.push("Скловидна сивина. Потрібен мордонсаж.");
                 }
@@ -1970,7 +2002,7 @@ const pigmentMap = {
                 let rMass = massModel.rootMass;
                 let lMass = massModel.lengthMass;
                 let tDye = `${tLevel}.${tDir}`;
-                
+
                 let rootRec = null, lenRec = null, plan = [], timing = 0;
 
                 let hotRoot = (rootLength >= 3 && rStep > 0);
@@ -1993,41 +2025,41 @@ const pigmentMap = {
 
                 // Логіка Довжини
                 if (lStep > 0) {
-                    if (bType === 'Косметична') lenRec = {process: "Порошок (Змивка)", dye: "Пудра", ox: "1.9%", mass: lMass, ratio: "1:3 або 1:4"};
-                    else if (lLevel <= 5) lenRec = {process: "Порошок", dye: "Пудра", ox: "4%", mass: lMass, ratio: "1:2"};
+                    if (bType === 'Косметична') lenRec = withMeta('powder', 1.9, {process: "Порошок (Змивка)", dye: "Пудра", ox: "1.9%", mass: lMass, ratio: "1:3 або 1:4"});
+                    else if (lLevel <= 5) lenRec = withMeta('powder', 4, {process: "Порошок", dye: "Пудра", ox: "4%", mass: lMass, ratio: "1:2"});
                     else if (grey >= 50) {
                         warnings.push("⚠️ ЗАБОРОНА SPECIAL BLOND: Сивина >= 50%. Призначено класичний перманент по довжині для щільного покриття.");
                         let oxChoice = lStep >= 3 ? "9%" : "6%";
-                        lenRec = {process: "Перманент", dye: `Барвник ${tDye}`, ox: oxChoice, mass: lMass, ratio: "1:1"};
+                        lenRec = withMeta('permanent', null, {process: "Перманент", dye: `Барвник ${tDye}`, ox: oxChoice, mass: lMass, ratio: "1:1"});
                     }
-                    else if (lStep >= 4) lenRec = {process: "Special Blond", dye: `S.B. ${tDye}`, ox: "12%", mass: lMass, ratio: "1:2"};
-                    else if (lStep >= 2) lenRec = {process: "Special Blond", dye: `S.B. ${tDye}`, ox: "9%", mass: lMass, ratio: "1:2"};
-                    else lenRec = {process: "Перманент", dye: `Барвник ${tDye}`, ox: "6%", mass: lMass, ratio: "1:1"};
-                } else if (lStep < 0) { lenRec = {process: "Перманент / Тонування", dye: `Барвник ${tDye}`, ox: "1.9%", mass: lMass, ratio: "1:2"}; }
-                else { lenRec = {process: "Перманент", dye: `Барвник ${tDye}`, ox: "6%", mass: lMass, ratio: "1:1"}; }
+                    else if (lStep >= 4) lenRec = withMeta('special_blond', 12, {process: "Special Blond", dye: `S.B. ${tDye}`, ox: "12%", mass: lMass, ratio: "1:2"});
+                    else if (lStep >= 2) lenRec = withMeta('special_blond', 9, {process: "Special Blond", dye: `S.B. ${tDye}`, ox: "9%", mass: lMass, ratio: "1:2"});
+                    else lenRec = withMeta('permanent', 6, {process: "Перманент", dye: `Барвник ${tDye}`, ox: "6%", mass: lMass, ratio: "1:1"});
+                } else if (lStep < 0) { lenRec = withMeta('toning', 1.9, {process: "Перманент / Тонування", dye: `Барвник ${tDye}`, ox: "1.9%", mass: lMass, ratio: "1:2"}); }
+                else { lenRec = withMeta('permanent', 6, {process: "Перманент", dye: `Барвник ${tDye}`, ox: "6%", mass: lMass, ratio: "1:1"}); }
 
                 // ПАТЧ: Оновлена Логіка Кореня (Жорстке блокування S.B. при сивині)
                 if (rStep > 0) {
                     if (rLevel <= 5) {
-                        rootRec = {process: "Порошок", dye: "Пудра", ox: "4%", mass: rMass, ratio: "1:2"};
+                        rootRec = withMeta('powder', 4, {process: "Порошок", dye: "Пудра", ox: "4%", mass: rMass, ratio: "1:2"});
                     } else if (grey >= 50) {
                         warnings.push("⚠️ ЗАБОРОНА SPECIAL BLOND: Сивина >= 50%. Призначено класичний перманент для щільного покриття.");
-                        let oxChoice = rStep >= 3 ? "9%" : "6%"; 
-                        rootRec = {process: "Перманент", dye: `Барвник ${tDye}`, ox: oxChoice, mass: rMass, ratio: "1:1"};
+                        let oxChoice = rStep >= 3 ? "9%" : "6%";
+                        rootRec = withMeta('permanent', null, {process: "Перманент", dye: `Барвник ${tDye}`, ox: oxChoice, mass: rMass, ratio: "1:1"});
                     } else if (rStep >= 4) {
-                        rootRec = {process: "Special Blond", dye: `S.B. ${tDye}`, ox: "12%", mass: rMass, ratio: "1:2"};
+                        rootRec = withMeta('special_blond', 12, {process: "Special Blond", dye: `S.B. ${tDye}`, ox: "12%", mass: rMass, ratio: "1:2"});
                     } else if (rStep >= 2) {
-                        rootRec = {process: "Special Blond", dye: `S.B. ${tDye}`, ox: "9%", mass: rMass, ratio: "1:2"};
+                        rootRec = withMeta('special_blond', 9, {process: "Special Blond", dye: `S.B. ${tDye}`, ox: "9%", mass: rMass, ratio: "1:2"});
                     } else {
-                        rootRec = {process: "Перманент", dye: `Барвник ${tDye}`, ox: "6%", mass: rMass, ratio: "1:1"};
+                        rootRec = withMeta('permanent', 6, {process: "Перманент", dye: `Барвник ${tDye}`, ox: "6%", mass: rMass, ratio: "1:1"});
                     }
-                } else if (rStep < 0) { 
-                    rootRec = {process: "Перманент", dye: `Барвник ${tDye}`, ox: "3%", mass: rMass, ratio: "1:1"}; 
-                } else { 
-                    rootRec = {process: "Перманент", dye: `Барвник ${tDye}`, ox: "6%", mass: rMass, ratio: "1:1"}; 
+                } else if (rStep < 0) {
+                    rootRec = withMeta('permanent', 3, {process: "Перманент", dye: `Барвник ${tDye}`, ox: "3%", mass: rMass, ratio: "1:1"});
+                } else {
+                    rootRec = withMeta('permanent', 6, {process: "Перманент", dye: `Барвник ${tDye}`, ox: "6%", mass: rMass, ratio: "1:1"});
                 }
 
-                if (rootRec && String(rootRec.process).includes("Порошок")) {
+                if (rootRec && ((rootRec.meta && rootRec.meta.isPowder) || String(rootRec.process).includes("Порошок"))) {
                     rMass = Math.round(rMass * 1.6);
                     if (rMass < 40) rMass = 40;
                     rootRec.mass = rMass;
@@ -2059,7 +2091,7 @@ const pigmentMap = {
                 // ПАТЧ: Фізична зміна рецептури при сивині >= 50% (Захист від низьких оксидів)
                 if (grey >= 50) {
                     let dLevel = tLevel > 1 ? tLevel - 1 : 1;
-                    
+
                     // Перевіряємо, чи це справжній перманент здатний розпушити сивину (6%, 9% або 12%)
                     // Якщо це тонування на 1.9%, 3% або 4% — додавання бази .00 заборонено (сивина або знебарвлена, або не візьметься)
                     let isValidRootGrey = rootRec && String(rootRec.process).includes("Перманент") && ["6%", "9%", "12%"].includes(rootRec.ox);
@@ -2070,19 +2102,21 @@ const pigmentMap = {
                     }
 
                     if (isValidRootGrey) {
+                        if (rootRec.meta) { rootRec.meta.usesDoubleNaturalBase = true; rootRec.meta.requiresBrandRuleMatrix = true; }
                         let hMass = Math.round(rootRec.mass / 2);
                         let rM = rootRec.mass - hMass;
                         rootRec.dye = `<br>&nbsp;&nbsp;&nbsp;▪️ База <b>${dLevel}.00</b> (${hMass} гр)<br>&nbsp;&nbsp;&nbsp;▪️ Модний <b>${tDye}</b> (${rM} гр)`;
                     }
                     if (isValidLenGrey) {
+                        if (lenRec.meta) { lenRec.meta.usesDoubleNaturalBase = true; lenRec.meta.requiresBrandRuleMatrix = true; }
                         let hMass = Math.round(lenRec.mass / 2);
                         let rM = lenRec.mass - hMass;
                         lenRec.dye = `<br>&nbsp;&nbsp;&nbsp;▪️ База <b>${dLevel}.00</b> (${hMass} гр)<br>&nbsp;&nbsp;&nbsp;▪️ Модний <b>${tDye}</b> (${rM} гр)`;
                     }
                 }
 
-                let isRPowder = rootRec && String(rootRec.process).includes("Порошок");
-                let isLPowder = lenRec && String(lenRec.process).includes("Порошок");
+                let isRPowder = rootRec && ((rootRec.meta && rootRec.meta.isPowder) || String(rootRec.process).includes("Порошок"));
+                let isLPowder = lenRec && ((lenRec.meta && lenRec.meta.isPowder) || String(lenRec.process).includes("Порошок"));
                 if (hotRoot) {
                     plan.push(`⚠️ ПРАВИЛО ГАРЯЧОГО КОРЕНЯ: Відростання ${rootLength} см. Нанесення на корінь розбити на 2 етапи!`);
                 }
@@ -2149,8 +2183,8 @@ const pigmentMap = {
                     return Number.isFinite(parsed) ? parsed : null;
                 }
 
-                const rootOxPercent = extractOxPercent(rootRec && rootRec.ox);
-                const lengthOxPercent = extractOxPercent(lenRec && lenRec.ox);
+                const rootOxPercent = (rootRec && rootRec.meta && typeof rootRec.meta.oxidizerPercent === 'number') ? rootRec.meta.oxidizerPercent : extractOxPercent(rootRec && rootRec.ox);
+                const lengthOxPercent = (lenRec && lenRec.meta && typeof lenRec.meta.oxidizerPercent === 'number') ? lenRec.meta.oxidizerPercent : extractOxPercent(lenRec && lenRec.ox);
                 const rootHighOxidizer = rootOxPercent !== null && rootOxPercent >= 9;
                 const lengthHighOxidizer = lengthOxPercent !== null && lengthOxPercent >= 9;
 
@@ -2264,14 +2298,14 @@ const pigmentMap = {
                     collectBrandSensitiveRecipeText(lenRec)
                 ].join(' ').toLowerCase();
                 const brandSensitiveReasons = [];
-                const brandSensitiveSpecialBlond = ['special blond', 'special blonde', 'спецблонд', 'спец блонд']
+                const brandSensitiveSpecialBlond = Boolean(rootRec && rootRec.meta && rootRec.meta.isSpecialBlond) || Boolean(lenRec && lenRec.meta && lenRec.meta.isSpecialBlond) || ['special blond', 'special blonde', 'спецблонд', 'спец блонд']
                     .some(marker => brandSensitiveRecipeText.includes(marker));
-                const brandSensitiveGreyBase = ['.00', '/00', 'double natural', 'intense natural']
+                const brandSensitiveGreyBase = Boolean(rootRec && rootRec.meta && rootRec.meta.usesDoubleNaturalBase) || Boolean(lenRec && lenRec.meta && lenRec.meta.usesDoubleNaturalBase) || ['.00', '/00', 'double natural', 'intense natural']
                     .some(marker => brandSensitiveRecipeText.includes(marker));
                 const brandSensitiveHighOxidizer = rootHighOxidizer || lengthHighOxidizer;
-                const brandSensitivePowder = ['powder', 'порошок', 'порош']
+                const brandSensitivePowder = Boolean(rootRec && rootRec.meta && rootRec.meta.isPowder) || Boolean(lenRec && lenRec.meta && lenRec.meta.isPowder) || ['powder', 'порошок', 'порош']
                     .some(marker => brandSensitiveRecipeText.includes(marker));
-                const brandSensitiveToning = ['перманент / тонування', 'тонування', 'toning']
+                const brandSensitiveToning = Boolean(rootRec && rootRec.meta && rootRec.meta.isToning) || Boolean(lenRec && lenRec.meta && lenRec.meta.isToning) || ['перманент / тонування', 'тонування', 'toning']
                     .some(marker => brandSensitiveRecipeText.includes(marker));
 
                 if (brandSensitiveSpecialBlond) brandSensitiveReasons.push('Special Blond');
@@ -2479,7 +2513,7 @@ const pigmentMap = {
                         ends_base_type: endsBaseType,
                         target_level: tLevel
                     });
-                    
+
                     threeZoneGateDecision = gateDecision.decision;
 
                     if (gateDecision.decision === 'KEEP_2_ZONE') {

@@ -148,6 +148,26 @@ below, group 8). Future implementation requires an explicit product/design
 contract and dedicated tests first, and does not by itself equal full
 salon-ready logic.
 
+## Structured safety markers (not display text)
+
+Powder / Special Blond / toning / grey-`.00` / high-oxidizer gates read **structured
+recipe metadata** (`recipe.meta`, set by `buildRecipeMeta` / `withMeta` at the
+formula-assembly branch), not user-facing display strings:
+
+- `meta.isPowder` / `isSpecialBlond` / `isToning` / `usesDoubleNaturalBase` —
+  gate the brand-sensitive MANUAL_REQUIRED decision and the powder mass surcharge.
+- `meta.oxidizerPercent` (numeric) — drives the high-oxidizer (≥9%) gate.
+- Display labels (`recipe.process` / `recipe.dye` / `recipe.ox`) are **not**
+  safety-critical inputs: renaming/localizing a label cannot silently disable a gate.
+- A legacy text-marker check remains only as a fallback when `meta` is absent;
+  the current builder always attaches `meta`.
+- `meta` is internal: it is never rendered to the UI and is never set from user input.
+- `calcMixtone` (tonal corrector amount) and timing display retain a separate
+  text-marker dependence; these are diagnostic/advisory and never emit an approved
+  recipe or exact mixing grams.
+
+Locked by `test_www_structured_safety_flags.js` (10 groups).
+
 ## Relationship to render safety contract
 
 Input gates and render gates are complementary layers. Even if input gate logic were
@@ -206,6 +226,9 @@ or missing required fields.
 - `test_www_hair_parameter_contract.js` — **hair parameter contract** (density/
   length mass, thickness timing, structure/curl absence). Integration-level, 10
   reported groups. Must be run as part of the full test matrix.
+- `test_www_structured_safety_flags.js` — **structured safety flags** (powder/SB/
+  toning/grey/high-ox gates driven by `recipe.meta`, robust to display-label
+  renames; meta not rendered; user cannot inject meta). 10 groups.
 
 ## Do not change without tests
 

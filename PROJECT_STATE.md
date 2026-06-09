@@ -46,6 +46,7 @@ The safety foundation phase is **in progress**. All committed work is on `main`.
 | *(pending)* | Add hair parameter contract tests v1 (density/length mass, thickness timing, structure/curl absence) — test-only + docs sync, no runtime change |
 | *(pending)* | Output honesty copy fix v1 (UI header/Block-1 wording + APPROVED gloss & safety caveat) + test_www_output_honesty_copy.js — render/UI text only, no formula change |
 | *(pending)* | Add output honesty contract tests (all-state honesty lock) — test_www_output_honesty_contract.js, test-only + concise docs, no runtime change |
+| *(pending)* | Refactor safety gates to structured flags (recipe.meta) + test_www_structured_safety_flags.js — copy-safe gate inputs, no formula/mass/timing change |
 
 ### Recently completed blocks
 
@@ -60,6 +61,7 @@ The safety foundation phase is **in progress**. All committed work is on `main`.
 9. Hair parameter contract v1 — test_www_hair_parameter_contract.js (10 groups, integration-level): density/length mass-bearing, thickness timing-only, density/length timing-neutral, structure/curl absence. Test-only; no runtime change. Docs synced (input-model, input-safety-gates, known-limitations §17, production-readiness-index).
 10. Output honesty copy fix v1 — UI header "Colorist Auto-Pilot" → "Колорист-калькулятор (помічник майстра)"; Block 1 "Структура" → "Стан і параметри волосся"; APPROVED status gloss "розрахунок дозволено (не гарантія безпеки)" + renderApprovedCaveat block on the production-ready path. Render/UI text only — no formula/gating change. Locked by test_www_output_honesty_copy.js (6 groups). DOM/render touched → run real browser smoke on Windows before deploy.
 11. Output honesty contract v1 — test_www_output_honesty_contract.js (12 groups): locks honesty wording across APPROVED/BLOCKED/MANUAL/unknown-enum/brand-missing/ends-diagnostic/stale/structure-curl; no apply-permission wording, exact grams approved-path only. Test-only; no runtime change. Docs synced (ui-render-safety, known-limitations §18, production-readiness-index).
+12. Structured safety flags refactor v1 — www/core.js: added buildRecipeMeta/withMeta; recipe.meta {isPowder,isSpecialBlond,isToning,usesDoubleNaturalBase,oxidizerPercent,requiresBrandRuleMatrix} set at assembly branch; powder/SB/toning/grey/high-ox gates + powder surcharge now read meta first (text fallback retained). Proven: renaming powder display label no longer flips a 5→9 bleach to APPROVED+grams. meta not rendered; user cannot inject meta. No formula/mass/timing/brand-matrix/3-zone change. Locked by test_www_structured_safety_flags.js (10 groups). DOM/render not changed → real browser smoke unaffected.
 
 ---
 
@@ -130,6 +132,7 @@ node --check test_www_real_browser_smoke.js
 node --check test_www_hair_parameter_contract.js
 node --check test_www_output_honesty_copy.js
 node --check test_www_output_honesty_contract.js
+node --check test_www_structured_safety_flags.js
 node test_www_business_scenarios.js
 node test_www_mass_model.js
 node test_www_mapping.js
@@ -139,6 +142,7 @@ node test_www_production_readiness_index.js
 node test_www_hair_parameter_contract.js
 node test_www_output_honesty_copy.js
 node test_www_output_honesty_contract.js
+node test_www_structured_safety_flags.js
 git diff --check
 ```
 
