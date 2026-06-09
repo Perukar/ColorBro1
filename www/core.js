@@ -526,7 +526,19 @@ const pigmentMap = {
                 timingInfo: runtime.timingInfo || null,
                 timing: typeof runtime.timing === 'number' ? runtime.timing : 0,
                 diagnostics: Array.isArray(runtime.diagnostics) ? runtime.diagnostics : [],
-                reasons: runtime.reasons || [],
+                // Narrow reasons sanitization:
+                // - Arrays (reason-code lists from gate results) pass through unchanged.
+                // - Non-array objects pass through only when they explicitly indicate
+                //   a 3-zone preview diagnostic case (threeZoneGateDecision === 'ALLOW_3_ZONE').
+                //   In that case normalizeReasonsToItems intentionally renders the 3-zone fields.
+                // - All other non-array reasons objects (normal approved path etc.) are
+                //   suppressed: normalizeReasonsToItems must not dump internal flags
+                //   (rootOxPercent, rootHighOxidizer, etc.) into user-visible HTML.
+                reasons: Array.isArray(runtime.reasons)
+                    ? runtime.reasons
+                    : (runtime.reasons && runtime.reasons.threeZoneGateDecision === 'ALLOW_3_ZONE'
+                        ? runtime.reasons
+                        : []),
                 endsRecDiagnosticWiringCandidate: runtime.endsRecDiagnosticWiringCandidate || null
             };
         }
