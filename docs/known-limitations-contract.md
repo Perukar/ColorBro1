@@ -560,10 +560,15 @@ localizing a recipe label (`process` / `dye` / `ox`) cannot silently disable a g
 - `meta` is internal: never rendered, never set from user input.
 - A legacy text-marker check remains only as a fallback if `meta` is absent; the
   current builder always attaches `meta`.
-- **Residual text dependence (non-safety):** `calcMixtone` (tonal corrector
-  amount) and timing display still key on process text. These are diagnostic/
-  advisory only — they never produce an approved recipe or exact mixing grams, so
-  a label change there cannot create an unsafe approved output.
+- **Advisory logic now structured:** `calcMixtone` (tonal corrector) and
+  `getBaseProcessTiming` (process base minutes) now read `recipe.meta` first
+  (text fallback retained). A process-label rename no longer changes corrector
+  neutralisation or base timing for internally-built recipes.
+- **Remaining text dependence (low risk, non-safety-block):** the grey `>=50`
+  base-`.00` validity check still reads `process.includes("Перманент")` + the ox
+  display set to decide base injection. The grey brand gate it feeds is already
+  meta-driven (`usesDoubleNaturalBase`); a rename there would skip base injection,
+  not produce an unsafe approved recipe. Candidate for a future pass.
 - This refactor added no formula/mass/timing production change, did not enable the
   brand matrix, and left 3-zone / endsRec / `endsMass: null` unchanged.
 

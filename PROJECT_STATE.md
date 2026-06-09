@@ -47,6 +47,7 @@ The safety foundation phase is **in progress**. All committed work is on `main`.
 | *(pending)* | Output honesty copy fix v1 (UI header/Block-1 wording + APPROVED gloss & safety caveat) + test_www_output_honesty_copy.js — render/UI text only, no formula change |
 | *(pending)* | Add output honesty contract tests (all-state honesty lock) — test_www_output_honesty_contract.js, test-only + concise docs, no runtime change |
 | *(pending)* | Refactor safety gates to structured flags (recipe.meta) + test_www_structured_safety_flags.js — copy-safe gate inputs, no formula/mass/timing change |
+| *(pending)* | Route advisory mixtone/timing to structured flags — calcMixtone + getBaseProcessTiming + SB confirmation gates read recipe.meta (text fallback); no behaviour change |
 
 ### Recently completed blocks
 
@@ -62,6 +63,7 @@ The safety foundation phase is **in progress**. All committed work is on `main`.
 10. Output honesty copy fix v1 — UI header "Colorist Auto-Pilot" → "Колорист-калькулятор (помічник майстра)"; Block 1 "Структура" → "Стан і параметри волосся"; APPROVED status gloss "розрахунок дозволено (не гарантія безпеки)" + renderApprovedCaveat block on the production-ready path. Render/UI text only — no formula/gating change. Locked by test_www_output_honesty_copy.js (6 groups). DOM/render touched → run real browser smoke on Windows before deploy.
 11. Output honesty contract v1 — test_www_output_honesty_contract.js (12 groups): locks honesty wording across APPROVED/BLOCKED/MANUAL/unknown-enum/brand-missing/ends-diagnostic/stale/structure-curl; no apply-permission wording, exact grams approved-path only. Test-only; no runtime change. Docs synced (ui-render-safety, known-limitations §18, production-readiness-index).
 12. Structured safety flags refactor v1 — www/core.js: added buildRecipeMeta/withMeta; recipe.meta {isPowder,isSpecialBlond,isToning,usesDoubleNaturalBase,oxidizerPercent,requiresBrandRuleMatrix} set at assembly branch; powder/SB/toning/grey/high-ox gates + powder surcharge now read meta first (text fallback retained). Proven: renaming powder display label no longer flips a 5→9 bleach to APPROVED+grams. meta not rendered; user cannot inject meta. No formula/mass/timing/brand-matrix/3-zone change. Locked by test_www_structured_safety_flags.js (10 groups). DOM/render not changed → real browser smoke unaffected.
+13. Advisory mixtone/timing routed to structured flags — calcMixtone + getBaseProcessTiming + Special Blond confirmation gates now read recipe.meta first (text fallback). Timing minute mapping mirrors legacy exactly (SB/powder 50, toning 25, permanent 40). Full matrix unchanged; structured-flags test extended to 15 groups (added 11–15). Residual: grey base-.00 validity still text-coupled (documented, low-risk, non-safety-block). No formula/brand/3-zone/endsRec change.
 
 ---
 

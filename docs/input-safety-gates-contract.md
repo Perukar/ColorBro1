@@ -162,9 +162,11 @@ formula-assembly branch), not user-facing display strings:
 - A legacy text-marker check remains only as a fallback when `meta` is absent;
   the current builder always attaches `meta`.
 - `meta` is internal: it is never rendered to the UI and is never set from user input.
-- `calcMixtone` (tonal corrector amount) and timing display retain a separate
-  text-marker dependence; these are diagnostic/advisory and never emit an approved
-  recipe or exact mixing grams.
+- Advisory `calcMixtone` (tonal corrector) and `getBaseProcessTiming` (process
+  base minutes) are ALSO routed to `recipe.meta` (powder/SB/toning/permanent),
+  with display text kept only as fallback. Renaming a process label no longer
+  changes the corrector neutralisation or the base timing for internally-built
+  recipes. Locked by `test_www_structured_safety_flags.js` groups 11–13.
 
 Locked by `test_www_structured_safety_flags.js` (10 groups).
 

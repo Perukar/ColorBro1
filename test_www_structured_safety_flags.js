@@ -76,6 +76,9 @@ function assertManualOrBlocked(h, ctx) {
 }
 const mutate = (from, to) => { const m = CORE.split(from).join(to); assert.notStrictEqual(m, CORE, 'mutation no-op: ' + from); return m; };
 
+function mixtoneBlock(html) { const m = html.match(/<h3>Мікстони<\/h3><pre>([\s\S]*?)<\/pre>/); return m ? m[1] : ''; }
+function timingTotal(html) { const m = html.match(/&quot;totalMinutes&quot;:\s*(\d+)/); return m ? Number(m[1]) : null; }
+
 // scenarios
 const POWDER = makeFixture({ root_level: '5', length_level: '5', target_level: '9', target_direction: '1' });
 const TONING = makeFixture({ root_level: '8', length_level: '8', target_level: '6', target_direction: '1' });
@@ -198,6 +201,69 @@ const GROUPS = [
             'sanity: renamed scenario has no powder text marker in any rendered recipe');
         assertManualOrBlocked(h, 'powder protected without text marker');
         assertNoExactGrams(h, 'powder protected without text marker');
+    }],
+
+    ['11. mixtone uses structured process metadata (powder label rename)', function () {
+        // calcMixtone returns the powder "not added" mixtone via meta.isPowder even
+        // when the display process label is renamed. Use a scenario whose recipe is
+        // rendered (APPROVED) so the mixtone block is visible: a clean lift that is
+        // NOT brand-sensitive would be permanent; instead assert at MANUAL level the
+        // mixtone block is identical regardless of label (powder mixtone is meta-driven).
+        const MUT = mutate('process: "Порошок"', 'process: "Lightener"');
+        // mixtone diagnostic block is present in MANUAL output (Мікстони) for powder.
+        const norm = mixtoneBlock(getOutputHtml(CORE, POWDER));
+        const ren = mixtoneBlock(getOutputHtml(MUT, POWDER));
+        assert.ok(norm.length > 0, 'powder scenario should render a Мікстони block');
+        assert.strictEqual(ren, norm, 'powder mixtone must be identical after label rename (meta.isPowder drives calcMixtone)');
+        assert.ok(/Не додається/.test(norm), 'powder mixtone must be "Не додається" (neutralised)');
+    }],
+
+    ['12. timing uses structured process metadata (label rename)', function () {
+        // Special Blond base-timing (50) must survive an SB label rename via meta.
+        const sbNorm = getOutputHtml(CORE, SB);
+        const sbMut = getOutputHtml(mutate('process: "Special Blond"', 'process: "Lift System"'), SB);
+        assert.strictEqual(timingTotal(sbMut), timingTotal(sbNorm),
+            'SB timing total must be unchanged by display-label rename (meta.isSpecialBlond)');
+        // Toning base-timing (25) must survive a toning label rename via meta.
+        const tnNorm = getOutputHtml(CORE, TONING);
+        const tnMut = getOutputHtml(mutate('"Перманент / Тонування"', '"Refresh"'), TONING);
+        assert.strictEqual(timingTotal(tnMut), timingTotal(tnNorm),
+            'toning timing total must be unchanged by display-label rename (meta.isToning)');
+        // Permanent timing (clean 7->7) is driven by meta.processCategory==='permanent'.
+        assert.strictEqual(timingTotal(getOutputHtml(CORE, makeFixture())), 40 - 0,
+            'clean permanent 7->7 base timing must be 40 (permanent), tMod 0');
+    }],
+
+    ['13. legacy fallback is not the primary timing/mixtone path', function () {
+        // Rename ALL process display labels at once; meta must still drive timing+mixtone.
+        let MUT = CORE;
+        MUT = MUT.split('process: "Порошок"').join('process: "X1"');
+        MUT = MUT.split('process: "Special Blond"').join('process: "X2"');
+        MUT = MUT.split('"Перманент / Тонування"').join('"X3"');
+        assert.notStrictEqual(MUT, CORE, 'mutation applied');
+        // Special Blond timing still 50-driven (MANUAL, but timing total reflects meta)
+        assert.strictEqual(timingTotal(getOutputHtml(MUT, SB)), timingTotal(getOutputHtml(CORE, SB)),
+            'SB timing must hold with all process labels renamed (meta is primary)');
+        // powder mixtone still neutralised
+        assert.ok(/Не додається/.test(mixtoneBlock(getOutputHtml(MUT, POWDER))),
+            'powder mixtone must hold with all process labels renamed (meta is primary)');
+    }],
+
+    ['14. render still does not leak meta', function () {
+        const states = [
+            getOutputHtml(CORE, makeFixture()), getOutputHtml(CORE, makeFixture({ allergy: 'yes' })),
+            getOutputHtml(CORE, makeFixture({ allergy: '' })), getOutputHtml(CORE, POWDER),
+            getOutputHtml(CORE, SB), getOutputHtml(CORE, TONING)
+        ];
+        for (const h of states) for (const f of META_FIELDS) assertNotIncludes(h, f, 'meta must not leak');
+    }],
+
+    ['15. behavior regression control', function () {
+        assert.strictEqual(status(getOutputHtml(CORE, makeFixture())).split(' ')[0], 'APPROVED', 'clean 7->7 APPROVED');
+        assertManualOrBlocked(getOutputHtml(CORE, POWDER), 'powder MANUAL'); assertNoExactGrams(getOutputHtml(CORE, POWDER), 'powder');
+        assertManualOrBlocked(getOutputHtml(CORE, SB), 'SB MANUAL'); assertNoExactGrams(getOutputHtml(CORE, SB), 'SB');
+        // Baseline timing total for clean 7->7 stays 40 (permanent, tMod 0) — unchanged by refactor.
+        assert.strictEqual(timingTotal(getOutputHtml(CORE, makeFixture())), 40, 'baseline timing unchanged');
     }]
 ];
 

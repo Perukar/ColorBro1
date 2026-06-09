@@ -6,9 +6,14 @@ const pigmentMap = {
             '32': 'Жовто-фіолетовий', '81': 'Сріблястий', '89': 'Жемчужно-сандре'
         };
 
-        function calcMixtone(tLevel, tDir, processType, mass, condition) {
+        function calcMixtone(tLevel, tDir, processType, mass, condition, processMeta) {
             let pType = String(processType).toLowerCase();
-            if (pType.includes('порошок') || pType.includes('powder'))
+            // Prefer structured recipe.meta over display-text classification (text = fallback).
+            var __m = (processMeta && typeof processMeta === 'object') ? processMeta : null;
+            var __isPowder = __m ? __m.isPowder === true : (pType.includes('порошок') || pType.includes('powder'));
+            var __isSpecialBlond = __m ? __m.isSpecialBlond === true : pType.includes('special blond');
+            var __isToningOrPermanent = __m ? (__m.isToning === true || __m.processCategory === 'permanent') : (pType.includes('тонування') || pType.includes('перманент'));
+            if (__isPowder)
                 return "Не додається (Нейтралізація на етапі тонування)";
 
             let color = pigmentMap[tDir] || "Коректор";
@@ -29,11 +34,11 @@ const pigmentMap = {
                 resStr = `${grams} гр | ${color}`;
             }
 
-            if (pType.includes('тонування') || pType.includes('перманент')) {
+            if (__isToningOrPermanent) {
                 let maxPastel = Math.round((4.0 * (mass / 60.0)) * 10) / 10;
                 if (grams > maxPastel) return `${maxPastel} гр (ЛІМІТ ПАСТЕЛЬ) | ${color}`;
             }
-            if (pType.includes('special blond')) {
+            if (__isSpecialBlond) {
                 let maxSB = Math.round((1.5 * (mass / 30.0)) * 10) / 10;
                 if (grams > maxSB) return `${maxSB} гр (ЛІМІТ S.B.) | ${color}`;
             }
@@ -1488,7 +1493,16 @@ const pigmentMap = {
          * @param {string} processText - process description string from rootRec/lenRec
          * @returns {number} base minutes (integer)
          */
-        function getBaseProcessTiming(processText) {
+        function getBaseProcessTiming(processText, processMeta) {
+            // Prefer structured recipe.meta classification (text = fallback). Minute
+            // values mirror the legacy text mapping exactly (SB/powder 50, toning 25, permanent 40).
+            var __tm = (processMeta && typeof processMeta === 'object') ? processMeta : null;
+            if (__tm) {
+                if (__tm.isSpecialBlond) return 50;
+                if (__tm.isPowder) return 50;
+                if (__tm.isToning) return 25;
+                if (__tm.processCategory === 'permanent') return 40;
+            }
             const p = String(processText || '').toLowerCase();
             if (p.includes('special blond')) return 50;
             if (p.includes('порошок') || p.includes('powder')) return 50;
@@ -2165,14 +2179,14 @@ const pigmentMap = {
                     plan = protocolText.split('<br><br>');
                 }
 
-                rootRec.mixtone = calcMixtone(tLevel, tDir, rootRec.process, rootRec.mass, "здоровые");
-                lenRec.mixtone = calcMixtone(tLevel, tDir, lenRec.process, lenRec.mass, condition);
+                rootRec.mixtone = calcMixtone(tLevel, tDir, rootRec.process, rootRec.mass, "здоровые", rootRec.meta);
+                lenRec.mixtone = calcMixtone(tLevel, tDir, lenRec.process, lenRec.mass, condition, lenRec.meta);
 
                 // Calculate production timing from process types.
                 // timing = max(root, length) base minutes + tMod (thickness modifier).
                 // If no process matches, timing stays 0 (not rendered as empty).
-                const rootBaseTiming = getBaseProcessTiming(rootRec ? rootRec.process : '');
-                const lenBaseTiming = getBaseProcessTiming(lenRec ? lenRec.process : '');
+                const rootBaseTiming = getBaseProcessTiming(rootRec ? rootRec.process : '', rootRec ? rootRec.meta : null);
+                const lenBaseTiming = getBaseProcessTiming(lenRec ? lenRec.process : '', lenRec ? lenRec.meta : null);
                 const baseTiming = Math.max(rootBaseTiming, lenBaseTiming);
                 timing = baseTiming > 0 ? Math.max(0, baseTiming + tMod) : 0;
 
@@ -2238,8 +2252,8 @@ const pigmentMap = {
                     && !isNeutralPorosity
                     && highPorosityMarkers.some(marker => porosityText.includes(marker));
                 const hasSpecialBlondProcess =
-                    (rootRec && String(rootRec.process).includes("Special Blond")) ||
-                    (lenRec && String(lenRec.process).includes("Special Blond"));
+                    (rootRec && ((rootRec.meta && rootRec.meta.isSpecialBlond) || String(rootRec.process).includes("Special Blond"))) ||
+                    (lenRec && ((lenRec.meta && lenRec.meta.isSpecialBlond) || String(lenRec.process).includes("Special Blond")));
                 const specialBlondHighPorosityNeedsConfirmation = hasSpecialBlondProcess && hasHighPorositySignal;
 
                 const legacyConditionText = String(condition || '').toLowerCase();
@@ -2337,8 +2351,8 @@ const pigmentMap = {
                 }
 
                 let specialBlondBase6NeedsConfirmation =
-                    (rLevel === 6 && rootRec && String(rootRec.process).includes("Special Blond")) ||
-                    (lLevel === 6 && lenRec && String(lenRec.process).includes("Special Blond"));
+                    (rLevel === 6 && rootRec && ((rootRec.meta && rootRec.meta.isSpecialBlond) || String(rootRec.process).includes("Special Blond"))) ||
+                    (lLevel === 6 && lenRec && ((lenRec.meta && lenRec.meta.isSpecialBlond) || String(lenRec.process).includes("Special Blond")));
 
                 if (specialBlondBase6NeedsConfirmation) {
                     warnings.push("⚠️ SPECIAL BLOND З БАЗИ 6: Потрібне підтвердження технології бренду або рішення майстра. Не вважати безумовно безпечним approved-рецептом.");
