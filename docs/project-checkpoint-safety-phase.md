@@ -1,8 +1,8 @@
 # Project Checkpoint: Safety Foundation Completed
 
-**Date:** 2026-06-06
-**Phase:** Safety Foundation — COMPLETED
-**HEAD:** 6474f559d0a7fe582d16121d42366d1152e08c51
+**Date:** 2026-06-09 (updated — Roadmap and project state sync v1)
+**Phase:** Safety Foundation — IN PROGRESS
+**HEAD:** d501069 Expand render forbidden-field coverage
 
 ---
 
@@ -12,6 +12,8 @@
 - Formula render safety contract hardened (productionReady invariant).
 - Third-zone skeleton isolation contract: skeleton renders only; no production recipe leaks.
 - All render paths verified: BLOCKED / MANUAL_REQUIRED / APPROVED states correctly gate output.
+- `buildWwwRenderState` narrow reasons sanitization: normal APPROVED output must not dump internal diagnostic fields; ALLOW_3_ZONE diagnostic preview is diagnostic-only.
+- 6 Node-level render-runtime regression tests cover forbidden-field invariants.
 
 ### 2. Input/Business Safety Gates
 - **Allergy gate:** `allergy === 'yes'` → BLOCKED; `unknown/empty` → MANUAL_REQUIRED; `no` → proceeds.
@@ -20,8 +22,14 @@
 - **Length/density/thickness gate:** any missing or empty value → BLOCKED; any unrecognized enum value → BLOCKED (no silent default, no MANUAL fallback).
 
 ### 3. Documentation
-- `docs/ui-render-safety-contract.md` — UI render safety contract.
+- `docs/ui-render-safety-contract.md` — UI render safety contract (15 sections + §16 forbidden-field policy).
 - `docs/input-safety-gates-contract.md` — input/business safety gates contract.
+- `docs/known-limitations-contract.md` — known limitations registry.
+- `docs/production-readiness-index.md` — 30-domain readiness matrix.
+- `docs/runtime-failsafe-contract.md` — runtime fail-safe rules.
+- `docs/state-persistence-safety-contract.md` — browser storage safety.
+- `docs/browser-smoke-contract.md` — Node-VM smoke contract (32 tests).
+- `docs/real-browser-smoke-contract.md` — Playwright Chromium smoke contract (8 scenarios).
 
 ---
 
@@ -57,6 +65,7 @@ length, density, thickness
 - Missing, empty, or unrecognized `length` / `density` / `thickness` enum values.
 - Missing or empty `target_direction`.
 - Diagnostic-only paths attempting to produce a production recipe.
+- Normal APPROVED output rendering internal diagnostic fields (`threeZonePreviewOnly`, `rootOxPercent`, etc.).
 
 ---
 
@@ -75,13 +84,16 @@ length, density, thickness
 | `6728e6d` | Harden formula correctness coverage (G1 regression + formula audit) |
 | `43c669b` | Document brand data layer safety contract |
 | `6103656` | Scaffold brand data layer readiness (helpers + schema + tests) |
-| `ee990a6` | Harden input model normalization contract (normalization helpers + condition trim + enum gate tests + docs) |
-| `e124809` | Document known limitations contract (powder surcharge, endsMass, endsRec, 3-zone, brand scaffold) |
-| `54c0763` | Harden UI safety surface contract (render audit, contract expanded to 15 sections, positive approved-recipe regression test) |
-| `a187cee` | Harden runtime fail-safe behavior (isFiniteNumber helper, NaN guards in mass model, buildWwwRenderState fail-closed default, 8 regression tests, docs/runtime-failsafe-contract.md) |
-| `511f97b` | Harden state persistence safety (safeParseJson helper, storage key constants, 7 PERSIST regression tests, docs/state-persistence-safety-contract.md) |
-| `d419973` | Add browser smoke safety contract (32 Node-VM smoke tests, docs/browser-smoke-contract.md, test_www_browser_smoke.js) |
-| pending   | Add production readiness index (30-domain matrix, docs/production-readiness-index.md, test_www_production_readiness_index.js) |
+| `ee990a6` | Harden input model normalization contract |
+| `e124809` | Document known limitations contract |
+| `54c0763` | Harden UI safety surface contract |
+| `a187cee` | Harden runtime fail-safe behavior |
+| `511f97b` | Harden state persistence safety |
+| `d419973` | Add browser smoke safety contract (32 Node-VM smoke tests) |
+| `b2645ef` | Add production readiness index (30-domain matrix) |
+| `94a6b23` | Add real browser smoke test (Playwright Chromium, 8 scenarios) |
+| `413ced8` | Fix real browser smoke internal field handling (narrow reasons sanitization in buildWwwRenderState) |
+| `d501069` | Expand render forbidden-field coverage (6 Node render-runtime regression tests, §16 ui-render-safety-contract) |
 
 ---
 
@@ -91,7 +103,7 @@ length, density, thickness
 |---|-------|--------|
 | 1 | Core business logic audit | done — formula correctness audit clean (2026-06-07) |
 | 2 | Formula correctness audit | done — G1 regression test added (2026-06-07) |
-| 3 | Brand/product data layer | scaffold done — schema defined, helpers added (Task 5), input normalization hardened (Task 6), matrix disabled |
+| 3 | Brand/product data layer | scaffold done — schema defined, helpers added, matrix disabled; not production-ready |
 | 4 | User flow / UI polish | pending |
 | 5 | Data persistence / client history | pending — state persistence safety contract and helpers added (2026-06-08); no active persistence yet |
 | 6 | Final QA / CI | pending |
@@ -102,9 +114,28 @@ length, density, thickness
 ## Notes for future agents
 
 - Known limitations are documented in `docs/known-limitations-contract.md` — consult before any future activation task.
-- UI render safety rules are documented in `docs/ui-render-safety-contract.md` (15 sections) — consult before any render layer change.
+- UI render safety rules are documented in `docs/ui-render-safety-contract.md` — consult before any render layer change.
+- Render forbidden-field policy is in §16 of `docs/ui-render-safety-contract.md`.
 - Do not change runtime logic or tests in documentation-only tasks.
 - Safety invariant (`status === 'APPROVED' && productionReady === true`) must be preserved in all future work.
 - LOCKED files: see `references/locked-files-and-git-policy.md`.
-- Full test matrix must pass before any commit: `test_www_render_runtime.js`, `test_www_business_scenarios.js`, `test_www_mass_model.js`, `test_www_mapping.js`, `test_www_browser_smoke.js`, `test_www_production_readiness_index.js`.
+- Full test matrix must pass before any commit:
+  ```
+  node --check www/core.js
+  node --check test_www_business_scenarios.js
+  node --check test_www_mass_model.js
+  node --check test_www_mapping.js
+  node --check test_www_render_runtime.js
+  node --check test_www_browser_smoke.js
+  node --check test_www_production_readiness_index.js
+  node --check test_www_real_browser_smoke.js
+  node test_www_business_scenarios.js
+  node test_www_mass_model.js
+  node test_www_mapping.js
+  node test_www_render_runtime.js
+  node test_www_browser_smoke.js
+  node test_www_production_readiness_index.js
+  git diff --check
+  ```
+  Real browser smoke (`node test_www_real_browser_smoke.js`) requires Playwright Chromium (Windows PowerShell). Run after DOM/script/render changes.
 - Production readiness domain matrix is documented in `docs/production-readiness-index.md` (30 domains, 9 status codes) — consult before any activation task.

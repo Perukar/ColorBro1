@@ -236,4 +236,21 @@ In all other cases: BLOCKED, MANUAL_REQUIRED, or FATAL_ERROR.
 Never APPROVED by default. Never executable recipe by default.
 ```
 
-Current production boundaries (as
+Current production boundaries (as of HEAD d501069):
+
+  endsMass: null — 2-zone mass model only
+  hasBrandRuleMatrix: false — all sensitive formulas → MANUAL_REQUIRED
+  threeZonePreviewOnly: true — 3-zone is diagnostic/preview only
+  endsRecipeReady: false — endsRec pipeline is diagnostic only
+  productionReady gated — approved output only when status=APPROVED && productionReady=true
+  normalApprovedPath — must not dump internal diagnostic fields into user-visible HTML
+  ALLOW_3ZONE diagnostic preview — renders 3-zone fields for inspection; not for mixing
+
+  Tests enforcing these boundaries:
+    test_www_business_scenarios.js   — formula correctness + gate decisions
+    test_www_mass_model.js           — 2-zone gram calculations + NaN guards
+    test_www_mapping.js              — level-to-tone + oxidizer selection
+    test_www_render_runtime.js       — render state + forbidden-field invariants
+    test_www_browser_smoke.js        — Node-VM gate path smoke (32 scenarios)
+    test_www_production_readiness_index.js — 30-domain matrix invariants
+    test_www_real_browser_smoke.js   — Playwright Chromium E2E (8 scenarios, Windows)

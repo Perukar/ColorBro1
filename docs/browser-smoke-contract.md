@@ -5,6 +5,7 @@
 **Status:** ACTIVE
 
 See also:
+- [docs/real-browser-smoke-contract.md](real-browser-smoke-contract.md) — Playwright Chromium smoke contract (8 end-to-end scenarios, Windows)
 - [docs/ui-render-safety-contract.md](ui-render-safety-contract.md) — render status taxonomy and HTML safety rules
 - [docs/runtime-failsafe-contract.md](runtime-failsafe-contract.md) — runtime fail-safe rules: NaN/Infinity, malformed input, exception policy
 - [docs/state-persistence-safety-contract.md](state-persistence-safety-contract.md) — browser storage safety contract
@@ -378,8 +379,10 @@ Browser smoke invariants:
   9. core.js does not access document at load time.
   10. No external scripts are loaded by index.html.
 
-Current runtime state (HEAD 511f97b):
+Current runtime state (HEAD d501069):
   - No localStorage or sessionStorage used anywhere in www/index.html or www/core.js.
   - calculateProtocol() is called only via explicit onclick button.
   - All safety gates confirmed working via Node-VM smoke tests.
+  - Real browser Playwright Chromium smoke (test_www_real_browser_smoke.js): 8/8 PASS on Windows.
+  - Render forbidden-field invariants verified: see docs/real-browser-smoke-contract.md and docs/ui-render-safety-contract.md §16.
 ```

@@ -1,7 +1,7 @@
 # Production Readiness Index — PERUKAR
 
-**Date:** 2026-06-08
-**HEAD at creation:** d419973 Add browser smoke safety contract
+**Date:** 2026-06-09 (updated — Roadmap and project state sync v1)
+**HEAD at last update:** d501069 Expand render forbidden-field coverage
 **Status:** ACTIVE
 **Classification method:** AUTONOMOUS_BOUNDED_AUDIT — all domains derived from runtime code, committed tests, and existing contracts.
 
@@ -13,7 +13,8 @@ See also:
 - [docs/input-model-contract.md](input-model-contract.md) — input normalization rules
 - [docs/brand-data-layer-contract.md](brand-data-layer-contract.md) — brand matrix contract
 - [docs/state-persistence-safety-contract.md](state-persistence-safety-contract.md) — persistence safety
-- [docs/browser-smoke-contract.md](browser-smoke-contract.md) — browser smoke safety
+- [docs/browser-smoke-contract.md](browser-smoke-contract.md) — Node-VM browser smoke safety (32 scenarios)
+- [docs/real-browser-smoke-contract.md](real-browser-smoke-contract.md) — Playwright Chromium smoke (8 scenarios, Windows)
 
 ---
 
@@ -54,7 +55,7 @@ is ready.
 
 ## 3. Global production invariants
 
-These invariants hold at `HEAD d419973` and must hold in all future work:
+These invariants hold at `HEAD d501069` and must hold in all future work:
 
 ```
 1. Executable recipe output is allowed only when:
@@ -373,13 +374,15 @@ Before any production deployment to a real salon environment:
 ## 16. Final invariant summary
 
 ```
-PERUKAR production readiness status at HEAD d419973:
+PERUKAR production readiness status at HEAD d501069:
 
-ACTIVE AND PRODUCTION_READY (8 domains):
+ACTIVE AND PRODUCTION_READY (10 domains):
   Runtime fail-safe, UI render safety, Input model normalization,
   Mass model 2-zone, Exact grams exposure policy,
-  Runtime persistence safety (defensive), Browser smoke (32 tests),
-  Known limitations registry.
+  Runtime persistence safety (defensive), Browser smoke (32 Node-VM tests),
+  Known limitations registry,
+  Real browser Playwright smoke (8 scenarios, Windows Chromium),
+  Render forbidden-field coverage (6 Node render-runtime regression tests).
 
 ACTIVE AS SAFETY GATES (8 domains):
   Input safety gates (12 critical fields), Allergy gate, Scalp gate,
@@ -414,4 +417,7 @@ HARD INVARIANTS THAT MUST NOT BE CHANGED:
   - stale persisted output is NOT authoritative
   - APPROVED output is allowed only through the current validated calculateProtocol path
   - browser smoke is a safety layer, not a replacement for domain tests
+  - normal APPROVED output must not dump internal diagnostic fields (rootOxPercent, threeZonePreviewOnly, etc.)
+  - ALLOW_3ZONE diagnostic preview is diagnostic evidence only — not for mixing, not a production recipe
+  - BLOCKED and MANUAL_REQUIRED states must not render dyeMass, oxidizerMass, or finalFormula
 ```

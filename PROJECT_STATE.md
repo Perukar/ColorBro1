@@ -1,15 +1,15 @@
 # PROJECT_STATE — PERUKAR
 
-**Last updated:** 2026-06-08
-**Updated by:** RALFBOT — AUTONOMOUS_BOUNDED_AUDIT_AND_DOCS (Production Readiness Index v1)
+**Last updated:** 2026-06-09
+**Updated by:** RALFBOT — AUTONOMOUS_BOUNDED_DOC_SYNC (Roadmap and project state sync v1)
 
 ---
 
 ## 0. Current HEAD
 
-**HEAD:** `d419973 Add browser smoke safety contract`
-
-> NOTE: Sections 1-8 below (legacy state from pre-safety-phase) are preserved for history but are **outdated**. The safety phase started at `9701a4f` (allergy gate) and has been the only active development track since 2026-06-06. The authoritative state record is the committed safety series in `docs/project-checkpoint-safety-phase.md`.
+**HEAD:** `d501069 Expand render forbidden-field coverage`
+**origin/main:** `d501069` (in sync)
+**Branch:** `main`
 
 ---
 
@@ -38,10 +38,20 @@ The safety foundation phase is **in progress**. All committed work is on `main`.
 | `a187cee` | Harden runtime fail-safe behavior |
 | `511f97b` | Harden state persistence safety |
 | `d419973` | Add browser smoke safety contract |
+| `b2645ef` | Add production readiness index |
+| `94a6b23` | Add real browser smoke test (Playwright Chromium) |
+| `413ced8` | Fix real browser smoke internal field handling (render sanitization) |
+| `d501069` | Expand render forbidden-field coverage (Node render-runtime regression tests) |
 
-### Next pending commit
+### Recently completed blocks
 
-- Add production readiness index (`docs/production-readiness-index.md`, `test_www_production_readiness_index.js`)
+1. Runtime fail-safe behavior — NaN guards, fail-closed status default
+2. State persistence safety — safeParseJson, storage key constants, stale output guard
+3. Browser smoke safety contract — 32 Node-VM smoke tests
+4. Production readiness index — 30-domain matrix
+5. Real browser Playwright smoke — 8 end-to-end Chromium scenarios
+6. Internal field render sanitization — buildWwwRenderState narrow reasons guard
+7. Render forbidden-field coverage expansion — 6 Node render-runtime regression tests
 
 ---
 
@@ -73,6 +83,9 @@ Full matrix: `docs/production-readiness-index.md`
 - Scalp gate: `irritated` → `BLOCKED`; `sensitive/unknown/missing` → `MANUAL_REQUIRED`.
 - `approved-recipe` renders only when `status === 'APPROVED' && productionReady === true`.
 - Fail-closed: missing/falsy status defaults to `'BLOCKED'`, never `'APPROVED'`.
+- Normal APPROVED output must not dump internal diagnostic fields (`threeZonePreviewOnly`, `rootOxPercent`, etc.).
+- ALLOW_3_ZONE diagnostic preview is diagnostic evidence only — not a production recipe, not for mixing.
+- BLOCKED/MANUAL_REQUIRED must not render executable mixing fields (`dyeMass`, `oxidizerMass`, `finalFormula`).
 
 ---
 
@@ -83,9 +96,10 @@ Full matrix: `docs/production-readiness-index.md`
 | `docs/production-readiness-index.md` | 30-domain readiness matrix — primary production boundary reference |
 | `docs/known-limitations-contract.md` | Single source of truth for intentional limitations |
 | `docs/runtime-failsafe-contract.md` | Fail-closed runtime rules: NaN, exceptions, fallback states |
-| `docs/ui-render-safety-contract.md` | Render status taxonomy and approved-recipe gate rules |
+| `docs/ui-render-safety-contract.md` | Render status taxonomy, approved-recipe gate rules, forbidden-field policy |
 | `docs/state-persistence-safety-contract.md` | Browser storage safety, safeParseJson, stale output policy |
-| `docs/browser-smoke-contract.md` | Page structure, gate smoke paths, manual checklist |
+| `docs/browser-smoke-contract.md` | Node-VM page structure smoke, gate smoke paths, manual checklist |
+| `docs/real-browser-smoke-contract.md` | Playwright Chromium end-to-end smoke contract (8 scenarios) |
 | `docs/input-safety-gates-contract.md` | Production input validation gate policy |
 | `docs/input-model-contract.md` | Input normalization rules |
 | `docs/brand-data-layer-contract.md` | Brand matrix safety contract (NOT READY) |
@@ -104,6 +118,7 @@ node --check test_www_mapping.js
 node --check test_www_render_runtime.js
 node --check test_www_browser_smoke.js
 node --check test_www_production_readiness_index.js
+node --check test_www_real_browser_smoke.js
 node test_www_business_scenarios.js
 node test_www_mass_model.js
 node test_www_mapping.js
@@ -112,6 +127,12 @@ node test_www_browser_smoke.js
 node test_www_production_readiness_index.js
 git diff --check
 ```
+
+Real browser smoke (Playwright Chromium):
+```
+node test_www_real_browser_smoke.js
+```
+Run from Windows PowerShell (Chromium binary required). Not required before every commit — run after any DOM/script/render change.
 
 ---
 
@@ -123,14 +144,7 @@ git diff --check
 
 ## Legacy sections (pre-safety-phase, retained for history)
 
-> Everything below is from the pre-safety-phase era (HEAD was `84b1e2c`). Treat as historical context only — do not act on it as current state.
+> Everything below is from the pre-safety-phase era (HEAD was `84b1e2c`). Treat as historical context only.
 
 ### Legacy HEAD (outdated)
 HEAD: `84b1e2c Normalize blocked result shape`
-
-### Legacy status (outdated)
-- Root core.js and www/core.js may diverge — this was resolved by safety phase work on www/core.js as the authoritative production file.
-- Mixtones structural only — still true as of safety phase.
-- massModel is now a real 2-zone gram model (rootMass, lengthMass, totalMass) — **no longer structural only**.
-- timingInfo is now a real production timing object — **no longer structural only**.
-- Full test suite now exists: 6 test files, all passing.

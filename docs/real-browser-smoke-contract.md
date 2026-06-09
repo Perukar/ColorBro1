@@ -1,8 +1,9 @@
 # Real Browser Smoke Contract — PERUKAR
 
-**Date:** 2026-06-08
+**Date:** 2026-06-09 (updated — Roadmap and project state sync v1)
 **HEAD at creation:** b2645ef Add production readiness index
-**Status:** ACTIVE — tooling BLOCKED_TOOLING in sandbox (Chromium binary download blocked by proxy); test ready for Windows execution
+**HEAD at last verification:** d501069 Expand render forbidden-field coverage
+**Status:** ACTIVE — 8/8 PASS on Windows (Playwright Chromium); tooling BLOCKED_TOOLING in sandbox (proxy blocks playwright.azureedge.net)
 **Test file:** `test_www_real_browser_smoke.js`
 
 See also:
@@ -236,9 +237,12 @@ Real browser smoke invariants:
   7. Forbidden internal fields do not appear in APPROVED DOM output.
   8. No console.error on normal operation.
 
-Tooling note (2026-06-08):
+Tooling note (updated 2026-06-09):
   @playwright/test is installed (devDependency).
   Chromium binary requires: npx playwright install chromium (run from Windows PowerShell).
   Sandbox binary download blocked by proxy (playwright.azureedge.net → HTTP 403).
-  Test is ready for Windows execution after binary install.
+  Windows verification: 8/8 scenarios PASS as of commit 94a6b23.
+  SMOKE-FORBIDDEN-FIELDS scenario (commit 94a6b23) verifies no internal diagnostic fields in APPROVED DOM output.
+  Render sanitization fix (commit 413ced8) resolved the underlying internal field leak in buildWwwRenderState.
+  All subsequent commits (d501069) preserve the 8/8 smoke pass state.
 ```

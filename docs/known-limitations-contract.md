@@ -1,7 +1,7 @@
 # Known Limitations Contract — PERUKAR
 
-**Date:** 2026-06-08
-**HEAD at creation:** ee990a6 Harden input model normalization contract
+**Date:** 2026-06-09 (updated — Roadmap and project state sync v1)
+**HEAD at last update:** d501069 Expand render forbidden-field coverage
 **Status:** ACTIVE — documents current intentional limitations
 
 See also:
@@ -330,11 +330,47 @@ The render layer (`PerucarWwwRenderV1`) always applies these guards:
 - `"mode": "3-zone"` in mass model block
 - `endsRecipeReady: true`
 
+### Narrow reasons sanitization (commit 413ced8)
+
+`buildWwwRenderState` applies a narrow guard on the `reasons` field:
+
+- If `runtime.reasons` is an Array → passes through unchanged (reason-code lists from gate results).
+- If `runtime.reasons` is an object AND `threeZoneGateDecision === 'ALLOW_3_ZONE'` → passes through (ALLOW_3ZONE diagnostic preview is intentional; `normalizeReasonsToItems` renders those diagnostic 3-zone fields).
+- In all other cases (normal APPROVED path, etc.) → `reasons` is replaced with `[]` to prevent `normalizeReasonsToItems` from dumping internal flags (`rootOxPercent`, `rootHighOxidizer`, `threeZonePreviewOnly`, etc.) into user-visible HTML.
+
+**Rule:** ALLOW_3ZONE diagnostic preview renders diagnostic 3-zone fields for inspection only. It is not a production recipe and must not be used for mixing (`notForMixing: true`).
+
+### endsMass null invariant
+
+`endsMass: null` in the mass-model JSON block in rendered HTML is correct 2-zone behavior. It is NOT a forbidden field — it is a null invariant. Any future activation of production 3-zone must change this deliberately, not accidentally.
+
+### Forbidden fields — APPROVED output must not contain
+
+| Field | Forbidden in | Notes |
+|---|---|---|
+| `threeZonePreviewOnly` | Normal APPROVED path | Diagnostic flag; should not appear in clean-path approved output |
+| `threeZonePreviewEligible` | Normal APPROVED path | Same |
+| `threeZoneGateDecision` | Normal APPROVED path | Same |
+| `endsRecipeReady` | BLOCKED, MANUAL paths | Never true; not for mixing |
+| `notForMixing` | BLOCKED, MANUAL paths | Should not appear as item in approved recipe |
+| `productionReady: true` | BLOCKED, MANUAL paths | Gate result; must not appear in non-approved outputs |
+| `dyeMass` | BLOCKED, MANUAL, DIAGNOSTIC | Exact gram values; must never appear in non-production states |
+| `oxidizerMass` | BLOCKED, MANUAL, DIAGNOSTIC | Same |
+| `rootOxPercent` | Normal APPROVED path | Internal calculation field |
+| `lengthOxPercent` | Normal APPROVED path | Internal calculation field |
+| `finalFormula` | BLOCKED, MANUAL | Exact formulation; must not appear in gated states |
+
 ### Tests
 
 - `DIAGNOSTIC-DISPLAY-RENDER-CONTRACT` (test_www_render_runtime.js)
 - `MANUAL-STATE-MASS-MODEL-RENDER` (test_www_render_runtime.js) — asserts `"mode": "2-zone"` and `"endsMass": null` in HTML
 - All MULTI-ZONE tests check `!hasProductionEndsRecSignal(html)`
+- `RENDER-FORBIDDEN-FIELDS-APPROVED-CLEAN-PATH` (test_www_render_runtime.js) — 7→7 fixture
+- `RENDER-FORBIDDEN-FIELDS-BLOCKED-PATH` (test_www_render_runtime.js) — allergy=yes
+- `RENDER-FORBIDDEN-FIELDS-MANUAL-PATH` (test_www_render_runtime.js) — allergy=empty
+- `RENDER-ALLOW-3ZONE-DIAGNOSTIC-PREVIEW-PRESERVED` (test_www_render_runtime.js)
+- `RENDER-REASONS-OBJECT-NOT-DUMPED-BY-DEFAULT` (test_www_render_runtime.js)
+- `RENDER-REASONS-ARRAY-PRESERVED` (test_www_render_runtime.js)
 
 ---
 
@@ -402,6 +438,37 @@ Before committing any change that touches a limitation boundary:
 - [ ] `docs/project-checkpoint-safety-phase.md` updated.
 - [ ] Commit message explicitly states which limitation boundary is being changed.
 - [ ] No `git add .` / `-A`; exact files staged only.
-- [ ] Full test matrix: `node test_www_business_scenarios.js`, `node test_www_render_runtime.js`, `node test_www_mass_model.js`, `node test_www_mapping.js`.
+- [ ] Full test matrix: `node test_www_business_scenarios.js`, `node test_www_render_runtime.js`, `node test_www_mass_model.js`, `node test_www_mapping.js`, `node test_www_browser_smoke.js`, `node test_www_production_readiness_index.js`.
+- [ ] `node --check` passes for all 8 test/source files.
+- [ ] Real browser smoke (`node test_www_real_browser_smoke.js`) run on Windows if any DOM/render change.
 - [ ] `git diff --check` passes.
 - [ ] User explicit `Commit: yes` before staging.
+
+
+---
+
+## 16. Browser smoke limitation
+
+### What real browser smoke is
+
+The real browser smoke (`test_www_real_browser_smoke.js`, Playwright Chromium) verifies end-to-end wiring: page load, form fill, button click, output DOM in a real browser. It is NOT:
+
+- A replacement for domain tests (business scenarios, mass model, mapping, render runtime)
+- A full salon QA or user acceptance test
+- A substitute for manual coloristic judgment
+
+### Sandbox limitation
+
+In the Linux sandbox (RALFBOT, CI environments with network restriction), Chromium binary download is blocked (`playwright.azureedge.net → HTTP 403`). Real browser smoke must be run from Windows PowerShell after installing: `npx playwright install chromium`.
+
+**Rule:** The inability to run real browser smoke in sandbox does NOT exempt the Node-VM test matrix from running. All 7 Node test files must pass before every commit. Real browser smoke is required before any production deployment and after any DOM/render/script change.
+
+### Status
+
+- Verified passing on Windows (8/8 scenarios) as of commit 94a6b23.
+- SMOKE-FORBIDDEN-FIELDS scenario added: verifies no internal diagnostic fields in APPROVED DOM output.
+- Contract: `docs/real-browser-smoke-contract.md`
+
+### Tests
+
+- `test_www_real_browser_smoke.js` (Playwright Chromium, 8 scenarios, Windows only)
