@@ -167,6 +167,9 @@ formula-assembly branch), not user-facing display strings:
   meta guard (`isValidRecipeMeta`) is the protection against missing/invalid meta.
   Retained on purpose: FB6 damage-lift markers (numeric `rStep/lStep>0` primary) and
   FB7 `zoneProcessesDiffer` (relative comparison), plus render/display and diagnostic text.
+- One canonical, diagnostic-only **brand matrix readiness API**; the legacy
+  `validateBrandRuleMatrixShape` / `getBrandMatrixReadinessStatus` are compatibility
+  wrappers over it (no duplicate readiness logic).
 - A strict **brand matrix data contract** (`validateBrandMatrixEntry` /
   `validateBrandRuleMatrix` / `getBrandMatrixReadiness`) exists for future brand data,
   but is **diagnostic-only**: brand matrix calculation stays disabled

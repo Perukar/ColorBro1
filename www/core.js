@@ -1568,21 +1568,20 @@ const pigmentMap = {
          * @param {*} matrix
          * @returns {{ ready: boolean, reason: string, missingFields?: string[] }}
          */
+        // COMPATIBILITY WRAPPER (consolidated) — delegates to the canonical
+        // validateBrandRuleMatrix() so there is ONE readiness implementation. Preserves
+        // the legacy return shape { ready, reason, missingFields? } for existing
+        // BRAND-HELPER-* tests. Diagnostic-only; does not enable the brand matrix.
         function validateBrandRuleMatrixShape(matrix) {
-            if (!isBrandRuleMatrixAvailable(matrix)) {
-                return { ready: false, reason: 'matrix is null, undefined, or empty' };
+            var v = validateBrandRuleMatrix(matrix);
+            if (v.ready) {
+                return { ready: true, reason: 'all entries present and validated' };
             }
-            for (var i = 0; i < matrix.length; i++) {
-                var entry = matrix[i];
-                var missing = getMissingBrandMatrixFields(entry);
-                if (missing.length > 0) {
-                    return { ready: false, reason: 'entry missing required fields', missingFields: missing };
-                }
-                if (entry.validationStatus !== 'validated') {
-                    return { ready: false, reason: 'entry validationStatus not validated: ' + entry.validationStatus };
-                }
+            var out = { ready: false, reason: (v.reasons && v.reasons.length) ? v.reasons[0] : 'not ready' };
+            if (Array.isArray(v.missingFields) && v.missingFields.length > 0) {
+                out.missingFields = v.missingFields;
             }
-            return { ready: true, reason: 'all entries present and validated' };
+            return out;
         }
 
         /**

@@ -285,7 +285,11 @@ Readiness helpers (`isBrandRuleMatrixAvailable`, `validateBrandRuleMatrixShape`,
 
 A strict, structured, PURE data contract for a future brand-line data set now exists:
 `validateBrandMatrixEntry(entry)`, `validateBrandRuleMatrix(matrix)`,
-`getBrandMatrixReadiness(matrix)`. Each entry requires all 18
+`getBrandMatrixReadiness(matrix)`. This is the **single canonical** readiness
+implementation; the legacy helpers `validateBrandRuleMatrixShape(matrix)` and
+`getBrandMatrixReadinessStatus(matrix)` are now thin **compatibility wrappers** that
+delegate to `validateBrandRuleMatrix()` (legacy return shape preserved), so there is
+no duplicated required-field list or processCategory logic. Each entry requires all 18
 `REQUIRED_BRAND_MATRIX_FIELDS`, a known `processCategory`
 (`permanent`/`special_blond`/`powder`/`toning`), a present `sourceReference` and
 `lastReviewedAt`, and `validationStatus === 'validated'`. Null/empty/partial/

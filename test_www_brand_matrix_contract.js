@@ -36,6 +36,20 @@ function entryReadiness(entry) {
     vm.runInContext('globalThis.__RE = JSON.stringify(validateBrandMatrixEntry(__E));', sb);
     return JSON.parse(sb.__RE);
 }
+function shapeReadiness(matrix) {
+    sb.__SM = matrix;
+    vm.runInContext('globalThis.__SR = JSON.stringify(validateBrandRuleMatrixShape(__SM));', sb);
+    return JSON.parse(sb.__SR);
+}
+function statusReadiness(matrix) {
+    sb.__STM = matrix;
+    vm.runInContext('globalThis.__ST = JSON.stringify(getBrandMatrixReadinessStatus(__STM));', sb);
+    return JSON.parse(sb.__ST);
+}
+function helperTypes() {
+    vm.runInContext('globalThis.__HT = JSON.stringify({entry: typeof validateBrandMatrixEntry, matrix: typeof validateBrandRuleMatrix, readiness: typeof getBrandMatrixReadiness, shape: typeof validateBrandRuleMatrixShape, status: typeof getBrandMatrixReadinessStatus});', sb);
+    return JSON.parse(sb.__HT);
+}
 
 // CLEARLY ARTIFICIAL mock entry — NOT a real brand spec.
 function mockEntry(over) {
@@ -170,6 +184,36 @@ const GROUPS = [
         assert.ok(/hasBrandRuleMatrix/.test(idx) || /brand matrix is NOT enabled/.test(idx), 'index must state brand matrix disabled');
         const lim = fs.readFileSync('./docs/known-limitations-contract.md', 'utf8');
         assert.ok(/brand matrix data contract/i.test(lim) || /brand matrix.*contract/i.test(lim), 'known-limitations must mention the brand matrix data contract');
+    }],
+    ['12. canonical + legacy helper names all exist', function () {
+        const t = helperTypes();
+        for (const k of ['entry', 'matrix', 'readiness', 'shape', 'status']) {
+            assert.strictEqual(t[k], 'function', 'helper missing: ' + k);
+        }
+    }],
+    ['13. legacy validateBrandRuleMatrixShape/getBrandMatrixReadinessStatus wrap canonical (consistent)', function () {
+        const cases = [null, [], 'notanarray', [{ brandId: 'x' }], [mockEntry({ validationStatus: 'pending' })], [mockEntry({ validationStatus: 'draft' })], [mockEntry({ processCategory: 'unknown_cat' })], [mockEntry()]];
+        for (const m of cases) {
+            const canon = readiness(m).ready;
+            assert.strictEqual(shapeReadiness(m).ready, canon, 'shape vs canonical disagree: ' + JSON.stringify(m));
+            assert.strictEqual(statusReadiness(m) === 'READY', canon, 'status vs canonical disagree: ' + JSON.stringify(m));
+        }
+        // Legacy return shape preserved for existing BRAND-HELPER-* tests.
+        const partial = shapeReadiness([{ brandId: 'x' }]);
+        assert.strictEqual(partial.ready, false);
+        assert.ok(Array.isArray(partial.missingFields) && partial.missingFields.length > 0, 'legacy missingFields array preserved');
+        assert.strictEqual(typeof partial.reason, 'string', 'legacy reason string preserved');
+        // Complete validated artificial fixture → ready via legacy wrapper too.
+        assert.strictEqual(shapeReadiness([mockEntry()]).ready, true, 'complete validated → ready via wrapper');
+        assert.strictEqual(statusReadiness([mockEntry()]), 'READY');
+    }],
+    ['14. single readiness implementation — consolidated field list + category logic', function () {
+        assert.strictEqual(readiness([mockEntry()]).requiredFieldsCount, 18);
+        // The legacy wrapper now inherits the canonical processCategory validation.
+        assert.strictEqual(shapeReadiness([mockEntry({ processCategory: 'bogus' })]).ready, false,
+            'consolidated wrapper rejects unknown processCategory');
+        assert.strictEqual(readiness([mockEntry({ processCategory: 'bogus' })]).ready, false,
+            'canonical rejects unknown processCategory');
     }]
 ];
 
