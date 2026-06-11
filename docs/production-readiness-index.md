@@ -243,6 +243,13 @@ produce, influence, or bypass the production recipe:
 - Used only for readiness checks and shape validation
 - Test: `BRAND-MATRIX-INACTIVE`, `FAILSAFE-BRAND-MATRIX-INACTIVE`
 
+**Brand matrix activation dry-run audit log** (diagnostic-only):
+- `getBrandMatrixActivationDryRunAudit({ importPayload, activationRequest, runtimeFlags, dryRunContext })` reuses `getBrandMatrixActivationPreconditions()` and emits a stable 10-event audit trail
+- It does NOT activate anything and is never production-authoritative; decisions are `DRY_RUN_BLOCKED` / `DRY_RUN_REVIEW_ONLY` only; `environment: 'production'` is always rejected
+- It never outputs formulas, exact masses, mixing proportions, timing instructions, or brand recipes; no persistence or network; pure (input never mutated)
+- Production activation remains disabled (`hasBrandRuleMatrix = false`); `calculateProtocol` remains isolated from the brand matrix; future production activation requires a separate guarded task
+- Test: `test_www_brand_matrix_activation_dry_run_contract.js` (24 groups)
+
 **Invariant:** the presence of a diagnostic helper function does not mean the
 feature is production-ready. Scaffold ≠ approval.
 
@@ -336,6 +343,7 @@ These test files must all pass before any commit that touches safety domains:
 | `test_www_structured_safety_flags.js` | Safety gates + advisory mixtone/timing + grey base-validity use structured `recipe.meta`; robust to label/ox rename; every built recipe carries valid consistent meta; fail-closed guard (`isValidRecipeMeta`) forces MANUAL on missing/invalid meta; legacy text fallbacks FB1-FB5 retired (meta-only), FB6/FB7 retained; meta never rendered; user cannot inject meta (35 groups) |
 | `test_www_brand_matrix_import_contract.js` | Brand matrix admin/import readiness (diagnostic-only): payload shape + canonical entry validation + provenance checks (sourceType/sourceName/importedAt/reviewedBy, placeholder rejection) + conservative coloristic sanity checks (levels 1-12, allowed oxidizer set, structured mixRatio <= 1:3, timing 1-90 min, structured policies, source-pointer sourceReference); import-ready never activates production (hasBrandRuleMatrix stays false; calculateProtocol unchanged; notForProductionActivation always true); pure; TEST_* fixtures only (29 groups) |
 | `test_www_brand_matrix_activation_contract.js` | Brand matrix activation preconditions checklist (diagnostic-only): import readiness + human review + bounded activation scope + production approval (rollback plan, test evidence) + runtime flags proving inactivity + production blockers (3-zone, endsRec, fake-formula markers, non-TEST identifiers, formula-like free text); even a complete artificial request only reaches READY_BUT_NOT_ACTIVATED; activationAllowedNow always false; notForProductionActivation always true; hasBrandRuleMatrix stays false; calculateProtocol unchanged; pure; TEST_* fixtures only (22 groups) |
+| `test_www_brand_matrix_activation_dry_run_contract.js` | Brand matrix activation dry-run audit log (diagnostic-only): getBrandMatrixActivationDryRunAudit reuses the preconditions checklist + dry-run context gate (contractType/schemaVersion/dryRunId/requestedBy/requestedAt/environment/reason; environment "production" ALWAYS rejected); stable 10-event audit trail; decisions DRY_RUN_BLOCKED / DRY_RUN_REVIEW_ONLY only — never activation; no formula/exact-mass/timing content in audit output; no persistence/network; output never production-authoritative; activationAllowedNow always false; notForProductionActivation always true; dryRunOnly always true; hasBrandRuleMatrix stays false; calculateProtocol remains isolated; pure; TEST_* fixtures only (24 groups) |
 | `test_www_brand_matrix_contract.js` | Brand matrix DATA CONTRACT (validateBrandMatrixEntry / validateBrandRuleMatrix / getBrandMatrixReadiness): strict 18-field + validationStatus + processCategory validation; null/empty/partial/pending/draft/unknown → not ready; pure (no mutation); brand matrix stays DISABLED, calculateProtocol behavior preserved, no fake formulas (11 groups, MOCK fixtures) |
 | `test_www_browser_smoke.js` | Browser page structure, global wiring, gate smoke paths, persistence infrastructure (32 tests) |
 | `test_www_production_readiness_index.js` | Readiness index document existence, required section presence, key invariant strings |

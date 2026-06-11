@@ -2336,6 +2336,219 @@ const pigmentMap = {
         }
 
         // =============================================================================
+        // BRAND MATRIX ACTIVATION DRY-RUN AUDIT LOG CONTRACT v1 — DIAGNOSTIC ONLY
+        // Answers ONE question: "What would happen if Brand Matrix activation was
+        // evaluated now?" — as a structured, reviewable audit log. The expected current
+        // answer is, and must remain:
+        //   - activation is NOT allowed; production activation is DISABLED;
+        //   - calculateProtocol is NOT wired to the brand matrix;
+        //   - hasBrandRuleMatrix stays false; no brand recipe content is used;
+        //   - the dry-run is diagnostic-only and NEVER production-authoritative.
+        // This helper NEVER activates anything, NEVER calls calculateProtocol, NEVER
+        // produces recipe content, exact masses, mixing proportions or timing
+        // instructions, NEVER touches storage or the network, and NEVER mutates input.
+        // The best possible outcome is decision 'DRY_RUN_REVIEW_ONLY' — a report for
+        // human review. Actual activation requires a separate, explicitly guarded task.
+        // =============================================================================
+        const BRAND_DRY_RUN_CONTRACT_TYPE = 'brandMatrixActivationDryRun';
+        const BRAND_DRY_RUN_RESULT_CONTRACT_TYPE = 'brandMatrixActivationDryRunAudit';
+        const BRAND_DRY_RUN_ALLOWED_ENVIRONMENTS = ['test', 'local', 'staging', 'review'];
+        const REQUIRED_BRAND_DRY_RUN_CONTEXT_FIELDS = [
+            'contractType', 'schemaVersion', 'dryRunId', 'requestedBy',
+            'requestedAt', 'environment', 'reason'
+        ];
+
+        /**
+         * Pure, diagnostic-only dry-run audit log for brand matrix activation.
+         * Reuses getBrandMatrixActivationPreconditions(); adds a dry-run context gate
+         * (who asked, when, where, why) and a stable 10-event audit trail.
+         * @param {*} input — { importPayload, activationRequest, runtimeFlags, dryRunContext }
+         * @returns {{ready:boolean, contractType:string, schemaVersion:number,
+         *   notForProductionActivation:true, activationAllowedNow:false, dryRunOnly:true,
+         *   dryRunId:(string|null), environment:(string|null),
+         *   decision:('DRY_RUN_BLOCKED'|'DRY_RUN_REVIEW_ONLY'), preconditions:object,
+         *   auditEvents:Array, blockers:string[], warnings:string[],
+         *   missingFields:string[], summary:object}}
+         */
+        function getBrandMatrixActivationDryRunAudit(input) {
+            var blockers = [];
+            var warnings = [
+                'Dry-run output is DIAGNOSTIC ONLY and never production-authoritative. Activation remains DISABLED; even a fully satisfied checklist only reaches DRY_RUN_REVIEW_ONLY. A separate, explicitly guarded activation task is required.'
+            ];
+            var missingFields = [];
+            var auditEvents = [];
+
+            var isObj = input !== null && input !== undefined && typeof input === 'object' && !Array.isArray(input);
+            var ctx = isObj ? input.dryRunContext : undefined;
+            var rf = isObj ? input.runtimeFlags : undefined;
+            var rfObj = rf !== null && rf !== undefined && typeof rf === 'object' && !Array.isArray(rf);
+
+            // --- Dry-run context gate (who asked, when, where, why) ---
+            var ctxObj = ctx !== null && ctx !== undefined && typeof ctx === 'object' && !Array.isArray(ctx);
+            if (!isObj) {
+                missingFields.push('dryRunContext');
+                blockers.push('dryRunContext: input is not an object — dry-run context is missing');
+            } else if (!ctxObj) {
+                missingFields.push('dryRunContext');
+                blockers.push('dryRunContext: missing or not an object — a dry-run must record who requested it, when, where and why');
+            } else {
+                for (var ci = 0; ci < REQUIRED_BRAND_DRY_RUN_CONTEXT_FIELDS.length; ci++) {
+                    var cf = REQUIRED_BRAND_DRY_RUN_CONTEXT_FIELDS[ci];
+                    if (ctx[cf] === undefined || ctx[cf] === null) {
+                        missingFields.push('dryRunContext.' + cf);
+                        blockers.push('dryRunContext: missing field: ' + cf);
+                    }
+                }
+                if (ctx.contractType !== undefined && ctx.contractType !== null && ctx.contractType !== BRAND_DRY_RUN_CONTRACT_TYPE) {
+                    blockers.push('dryRunContext: contractType must be "' + BRAND_DRY_RUN_CONTRACT_TYPE + '": ' + String(ctx.contractType));
+                }
+                if (ctx.schemaVersion !== undefined && ctx.schemaVersion !== null && ctx.schemaVersion !== 1) {
+                    blockers.push('dryRunContext: unsupported schemaVersion: ' + String(ctx.schemaVersion));
+                }
+                if (ctx.dryRunId !== undefined && ctx.dryRunId !== null && isBrandImportPlaceholderValue(ctx.dryRunId)) {
+                    blockers.push('dryRunContext: dryRunId is a placeholder: ' + String(ctx.dryRunId));
+                }
+                if (ctx.requestedBy !== undefined && ctx.requestedBy !== null && isBrandImportPlaceholderValue(ctx.requestedBy)) {
+                    blockers.push('dryRunContext: requestedBy is a placeholder: ' + String(ctx.requestedBy));
+                }
+                if (ctx.reason !== undefined && ctx.reason !== null && isBrandImportPlaceholderValue(ctx.reason)) {
+                    blockers.push('dryRunContext: reason is a placeholder: ' + String(ctx.reason));
+                }
+                if (ctx.requestedAt !== undefined && ctx.requestedAt !== null && !isIsoLikeDateString(ctx.requestedAt)) {
+                    blockers.push('dryRunContext: requestedAt must be an ISO-like parseable date/time string: ' + String(ctx.requestedAt));
+                }
+                if (ctx.environment !== undefined && ctx.environment !== null) {
+                    if (ctx.environment === 'production') {
+                        blockers.push('dryRunContext: environment "production" is rejected — the dry-run is diagnostic-only and is never evaluated for production');
+                    } else if (BRAND_DRY_RUN_ALLOWED_ENVIRONMENTS.indexOf(ctx.environment) === -1) {
+                        blockers.push('dryRunContext: environment must be one of ' + BRAND_DRY_RUN_ALLOWED_ENVIRONMENTS.join('|') + ': ' + String(ctx.environment));
+                    }
+                }
+            }
+            var contextValid = blockers.length === 0;
+
+            // --- Reuse the activation preconditions checklist (pure; never activates) ---
+            var preconditions = getBrandMatrixActivationPreconditions(isObj ? {
+                importPayload: input.importPayload,
+                activationRequest: input.activationRequest,
+                runtimeFlags: input.runtimeFlags
+            } : input);
+            for (var mi = 0; mi < preconditions.missingFields.length; mi++) {
+                missingFields.push(preconditions.missingFields[mi]);
+            }
+            function checklistItem(id) {
+                for (var i = 0; i < preconditions.checklist.length; i++) {
+                    if (preconditions.checklist[i].id === id) return preconditions.checklist[i];
+                }
+                return null;
+            }
+            function itemReady(id) {
+                var it = checklistItem(id);
+                return it !== null && it.ready === true;
+            }
+            function itemReasonCount(id) {
+                var it = checklistItem(id);
+                return it === null ? 1 : it.reasons.length;
+            }
+            // Audit-safe blocker summaries: counts and checklist ids only. Raw checklist
+            // reasons stay inside `preconditions`; they are NOT copied into the audit
+            // log so the log can never carry recipe-like content.
+            for (var pc = 0; pc < preconditions.checklist.length; pc++) {
+                var pcItem = preconditions.checklist[pc];
+                if (pcItem.ready !== true) {
+                    blockers.push('activation_preconditions: checklist item "' + pcItem.id + '" is not satisfied (' + pcItem.reasons.length + ' reason(s) — see preconditions.checklist)');
+                }
+            }
+
+            var importReadiness = preconditions.importReadiness;
+            var provenanceReady = importReadiness && importReadiness.provenanceReadiness ? importReadiness.provenanceReadiness.ready === true : false;
+            var sanityReady = importReadiness && importReadiness.sanityReadiness ? importReadiness.sanityReadiness.ready === true : false;
+            var observedHasBrandRuleMatrix = rfObj && rf.hasBrandRuleMatrix === true;
+            var observedWired = rfObj && rf.calculateProtocolWiredToBrandMatrix === true;
+            var observedFormulaOutput = rfObj && rf.brandFormulaOutputEnabled === true;
+            var isolationVerified = !observedHasBrandRuleMatrix && !observedWired && !observedFormulaOutput;
+
+            var decision = (contextValid && preconditions.ready === true) ? 'DRY_RUN_REVIEW_ONLY' : 'DRY_RUN_BLOCKED';
+
+            // --- Stable 10-event audit trail (no recipe content, no exact masses,
+            //     no mixing proportions, no timing instructions — ever) ---
+            function event(id, type, ok, source, passMessage, failMessage) {
+                auditEvents.push({
+                    id: id,
+                    type: type,
+                    severity: ok ? 'info' : 'critical',
+                    status: ok ? 'pass' : 'fail',
+                    message: ok ? passMessage : failMessage,
+                    source: source
+                });
+            }
+            event('dry_run_import_readiness_evaluated', 'check', itemReady('import_readiness'), 'import_readiness',
+                'Import readiness evaluated: package is import-ready (shape, provenance, sanity). Import-ready is NOT production-ready.',
+                'Import readiness evaluated: package is NOT import-ready (' + itemReasonCount('import_readiness') + ' reason(s) in preconditions.checklist).');
+            event('dry_run_provenance_sanity_acknowledged', 'check', provenanceReady && sanityReady, 'import_readiness',
+                'Provenance and sanity acknowledged: source, reviewer and conservative range checks passed at import level.',
+                'Provenance and sanity acknowledged: provenance or sanity checks did NOT pass at import level.');
+            event('dry_run_activation_preconditions_evaluated', 'check', preconditions.ready === true, 'activation_preconditions',
+                'Activation preconditions evaluated: checklist fully satisfied — still NOT an activation.',
+                'Activation preconditions evaluated: checklist NOT satisfied (' + preconditions.blockers.length + ' blocking reason(s) in preconditions).');
+            event('dry_run_human_review_evaluated', 'check', itemReady('human_review'), 'activation_preconditions',
+                'Human review evaluated: reviewer, requester and source audit are recorded.',
+                'Human review evaluated: review records are missing or incomplete.');
+            event('dry_run_activation_scope_evaluated', 'check', itemReady('activation_scope'), 'activation_preconditions',
+                'Activation scope evaluated: scope is explicitly bounded to artificial TEST fixtures.',
+                'Activation scope evaluated: scope is missing, unbounded or contains non-fixture values.');
+            event('dry_run_test_evidence_evaluated', 'check', itemReady('production_approval'), 'activation_preconditions',
+                'Test evidence evaluated: required suites are recorded as passing in the activation request.',
+                'Test evidence evaluated: approval, rollback plan or test evidence is incomplete.');
+            event('dry_run_runtime_flags_evaluated', 'check', itemReady('runtime_flags'), 'runtime_flags',
+                'Runtime flags evaluated: flags prove the brand matrix is still inactive.',
+                'Runtime flags evaluated: flags are missing or do NOT prove inactivity.');
+            event('dry_run_production_blockers_evaluated', 'check', itemReady('production_blockers'), 'activation_preconditions',
+                'Production blockers evaluated: no 3-zone, endsRec, fixture or free-text blockers found.',
+                'Production blockers evaluated: one or more production blockers are present.');
+            event('dry_run_calculate_protocol_isolation_verified', 'check', isolationVerified, 'runtime_flags',
+                'calculateProtocol isolation verified: not wired to the brand matrix; hasBrandRuleMatrix false; brand output disabled.',
+                'calculateProtocol isolation verified: reported runtime flags claim brand wiring or output is enabled — dry-run blocked.');
+            auditEvents.push({
+                id: 'dry_run_final_decision_recorded',
+                type: 'decision',
+                severity: decision === 'DRY_RUN_REVIEW_ONLY' ? 'info' : 'critical',
+                status: decision === 'DRY_RUN_REVIEW_ONLY' ? 'review_only' : 'blocked',
+                message: decision === 'DRY_RUN_REVIEW_ONLY'
+                    ? 'Final dry-run decision recorded: DRY_RUN_REVIEW_ONLY — a report for human review. Nothing was activated; production activation remains disabled.'
+                    : 'Final dry-run decision recorded: DRY_RUN_BLOCKED — context or preconditions are not satisfied. Nothing was activated; production activation remains disabled.',
+                source: 'dry_run_contract'
+            });
+
+            return {
+                ready: decision === 'DRY_RUN_REVIEW_ONLY',
+                contractType: BRAND_DRY_RUN_RESULT_CONTRACT_TYPE,
+                schemaVersion: 1,
+                notForProductionActivation: true,
+                activationAllowedNow: false,
+                dryRunOnly: true,
+                dryRunId: ctxObj && typeof ctx.dryRunId === 'string' ? ctx.dryRunId : null,
+                environment: ctxObj && typeof ctx.environment === 'string' ? ctx.environment : null,
+                decision: decision,
+                preconditions: preconditions,
+                auditEvents: auditEvents,
+                blockers: blockers,
+                warnings: warnings,
+                missingFields: missingFields,
+                summary: {
+                    importReady: importReadiness ? importReadiness.ready === true : false,
+                    activationPreconditionsReady: preconditions.ready === true,
+                    activationAllowedNow: false,
+                    hasBrandRuleMatrix: observedHasBrandRuleMatrix,
+                    calculateProtocolWiredToBrandMatrix: observedWired,
+                    brandFormulaOutputEnabled: observedFormulaOutput,
+                    dryRunDiagnosticOnly: true
+                }
+            };
+        }
+        // ====================== END BRAND MATRIX DRY-RUN AUDIT ======================
+
+        // =============================================================================
         // STRUCTURED RECIPE SAFETY METADATA — docs/input-safety-gates-contract.md
         // Internal, trusted metadata set at the formula-assembly branch (NOT parsed
         // from user-facing display text). Safety gates read these structured flags so

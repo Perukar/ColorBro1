@@ -423,6 +423,42 @@ warnings, missingFields, decision: 'NOT_READY' | 'READY_BUT_NOT_ACTIVATED' }`.
 - Locked by `test_www_brand_matrix_activation_contract.js` (22 groups, artificial
   TEST_* fixtures only).
 
+### Brand matrix ACTIVATION DRY-RUN AUDIT LOG contract v1 (diagnostic-only)
+
+A pure, diagnostic-only **dry-run audit** helper now exists:
+`getBrandMatrixActivationDryRunAudit({ importPayload, activationRequest,
+runtimeFlags, dryRunContext })`. It answers the question "What would happen if
+Brand Matrix activation was evaluated now?" — as a structured, reviewable audit
+log. It is NOT activation, NOT formula execution, NOT production readiness.
+
+- **The dry-run audit does not activate anything** and its output is never
+  production-authoritative — it is a diagnostic report for human review only.
+- `dryRunContext` is required: `contractType: 'brandMatrixActivationDryRun'`,
+  `schemaVersion: 1`, non-placeholder `dryRunId`/`requestedBy`/`reason`,
+  ISO-like `requestedAt`, and `environment` ∈ test/local/staging/review.
+  `environment: 'production'` is ALWAYS rejected (=> `DRY_RUN_BLOCKED`).
+- The helper reuses `getBrandMatrixActivationPreconditions()` and emits a
+  stable 10-event audit trail (`{ id, type, severity, status, message,
+  source }`): import readiness, provenance/sanity, activation preconditions,
+  human review, activation scope, test evidence, runtime flags, production
+  blockers, calculateProtocol isolation, final decision.
+- Decisions: `DRY_RUN_BLOCKED` (context or preconditions incomplete) or
+  `DRY_RUN_REVIEW_ONLY` (complete artificial TEST fixture — still NOT an
+  activation). Never `READY_FOR_PRODUCTION`, never `ACTIVATED`.
+- The audit log **never outputs formulas, exact masses (grams), mixing
+  proportions, timing instructions, or brand recipes** — audit messages are
+  count/id summaries; raw checklist reasons stay inside `preconditions`.
+- No persistence, no network, no storage writes: the helper is pure, never
+  mutates input, and audit logs are returned to the caller only — never
+  written to disk or browser storage.
+- Invariants in every result: `activationAllowedNow: false`,
+  `notForProductionActivation: true`, `dryRunOnly: true`. Production
+  activation remains disabled (`hasBrandRuleMatrix = false`);
+  `calculateProtocol` remains isolated from the brand matrix; future
+  production activation requires a separate, explicitly guarded task.
+- Locked by `test_www_brand_matrix_activation_dry_run_contract.js` (24 groups,
+  artificial TEST_* fixtures only).
+
 ---
 
 ## 11. Input model limitation
