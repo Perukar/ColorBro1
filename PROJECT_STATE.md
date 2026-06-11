@@ -1,7 +1,7 @@
 # PROJECT_STATE — PERUKAR
 
 **Last updated:** 2026-06-11
-**Updated by:** RALFBOT — BOUNDED_PRODUCT_INFRA_WITH_TESTS (Brand matrix import provenance + sanity contract v1)
+**Updated by:** RALFBOT — BOUNDED_PRODUCT_INFRA_WITH_TESTS (Brand matrix activation preconditions checklist contract v1)
 
 ---
 
@@ -56,6 +56,7 @@ The safety foundation phase is **in progress**. All committed work is on `main`.
 | *(pending)* | Retire legacy text fallbacks FB1-FB5 (meta-only powder/SB/grey/toning/high-ox); guard handles missing meta; FB6/FB7 retained; tests 31-35 |
 | *(pending)* | Add brand matrix data contract — strict validateBrandMatrixEntry/validateBrandRuleMatrix/getBrandMatrixReadiness (diagnostic-only); matrix stays disabled; test_www_brand_matrix_contract.js |
 | *(pending)* | Add brand matrix import provenance sanity checks — validateBrandImportProvenance / validateBrandMatrixEntrySanity / validateBrandMatrixImportSanity merged into getBrandMatrixImportReadiness; provenance (allowed sourceType, non-placeholder sourceName/reviewedBy, parseable importedAt) + conservative coloristic sanity (levels 1-12, allowed oxidizer set, structured mixRatio <= 1:3, timing 1-90 min, structured policies, source-pointer sourceReference, parseable lastReviewedAt); diagnostic-only; import-ready != production-ready; hasBrandRuleMatrix stays false; calculateProtocol unchanged; no fake formulas; import test now 29 groups |
+| *(pending)* | Add brand matrix activation preconditions contract — getBrandMatrixActivationPreconditions({importPayload, activationRequest, runtimeFlags}); checklist: import readiness (provenance+sanity), human review + source audit, bounded activation scope, production approval (rollbackPlan >= 20 chars, full testEvidence), runtime flags proving inactivity, production blockers (3-zone/endsRec/fake-formula markers/non-TEST identifiers/formula-like free text); decision NOT_READY or READY_BUT_NOT_ACTIVATED; activationAllowedNow always false; notForProductionActivation always true; hasBrandRuleMatrix stays false; calculateProtocol unchanged; test_www_brand_matrix_activation_contract.js (22 groups) |
 
 ### Recently completed blocks
 

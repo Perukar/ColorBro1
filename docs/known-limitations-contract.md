@@ -374,6 +374,55 @@ If provenance or sanity fails: `ready: false`, `reasons` explain why, and
   allowed anywhere (test fixtures use clearly-artificial TEST_* values only).
 - Future activation needs a separate guarded task and real validated data.
 
+### Brand matrix ACTIVATION PRECONDITIONS checklist contract v1 (diagnostic-only)
+
+A pure, diagnostic-only **activation preconditions checklist** now exists:
+`getBrandMatrixActivationPreconditions({ importPayload, activationRequest,
+runtimeFlags })`. It answers the question "Is the system allowed to activate the
+brand matrix in production?" — and for now the answer is, and must remain, **NO**.
+
+The checklist evaluates (all critical):
+
+1. **import readiness** — the package must be fully import-ready (shape +
+   provenance + sanity) and must explicitly acknowledge
+   `notForProductionActivation: true` (import-ready is NOT production-ready);
+2. **activation request shape** — `contractType: 'brandMatrixActivationRequest'`,
+   `schemaVersion: 1`, all required fields present;
+3. **human review** — non-placeholder `requestedBy`/`reviewedBy`/
+   `sourceAuditSummary`, parseable `requestedAt`/`reviewCompletedAt`;
+4. **activation scope** — structured object with non-empty, non-placeholder
+   `allowedBrandIds`/`allowedLineIds`/`allowedProcessCategories` (known
+   categories only: permanent, special_blond, powder, toning);
+5. **production approval** — `approvedForProduction === true`, non-placeholder
+   rollback plan (>= 20 chars), complete `testEvidence` (six suites, all "pass");
+6. **runtime flags** — must PROVE the feature is still inactive:
+   `hasBrandRuleMatrix`, `calculateProtocolWiredToBrandMatrix`,
+   `brandFormulaOutputEnabled` all false; any true flag → not ready, because
+   activation is not allowed in the current diagnostic-only contract;
+7. **production blockers** — `productionThreeZoneEnabled`/`endsRecEnabled` true,
+   fake-formula markers, non-TEST brand/line identifiers (only artificial
+   `TEST_*` fixture identifiers are allowed while the contract is
+   diagnostic-only), or formula-like markers in free-text fields
+   (audit summary / rollback plan) → not ready. No real brand names are stored
+   in the source in any form — literal or encoded; the source stays readable
+   and auditable.
+
+Result is structured `{ ready, contractType: 'brandMatrixActivationPreconditions',
+schemaVersion: 1, notForProductionActivation: true, activationAllowedNow: false,
+importReadiness, checklist: [{ id, label, ready, severity, reasons }], blockers,
+warnings, missingFields, decision: 'NOT_READY' | 'READY_BUT_NOT_ACTIVATED' }`.
+
+- **The checklist never activates anything.** Even a complete artificial request
+  only reaches decision `READY_BUT_NOT_ACTIVATED`; `activationAllowedNow` is
+  ALWAYS `false` and `notForProductionActivation` is ALWAYS `true`. Production
+  activation remains disabled (`hasBrandRuleMatrix = false`), `calculateProtocol`
+  is unchanged, and current formula behavior is unchanged.
+- Activation requires validated import, human review, source audit, test
+  evidence, a rollback plan — and an explicit, separately guarded future
+  activation task. No fake formulas are allowed anywhere.
+- Locked by `test_www_brand_matrix_activation_contract.js` (22 groups, artificial
+  TEST_* fixtures only).
+
 ---
 
 ## 11. Input model limitation

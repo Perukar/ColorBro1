@@ -2044,6 +2044,298 @@ const pigmentMap = {
         }
 
         // =============================================================================
+        // BRAND MATRIX ACTIVATION PRECONDITIONS CHECKLIST CONTRACT v1 — DIAGNOSTIC ONLY
+        // Answers ONE question: "Is the system allowed to activate the brand matrix in
+        // production?" For now the answer is, and must remain: NO.
+        // This contract only DEFINES the gate. It never activates anything:
+        //   - activationAllowedNow is ALWAYS false;
+        //   - notForProductionActivation is ALWAYS true;
+        //   - hasBrandRuleMatrix stays false; calculateProtocol is never wired here;
+        //   - no formula is produced or exposed; pure (input never mutated).
+        // A fully-satisfied checklist yields decision 'READY_BUT_NOT_ACTIVATED' —
+        // actual activation requires a separate, explicitly guarded future task.
+        // =============================================================================
+        const REQUIRED_BRAND_ACTIVATION_REQUEST_FIELDS = [
+            'contractType', 'schemaVersion', 'requestedBy', 'requestedAt',
+            'reviewedBy', 'reviewCompletedAt', 'activationScope', 'approvedForProduction',
+            'rollbackPlan', 'testEvidence', 'sourceAuditSummary'
+        ];
+        const REQUIRED_BRAND_ACTIVATION_RUNTIME_FLAGS = [
+            'hasBrandRuleMatrix', 'calculateProtocolWiredToBrandMatrix',
+            'brandFormulaOutputEnabled', 'productionThreeZoneEnabled', 'endsRecEnabled'
+        ];
+        const REQUIRED_BRAND_ACTIVATION_TEST_EVIDENCE = [
+            'brandMatrixContractTests', 'importContractTests', 'businessScenarios',
+            'renderRuntime', 'structuredSafetyFlags', 'productionReadinessIndex'
+        ];
+        const BRAND_ACTIVATION_ROLLBACK_MIN_LENGTH = 20;
+        // Fake-formula markers: their presence anywhere in the activation input is a blocker.
+        const BRAND_ACTIVATION_FAKE_FORMULA_MARKERS = [
+            'fakeformula', 'fake_formula', 'formulaoverride', 'formula_override', 'hardcodedformula'
+        ];
+        // Diagnostic-only fixture restriction. No real brand names are stored here in
+        // ANY form (literal or encoded): instead, while this contract is diagnostic-only,
+        // activation input may reference ONLY clearly-artificial fixture identifiers
+        // with the TEST_ prefix. Any other identifier is treated as potential real
+        // brand data and blocks the checklist. Readable, auditable, no source-scan tricks.
+        const BRAND_ACTIVATION_FIXTURE_ID_PREFIX = 'TEST_';
+        // Formula-like markers are forbidden in free-text fields (audit summary,
+        // rollback plan): no formula may be smuggled through prose. Token-matched
+        // words plus substring patterns.
+        const BRAND_ACTIVATION_FORMULA_TEXT_MARKERS = [
+            'grams', 'gram', 'g', 'ml', 'vol', 'developer', 'oxidizer', 'mix', 'ratio', 'formula', 'recipe'
+        ];
+        const BRAND_ACTIVATION_FORMULA_TEXT_PATTERNS = ['1:1', '1:2', '1:3', '%'];
+
+        // True if a free-text value contains a formula-like marker (exact token) or
+        // pattern (substring). Pure; diagnostic-only.
+        function hasBrandActivationFormulaMarker(value) {
+            if (typeof value !== 'string') return false;
+            var lowered = value.toLowerCase();
+            for (var i = 0; i < BRAND_ACTIVATION_FORMULA_TEXT_PATTERNS.length; i++) {
+                if (lowered.indexOf(BRAND_ACTIVATION_FORMULA_TEXT_PATTERNS[i]) !== -1) return true;
+            }
+            var tokens = lowered.split(/[^a-z0-9]+/);
+            for (var t = 0; t < tokens.length; t++) {
+                if (tokens[t] && BRAND_ACTIVATION_FORMULA_TEXT_MARKERS.indexOf(tokens[t]) !== -1) return true;
+            }
+            return false;
+        }
+
+        /**
+         * Pure, diagnostic-only activation preconditions checklist.
+         * @param {*} input — { importPayload, activationRequest, runtimeFlags }
+         * @returns {{ready:boolean, contractType:string, schemaVersion:number,
+         *   notForProductionActivation:true, activationAllowedNow:false,
+         *   importReadiness:object, checklist:Array, blockers:string[], warnings:string[],
+         *   missingFields:string[], decision:('NOT_READY'|'READY_BUT_NOT_ACTIVATED')}}
+         */
+        function getBrandMatrixActivationPreconditions(input) {
+            var missingFields = [];
+            var blockers = [];
+            var warnings = [
+                'Activation remains DISABLED in this diagnostic-only contract. Even a fully satisfied checklist never activates the brand matrix; a separate, explicitly guarded activation task with real validated data is required.'
+            ];
+            var checklist = [];
+            function item(id, label, reasons) {
+                var entry = { id: id, label: label, ready: reasons.length === 0, severity: 'critical', reasons: reasons };
+                checklist.push(entry);
+                for (var i = 0; i < reasons.length; i++) blockers.push(id + ': ' + reasons[i]);
+                return entry;
+            }
+            var isObj = input !== null && input !== undefined && typeof input === 'object' && !Array.isArray(input);
+            var importPayload = isObj ? input.importPayload : undefined;
+            var ar = isObj ? input.activationRequest : undefined;
+            var rf = isObj ? input.runtimeFlags : undefined;
+            if (!isObj) {
+                missingFields.push('importPayload', 'activationRequest', 'runtimeFlags');
+            } else {
+                if (importPayload === undefined || importPayload === null) missingFields.push('importPayload');
+                if (ar === undefined || ar === null) missingFields.push('activationRequest');
+                if (rf === undefined || rf === null) missingFields.push('runtimeFlags');
+            }
+
+            // 1. IMPORT READINESS — package must be import-ready (shape + provenance +
+            //    sanity) AND must explicitly acknowledge import-ready != production-ready.
+            var importReadiness = getBrandMatrixImportReadiness(importPayload === undefined ? null : importPayload);
+            var r1 = [];
+            if (importPayload === undefined || importPayload === null) {
+                r1.push('importPayload is missing');
+            } else if (importReadiness.ready !== true) {
+                r1.push('import package is not import-ready (' + importReadiness.reasons.length + ' reason(s)): ' + importReadiness.reasons.slice(0, 5).join(' | '));
+            }
+            if (importReadiness.notForProductionActivation !== true) {
+                r1.push('import readiness must explicitly acknowledge notForProductionActivation: true');
+            }
+            item('import_readiness', 'Import package passes shape + provenance + sanity contract', r1);
+
+            // 2. ACTIVATION REQUEST SHAPE.
+            var r2 = [];
+            var arObj = ar !== null && ar !== undefined && typeof ar === 'object' && !Array.isArray(ar);
+            if (!arObj) {
+                r2.push('activationRequest is not an object');
+            } else {
+                for (var fi = 0; fi < REQUIRED_BRAND_ACTIVATION_REQUEST_FIELDS.length; fi++) {
+                    var ff = REQUIRED_BRAND_ACTIVATION_REQUEST_FIELDS[fi];
+                    if (ar[ff] === undefined || ar[ff] === null) {
+                        missingFields.push('activationRequest.' + ff);
+                        r2.push('missing field: ' + ff);
+                    }
+                }
+                if (ar.contractType !== undefined && ar.contractType !== 'brandMatrixActivationRequest') {
+                    r2.push('contractType must be "brandMatrixActivationRequest": ' + String(ar.contractType));
+                }
+                if (ar.schemaVersion !== undefined && ar.schemaVersion !== 1) {
+                    r2.push('unsupported schemaVersion: ' + String(ar.schemaVersion));
+                }
+            }
+            item('activation_request_shape', 'Activation request has required contract shape', r2);
+
+            // 3. HUMAN REVIEW — real people, real parseable dates, real audit summary.
+            var r3 = [];
+            if (!arObj) {
+                r3.push('activationRequest is not an object');
+            } else {
+                if (isBrandImportPlaceholderValue(ar.requestedBy)) r3.push('requestedBy is missing or a placeholder: ' + String(ar.requestedBy));
+                if (!isIsoLikeDateString(ar.requestedAt)) r3.push('requestedAt must be an ISO-like parseable date/time string: ' + String(ar.requestedAt));
+                if (isBrandImportPlaceholderValue(ar.reviewedBy)) r3.push('reviewedBy is missing or a placeholder: ' + String(ar.reviewedBy));
+                if (!isIsoLikeDateString(ar.reviewCompletedAt)) r3.push('reviewCompletedAt must be an ISO-like parseable date/time string: ' + String(ar.reviewCompletedAt));
+                if (isBrandImportPlaceholderValue(ar.sourceAuditSummary)) r3.push('sourceAuditSummary is missing or a placeholder: ' + String(ar.sourceAuditSummary));
+            }
+            item('human_review', 'Human review and source audit are recorded', r3);
+
+            // 4. ACTIVATION SCOPE — explicitly bounded, non-placeholder, known categories.
+            var r4 = [];
+            var scope = arObj ? ar.activationScope : undefined;
+            var scopeObj = scope !== null && scope !== undefined && typeof scope === 'object' && !Array.isArray(scope);
+            if (!scopeObj) {
+                r4.push('activationScope must be a structured object');
+            } else {
+                ['allowedBrandIds', 'allowedLineIds', 'allowedProcessCategories'].forEach(function(sf) {
+                    var arr = scope[sf];
+                    if (!Array.isArray(arr) || arr.length === 0) {
+                        r4.push(sf + ' must be a non-empty array');
+                    } else {
+                        arr.forEach(function(v) {
+                            if (isBrandImportPlaceholderValue(v)) {
+                                r4.push(sf + ' contains a placeholder value: ' + String(v));
+                            }
+                        });
+                    }
+                });
+                if (Array.isArray(scope.allowedProcessCategories)) {
+                    scope.allowedProcessCategories.forEach(function(cat) {
+                        if (ALLOWED_BRAND_PROCESS_CATEGORIES.indexOf(cat) === -1) {
+                            r4.push('unknown process category: ' + String(cat));
+                        }
+                    });
+                }
+            }
+            item('activation_scope', 'Activation scope is explicitly bounded', r4);
+
+            // 5. PRODUCTION APPROVAL — explicit true, real rollback plan, full test evidence.
+            var r5 = [];
+            if (!arObj) {
+                r5.push('activationRequest is not an object');
+            } else {
+                if (ar.approvedForProduction !== true) {
+                    r5.push('approvedForProduction must be exactly true: ' + String(ar.approvedForProduction));
+                }
+                if (isBrandImportPlaceholderValue(ar.rollbackPlan)) {
+                    r5.push('rollbackPlan is missing or a placeholder: ' + String(ar.rollbackPlan));
+                } else if (ar.rollbackPlan.trim().length < BRAND_ACTIVATION_ROLLBACK_MIN_LENGTH) {
+                    r5.push('rollbackPlan too short (< ' + BRAND_ACTIVATION_ROLLBACK_MIN_LENGTH + ' chars)');
+                }
+                var te = ar.testEvidence;
+                if (te === null || te === undefined || typeof te !== 'object' || Array.isArray(te)) {
+                    r5.push('testEvidence must be an object');
+                } else {
+                    for (var ti = 0; ti < REQUIRED_BRAND_ACTIVATION_TEST_EVIDENCE.length; ti++) {
+                        var tf = REQUIRED_BRAND_ACTIVATION_TEST_EVIDENCE[ti];
+                        if (te[tf] !== 'pass') {
+                            r5.push('testEvidence.' + tf + ' must be "pass": ' + String(te[tf]));
+                        }
+                    }
+                }
+            }
+            item('production_approval', 'Production approval, rollback plan and test evidence are complete', r5);
+
+            // 6. RUNTIME FLAGS — must PROVE the feature is still NOT active. In this
+            //    diagnostic-only contract any active flag means activation is not allowed.
+            var r6 = [];
+            var rfObj = rf !== null && rf !== undefined && typeof rf === 'object' && !Array.isArray(rf);
+            if (!rfObj) {
+                r6.push('runtimeFlags is not an object');
+            } else {
+                for (var ri = 0; ri < REQUIRED_BRAND_ACTIVATION_RUNTIME_FLAGS.length; ri++) {
+                    var rff = REQUIRED_BRAND_ACTIVATION_RUNTIME_FLAGS[ri];
+                    if (rf[rff] === undefined || rf[rff] === null) {
+                        missingFields.push('runtimeFlags.' + rff);
+                        r6.push('missing runtime flag: ' + rff);
+                    }
+                }
+                ['hasBrandRuleMatrix', 'calculateProtocolWiredToBrandMatrix', 'brandFormulaOutputEnabled'].forEach(function(flag) {
+                    if (rf[flag] === true) {
+                        r6.push(flag + ' is true — activation is not allowed in the current diagnostic-only contract');
+                    } else if (rf[flag] !== undefined && rf[flag] !== null && rf[flag] !== false) {
+                        r6.push(flag + ' must be boolean false: ' + String(rf[flag]));
+                    }
+                });
+            }
+            item('runtime_flags', 'Runtime flags prove the brand matrix is still inactive', r6);
+
+            // 7. PRODUCTION BLOCKERS — forbidden features and forbidden fixture content.
+            var r7 = [];
+            if (rfObj) {
+                if (rf.productionThreeZoneEnabled === true) r7.push('productionThreeZoneEnabled is true — production 3-zone is a blocker');
+                if (rf.endsRecEnabled === true) r7.push('endsRecEnabled is true — endsRec is a blocker');
+            }
+            var serialized = null;
+            try {
+                serialized = JSON.stringify(isObj ? input : null);
+            } catch (e) {
+                r7.push('input is not serializable for the audit scan: ' + String(e && e.message));
+            }
+            if (typeof serialized === 'string') {
+                var lowered = serialized.toLowerCase();
+                BRAND_ACTIVATION_FAKE_FORMULA_MARKERS.forEach(function(m) {
+                    if (lowered.indexOf(m) !== -1) r7.push('fake formula marker present in input: ' + m);
+                });
+            }
+            // Diagnostic-only fixture restriction: only TEST_* identifiers are allowed.
+            if (scopeObj) {
+                ['allowedBrandIds', 'allowedLineIds'].forEach(function(sf) {
+                    var idArr = scope[sf];
+                    if (Array.isArray(idArr)) {
+                        idArr.forEach(function(v) {
+                            if (typeof v === 'string' && !isBrandImportPlaceholderValue(v) && v.indexOf(BRAND_ACTIVATION_FIXTURE_ID_PREFIX) !== 0) {
+                                r7.push(sf + ' contains a non-TEST identifier — only artificial ' + BRAND_ACTIVATION_FIXTURE_ID_PREFIX + '* fixture identifiers are allowed while this contract is diagnostic-only: ' + String(v));
+                            }
+                        });
+                    }
+                });
+            }
+            var importParsed = parseBrandMatrixImportPayload(importPayload === undefined ? null : importPayload);
+            if (importParsed !== null && Array.isArray(importParsed.entries)) {
+                importParsed.entries.forEach(function(en, ei) {
+                    if (en && typeof en === 'object' && !Array.isArray(en)) {
+                        ['brandId', 'lineId'].forEach(function(idf) {
+                            var idv = en[idf];
+                            if (typeof idv === 'string' && !isBrandImportPlaceholderValue(idv) && idv.indexOf(BRAND_ACTIVATION_FIXTURE_ID_PREFIX) !== 0) {
+                                r7.push('entries[' + ei + '].' + idf + ' is a non-TEST identifier — only artificial fixtures are allowed while this contract is diagnostic-only: ' + String(idv));
+                            }
+                        });
+                    }
+                });
+            }
+            // Formula-like markers are forbidden in free-text fields.
+            if (arObj) {
+                if (hasBrandActivationFormulaMarker(ar.sourceAuditSummary)) {
+                    r7.push('sourceAuditSummary contains a formula-like marker — formulas are forbidden in audit text');
+                }
+                if (hasBrandActivationFormulaMarker(ar.rollbackPlan)) {
+                    r7.push('rollbackPlan contains a formula-like marker — formulas are forbidden in rollback text');
+                }
+            }
+            item('production_blockers', 'No production blockers (3-zone, endsRec, fake formulas, non-fixture identifiers, formula-like text)', r7);
+
+            var allReady = checklist.every(function(c) { return c.ready === true; });
+            return {
+                ready: allReady,
+                contractType: 'brandMatrixActivationPreconditions',
+                schemaVersion: 1,
+                notForProductionActivation: true,
+                activationAllowedNow: false,
+                importReadiness: importReadiness,
+                checklist: checklist,
+                blockers: blockers,
+                warnings: warnings,
+                missingFields: missingFields,
+                decision: allReady ? 'READY_BUT_NOT_ACTIVATED' : 'NOT_READY'
+            };
+        }
+
+        // =============================================================================
         // STRUCTURED RECIPE SAFETY METADATA — docs/input-safety-gates-contract.md
         // Internal, trusted metadata set at the formula-assembly branch (NOT parsed
         // from user-facing display text). Safety gates read these structured flags so
