@@ -301,7 +301,30 @@ missingFields, validationStatus, requiredFieldsCount, contractType }` result.
 - No fake/real brand formulas are added; incomplete/pending/unreviewed data fails
   closed (not ready). Real brand formulas require validated source data ingested
   later (admin import / data pipeline) — never hardcoded.
-- Locked by `test_www_brand_matrix_contract.js` (11 groups, artificial MOCK fixtures only).
+- Locked by `test_www_brand_matrix_contract.js` (14 groups, artificial MOCK fixtures only).
+
+### Brand matrix ADMIN/IMPORT contract v1 (diagnostic-only)
+
+A pure, diagnostic-only **admin/import readiness** contract now exists for a FUTURE
+import of real, validated brand data: `parseBrandMatrixImportPayload(payload)`,
+`validateBrandMatrixImportPayload(payload)`, `getBrandMatrixImportReadiness(payload)`.
+An import package requires top-level `contractType: 'brandMatrixImport'`,
+`schemaVersion: 1`, `sourceType`, `sourceName`, `importedAt`, `reviewedBy`, and an
+`entries` array; every entry must pass the canonical 18-field brand matrix contract
+(`validationStatus === 'validated'`, known `processCategory`, present `sourceReference`).
+Result is structured `{ ready, contractType, schemaVersion, entryCount, reasons,
+missingFields, invalidEntries, matrixReadiness, notForProductionActivation: true }`.
+
+- **IMPORT READY != PRODUCTION ACTIVATION.** Even a fully-valid package returns
+  `notForProductionActivation: true`; `hasBrandRuleMatrix` stays `false`,
+  `calculateProtocol` is never wired to imported data here, and brand-sensitive paths
+  still require manual review. Activation is a separate, guarded future task that
+  needs real validated data with `sourceName`/`importedAt`/`reviewedBy`/
+  `sourceReference`/`validationStatus`.
+- No fake/real brand formulas are added; helpers are pure (do not mutate input);
+  no network access and no persistence are used.
+- Current formula behavior is unchanged.
+- Locked by `test_www_brand_matrix_import_contract.js` (16 groups, artificial TEST_* fixtures only).
 
 ---
 

@@ -52,6 +52,7 @@ The safety foundation phase is **in progress**. All committed work is on `main`.
 | *(pending)* | Add recipe meta-presence invariant test — every calculateProtocol-built recipe carries valid consistent recipe.meta; user cannot inject meta; no runtime change |
 | *(pending)* | Add fail-closed recipe meta guard — isValidRecipeMeta() forces MANUAL_REQUIRED on missing/invalid recipe.meta; fallbacks retained; tests 26-30 |
 | *(pending)* | Consolidate brand readiness helpers — validateBrandRuleMatrixShape/getBrandMatrixReadinessStatus become thin wrappers over canonical validateBrandRuleMatrix; one readiness implementation; brand matrix stays disabled |
+| *(pending)* | Add brand matrix admin/import contract — parse/validate/getBrandMatrixImportReadiness (diagnostic-only); import-ready != activation; brand matrix stays disabled; test_www_brand_matrix_import_contract.js |
 | *(pending)* | Retire legacy text fallbacks FB1-FB5 (meta-only powder/SB/grey/toning/high-ox); guard handles missing meta; FB6/FB7 retained; tests 31-35 |
 | *(pending)* | Add brand matrix data contract — strict validateBrandMatrixEntry/validateBrandRuleMatrix/getBrandMatrixReadiness (diagnostic-only); matrix stays disabled; test_www_brand_matrix_contract.js |
 

@@ -1704,6 +1704,89 @@ const pigmentMap = {
         }
 
         // =============================================================================
+        // BRAND MATRIX ADMIN/IMPORT CONTRACT v1 — docs/known-limitations-contract.md
+        // PURE, DIAGNOSTIC-ONLY validation of a *future* admin/import package of real,
+        // validated brand-matrix data. Builds on the canonical validateBrandRuleMatrix().
+        // IMPORT READY != PRODUCTION ACTIVATION: even a fully-valid package does NOT
+        // enable the brand matrix. hasBrandRuleMatrix stays false; calculateProtocol is
+        // never wired to imported data here; no formula is produced; no real/fake brand
+        // formulas are introduced. notForProductionActivation: true is always returned.
+        // =============================================================================
+        const REQUIRED_BRAND_IMPORT_FIELDS = ['contractType', 'schemaVersion', 'sourceType', 'sourceName', 'importedAt', 'reviewedBy', 'entries'];
+
+        // Normalize an import payload to a plain object (or null). Accepts an object or a
+        // JSON string (parsed via safeParseJson). Arrays/primitives/invalid → null. Pure.
+        function parseBrandMatrixImportPayload(payload) {
+            if (typeof payload === 'string') return safeParseJson(payload);
+            if (payload !== null && payload !== undefined && typeof payload === 'object' && !Array.isArray(payload)) return payload;
+            return null;
+        }
+
+        function buildBrandImportResult(ready, schemaVersion, entryCount, reasons, missingFields, invalidEntries, matrixReadiness) {
+            return {
+                contractType: 'brandMatrixImportReadiness',
+                ready: ready === true,
+                schemaVersion: schemaVersion,
+                entryCount: entryCount,
+                reasons: reasons,
+                missingFields: missingFields,
+                invalidEntries: invalidEntries,
+                matrixReadiness: matrixReadiness,
+                notForProductionActivation: true
+            };
+        }
+
+        // Strictly validate an import payload. Pure; structured result. Does NOT mutate
+        // input and does NOT activate anything.
+        function validateBrandMatrixImportPayload(payload) {
+            var reasons = [];
+            var missingFields = [];
+            var invalidEntries = [];
+            var entryCount = 0;
+            var matrixReadiness = null;
+            var isObj = payload !== null && payload !== undefined && typeof payload === 'object' && !Array.isArray(payload);
+            var schemaVersion = isObj ? (payload.schemaVersion !== undefined ? payload.schemaVersion : null) : null;
+            if (!isObj) {
+                reasons.push('payload is not an object');
+                return buildBrandImportResult(false, schemaVersion, 0, reasons, missingFields, invalidEntries, matrixReadiness);
+            }
+            for (var i = 0; i < REQUIRED_BRAND_IMPORT_FIELDS.length; i++) {
+                var f = REQUIRED_BRAND_IMPORT_FIELDS[i];
+                if (payload[f] === undefined || payload[f] === null) missingFields.push(f);
+            }
+            if (missingFields.length > 0) reasons.push('missing required fields: ' + missingFields.join(', '));
+            if (missingFields.indexOf('contractType') === -1 && payload.contractType !== 'brandMatrixImport') {
+                reasons.push('contractType must be "brandMatrixImport": ' + String(payload.contractType));
+            }
+            if (missingFields.indexOf('schemaVersion') === -1 && payload.schemaVersion !== 1) {
+                reasons.push('unsupported schemaVersion: ' + String(payload.schemaVersion));
+            }
+            if (missingFields.indexOf('entries') === -1) {
+                if (!Array.isArray(payload.entries)) {
+                    reasons.push('entries must be an array');
+                } else {
+                    entryCount = payload.entries.length;
+                    if (entryCount === 0) reasons.push('entries is empty');
+                    matrixReadiness = validateBrandRuleMatrix(payload.entries);
+                    if (!matrixReadiness.ready) {
+                        reasons.push('one or more entries are not ready');
+                        for (var j = 0; j < matrixReadiness.entries.length; j++) {
+                            if (!matrixReadiness.entries[j].ready) {
+                                invalidEntries.push({ index: j, reasons: matrixReadiness.entries[j].reasons, missingFields: matrixReadiness.entries[j].missingFields });
+                            }
+                        }
+                    }
+                }
+            }
+            return buildBrandImportResult(reasons.length === 0, schemaVersion, entryCount, reasons, missingFields, invalidEntries, matrixReadiness);
+        }
+
+        // Top-level import readiness: parse then validate. DIAGNOSTIC ONLY.
+        function getBrandMatrixImportReadiness(payload) {
+            return validateBrandMatrixImportPayload(parseBrandMatrixImportPayload(payload));
+        }
+
+        // =============================================================================
         // STRUCTURED RECIPE SAFETY METADATA — docs/input-safety-gates-contract.md
         // Internal, trusted metadata set at the formula-assembly branch (NOT parsed
         // from user-facing display text). Safety gates read these structured flags so
