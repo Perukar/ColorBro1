@@ -564,6 +564,9 @@ localizing a recipe label (`process` / `dye` / `ox`) cannot silently disable a g
   `getBaseProcessTiming` (process base minutes) now read `recipe.meta` first
   (text fallback retained). A process-label rename no longer changes corrector
   neutralisation or base timing for internally-built recipes.
+- **Fail-closed meta guard active:** `isValidRecipeMeta()` forces MANUAL_REQUIRED if any
+  built recipe lacks valid `recipe.meta`. Legacy text fallbacks remain as defense-in-depth
+  but are no longer the safety mechanism for the missing-meta case (groups 26-30).
 - **Grey base-validity now meta-first:** the grey `>=50` base-`.00` validity check
   reads `meta.processCategory === 'permanent'` and numeric `meta.oxidizerPercent`
   (∈ {6,9,12}) first; the grey-perm recipe now carries a numeric `oxidizerPercent`

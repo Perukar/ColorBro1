@@ -171,6 +171,15 @@ formula-assembly branch), not user-facing display strings:
   powder / toning / grey / high-ox / manual / blocked paths. The legacy text
   fallback is compatibility-only and is not the active classifier for any
   internally-built recipe. Locked by `test_www_structured_safety_flags.js` groups 21-25.
+- **Fail-closed meta guard:** `isValidRecipeMeta(recipe)` runs in `calculateProtocol()`
+  after recipe assembly. If any built `rootRec`/`lenRec` is missing or has invalid
+  `meta` (bad `safetyMarkersVersion`, unknown `processCategory`, non-boolean flags,
+  or non-null/non-finite `oxidizerPercent`), a `manualDecision` is pushed → status
+  becomes `MANUAL_REQUIRED`, never an approved recipe with exact grams. A meta-less
+  recipe therefore fails CLOSED regardless of display labels — proven by stripping
+  meta + renaming the process label and still getting MANUAL. The legacy text
+  fallbacks are now defense-in-depth only and are no longer required for
+  missing-meta safety. Locked by `test_www_structured_safety_flags.js` groups 26-30.
 - Advisory `calcMixtone` (tonal corrector) and `getBaseProcessTiming` (process
   base minutes) are ALSO routed to `recipe.meta` (powder/SB/toning/permanent),
   with display text kept only as fallback. Renaming a process label no longer

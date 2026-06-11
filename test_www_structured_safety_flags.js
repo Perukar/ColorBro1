@@ -432,6 +432,62 @@ const GROUPS = [
         // production invariants visible in the mass-model block of a non-approved grey state.
         assertIncludes(grey, '&quot;mode&quot;: &quot;2-zone&quot;', 'mass model 2-zone');
         assertIncludes(grey, '&quot;endsMass&quot;: null', 'endsMass null');
+    }],
+
+    ['26. missing meta fails closed (forgotten withMeta -> MANUAL, no grams)', function () {
+        // Simulate a future builder branch that forgot withMeta() on the powder recipes:
+        // strip the meta wrapper so rootRec/lenRec are bare objects (no meta).
+        const noPowderMeta = CORE.replace(/withMeta\('powder', [0-9.]+, (\{[^}]*\})\)/g, '$1');
+        assert.notStrictEqual(noPowderMeta, CORE, 'powder meta strip applied');
+        const POWDER = makeFixture({ root_level: '5', length_level: '5', target_level: '9', target_direction: '1' });
+        const html = getOutputHtml(noPowderMeta, POWDER);
+        assertManualOrBlocked(html, 'missing-meta powder');
+        assertNoApproved(html, 'missing-meta powder');
+        assertNoExactGrams(html, 'missing-meta powder');
+    }],
+
+    ['27. missing meta fails closed even with text fallback unable to help (new label)', function () {
+        // Strip powder meta AND rename the powder process label so the legacy text
+        // fallback CANNOT classify it. Guard must still force MANUAL (fail-closed).
+        let MUT = CORE.replace(/withMeta\('powder', [0-9.]+, (\{[^}]*\})\)/g, '$1');
+        MUT = MUT.split('process: "Порошок"').join('process: "NewBleachLabel"');
+        const POWDER = makeFixture({ root_level: '5', length_level: '5', target_level: '9', target_direction: '1' });
+        const html = getOutputHtml(MUT, POWDER);
+        assertManualOrBlocked(html, 'missing-meta + new label');
+        assertNoApproved(html, 'missing-meta + new label');
+        assertNoExactGrams(html, 'missing-meta + new label');
+        for (const f of META_FIELDS) assertNotIncludes(html, f, 'guard must not leak meta');
+    }],
+
+    ['28. invalid meta fails closed (bad safetyMarkersVersion / processCategory)', function () {
+        // Corrupt meta so it is present but invalid: change safetyMarkersVersion value.
+        const MUT = CORE.replace(/safetyMarkersVersion: 1/g, 'safetyMarkersVersion: 99');
+        assert.notStrictEqual(MUT, CORE, 'meta-version corruption applied');
+        const clean = makeFixture(); // would normally be APPROVED
+        const html = getOutputHtml(MUT, clean);
+        assertManualOrBlocked(html, 'invalid-meta clean baseline');
+        assertNoApproved(html, 'invalid-meta clean baseline');
+        assertNoExactGrams(html, 'invalid-meta clean baseline');
+    }],
+
+    ['29. valid recipes unaffected by the guard', function () {
+        // Unmodified core: clean APPROVED still APPROVED with grams; gated paths still MANUAL.
+        const cleanHtml = getOutputHtml(CORE, makeFixture());
+        assert.strictEqual(status(cleanHtml).split(' ')[0], 'APPROVED', 'clean 7->7 still APPROVED');
+        assert.ok(/Маса:<\/b>\s*\d/.test(cleanHtml), 'clean APPROVED still shows grams');
+        assertManualOrBlocked(getOutputHtml(CORE, makeFixture({ root_level: '5', length_level: '5', target_level: '9', target_direction: '1' })), 'powder still MANUAL');
+        for (const f of META_FIELDS) assertNotIncludes(cleanHtml, f, 'guard adds no meta leak on valid path');
+    }],
+
+    ['30. user meta injection cannot satisfy the guard or flip status', function () {
+        // User supplies a fake-but-well-formed meta in INPUT. It must be ignored: the guard
+        // validates the TRUSTED recipe.meta (built internally), not user input.
+        const injected = makeFixture({ meta: 'whatever', safetyMarkersVersion: '1', processCategory: 'permanent', isPowder: 'false' });
+        const c = captureRecipes(injected);
+        assert.ok(c.rootRec && c.rootRec.meta && c.rootRec.meta.safetyMarkersVersion === 1, 'trusted meta is internal');
+        const html = getOutputHtml(CORE, injected);
+        assert.strictEqual(status(html).split(' ')[0], 'APPROVED', 'clean baseline still APPROVED via trusted meta (injection ignored)');
+        for (const f of META_FIELDS) assertNotIncludes(html, f, 'injected meta must not leak');
     }]
 ];
 

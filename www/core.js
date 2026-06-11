@@ -1628,6 +1628,26 @@ const pigmentMap = {
             return recipe;
         }
 
+        // Fail-closed recipe meta validator. A null/undefined recipe (not built on this
+        // path) is acceptable. A recipe OBJECT must carry trusted, well-formed meta:
+        // safetyMarkersVersion === 1, a known processCategory, boolean flags, and a
+        // null-or-finite oxidizerPercent. Used by the fail-closed guard so a recipe
+        // built without withMeta(...) can never reach an approved/executable state.
+        function isValidRecipeMeta(recipe) {
+            if (recipe === null || recipe === undefined) return true;
+            if (typeof recipe !== 'object') return false;
+            var m = recipe.meta;
+            if (!m || typeof m !== 'object') return false;
+            if (m.safetyMarkersVersion !== 1) return false;
+            if (['permanent', 'special_blond', 'powder', 'toning', 'unknown'].indexOf(m.processCategory) === -1) return false;
+            var boolFields = ['isSpecialBlond', 'isPowder', 'isToning', 'usesDoubleNaturalBase', 'requiresBrandRuleMatrix'];
+            for (var i = 0; i < boolFields.length; i++) {
+                if (typeof m[boolFields[i]] !== 'boolean') return false;
+            }
+            if (!(m.oxidizerPercent === null || (typeof m.oxidizerPercent === 'number' && isFinite(m.oxidizerPercent)))) return false;
+            return true;
+        }
+
         // =============================================================================
         // NUMERIC SAFETY HELPERS — docs/runtime-failsafe-contract.md
         // Pure functions — no side effects.
@@ -2131,6 +2151,21 @@ const pigmentMap = {
 
                 let isRPowder = rootRec && ((rootRec.meta && rootRec.meta.isPowder) || String(rootRec.process).includes("Порошок"));
                 let isLPowder = lenRec && ((lenRec.meta && lenRec.meta.isPowder) || String(lenRec.process).includes("Порошок"));
+
+                // FAIL-CLOSED RECIPE META GUARD — docs/input-safety-gates-contract.md
+                // Every built rootRec/lenRec MUST carry trusted recipe.meta. If a recipe
+                // object is missing/has invalid meta (e.g. a future builder branch forgot
+                // withMeta(...)), force MANUAL_REQUIRED — never an approved recipe with
+                // exact grams. This makes the legacy text fallbacks unnecessary for
+                // missing-meta safety (they remain only as defense-in-depth). meta is not
+                // rendered, so this guard adds no internal-field leak.
+                if (!isValidRecipeMeta(rootRec) || !isValidRecipeMeta(lenRec)) {
+                    warnings.push("⚠️ ВНУТРІШНЯ ПОМИЛКА КЛАСИФІКАЦІЇ РЕЦЕПТА: рецепт побудовано без надійної метадатної класифікації. Automatic approved recipe заборонений. Потрібне ручне рішення майстра та тест-пасмо.");
+                    manualDecisions.push({
+                        title: "Recipe meta missing or invalid",
+                        message: "Внутрішня класифікація рецепта (recipe.meta) відсутня або недійсна. Це внутрішня помилка побудови рецепта — рецепт не може бути автоматично затверджений. Потрібне ручне рішення майстра."
+                    });
+                }
                 if (hotRoot) {
                     plan.push(`⚠️ ПРАВИЛО ГАРЯЧОГО КОРЕНЯ: Відростання ${rootLength} см. Нанесення на корінь розбити на 2 етапи!`);
                 }
