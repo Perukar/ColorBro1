@@ -1597,6 +1597,114 @@ const pigmentMap = {
         }
 
         // =============================================================================
+        // BRAND MATRIX DATA CONTRACT v1 — docs/brand-data-schema.md, docs/known-limitations
+        // Strict, structured, PURE validation of a future brand-line data set. DIAGNOSTIC
+        // ONLY: not called by calculateProtocol; hasBrandRuleMatrix stays false; no brand
+        // formula is produced. Real brand formulas require validated source data ingested
+        // later — never hardcoded/faked here. These helpers do NOT mutate their input.
+        // =============================================================================
+
+        // Allowed processCategory values for a brand-line entry. 'unknown' is NOT allowed
+        // for a real brand line — an unrecognised category is not-ready.
+        const ALLOWED_BRAND_PROCESS_CATEGORIES = ['permanent', 'special_blond', 'powder', 'toning'];
+
+        /**
+         * Strictly validate ONE brand-line entry. Pure; returns a structured result.
+         * @param {*} entry
+         * @returns {{contractType:string, ready:boolean, reasons:string[], missingFields:string[], validationStatus:(string|null), requiredFieldsCount:number}}
+         */
+        function validateBrandMatrixEntry(entry) {
+            var missingFields = getMissingBrandMatrixFields(entry);
+            var reasons = [];
+            var isObj = entry !== null && entry !== undefined && typeof entry === 'object';
+            if (!isObj) {
+                reasons.push('entry is not an object');
+            } else {
+                if (missingFields.length > 0) {
+                    reasons.push('missing required fields: ' + missingFields.join(', '));
+                }
+                if (missingFields.indexOf('processCategory') === -1 && ALLOWED_BRAND_PROCESS_CATEGORIES.indexOf(entry.processCategory) === -1) {
+                    reasons.push('unknown processCategory: ' + String(entry.processCategory));
+                }
+                if (missingFields.indexOf('validationStatus') === -1 && entry.validationStatus !== 'validated') {
+                    reasons.push('validationStatus not validated: ' + String(entry.validationStatus));
+                }
+            }
+            return {
+                contractType: 'brandMatrixEntryReadiness',
+                ready: reasons.length === 0,
+                reasons: reasons,
+                missingFields: missingFields,
+                validationStatus: (isObj && entry.validationStatus !== undefined) ? entry.validationStatus : null,
+                requiredFieldsCount: REQUIRED_BRAND_MATRIX_FIELDS.length
+            };
+        }
+
+        /**
+         * Strictly validate a brand rule matrix (array of entries). Pure; structured result.
+         * Null/empty/non-array → not ready. Any not-ready entry → matrix not ready.
+         * @param {*} matrix
+         */
+        function validateBrandRuleMatrix(matrix) {
+            if (!isBrandRuleMatrixAvailable(matrix)) {
+                return {
+                    contractType: 'brandMatrixReadiness',
+                    ready: false,
+                    reasons: ['matrix is null, undefined, or empty'],
+                    missingFields: REQUIRED_BRAND_MATRIX_FIELDS.slice(),
+                    entries: [],
+                    requiredFieldsCount: REQUIRED_BRAND_MATRIX_FIELDS.length
+                };
+            }
+            var entries = [];
+            var allReady = true;
+            var aggregateReasons = [];
+            var aggregateMissing = [];
+            for (var i = 0; i < matrix.length; i++) {
+                var r = validateBrandMatrixEntry(matrix[i]);
+                entries.push(r);
+                if (!r.ready) {
+                    allReady = false;
+                    for (var j = 0; j < r.reasons.length; j++) {
+                        aggregateReasons.push('entry[' + i + ']: ' + r.reasons[j]);
+                    }
+                    for (var k = 0; k < r.missingFields.length; k++) {
+                        if (aggregateMissing.indexOf(r.missingFields[k]) === -1) aggregateMissing.push(r.missingFields[k]);
+                    }
+                }
+            }
+            return {
+                contractType: 'brandMatrixReadiness',
+                ready: allReady,
+                reasons: allReady ? ['all entries present and validated'] : aggregateReasons,
+                missingFields: aggregateMissing,
+                entries: entries,
+                requiredFieldsCount: REQUIRED_BRAND_MATRIX_FIELDS.length
+            };
+        }
+
+        /**
+         * Top-level structured brand-matrix readiness. DIAGNOSTIC ONLY.
+         * @param {*} matrix
+         */
+        function getBrandMatrixReadiness(matrix) {
+            var v = validateBrandRuleMatrix(matrix);
+            var validationStatus;
+            if (!isBrandRuleMatrixAvailable(matrix)) validationStatus = 'absent';
+            else if (v.ready) validationStatus = 'validated';
+            else validationStatus = 'not_ready';
+            return {
+                contractType: 'brandMatrixReadiness',
+                ready: v.ready,
+                reasons: v.reasons,
+                missingFields: v.missingFields,
+                validationStatus: validationStatus,
+                requiredFieldsCount: REQUIRED_BRAND_MATRIX_FIELDS.length,
+                entries: v.entries
+            };
+        }
+
+        // =============================================================================
         // STRUCTURED RECIPE SAFETY METADATA — docs/input-safety-gates-contract.md
         // Internal, trusted metadata set at the formula-assembly branch (NOT parsed
         // from user-facing display text). Safety gates read these structured flags so

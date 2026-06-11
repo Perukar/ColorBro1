@@ -167,6 +167,10 @@ formula-assembly branch), not user-facing display strings:
   meta guard (`isValidRecipeMeta`) is the protection against missing/invalid meta.
   Retained on purpose: FB6 damage-lift markers (numeric `rStep/lStep>0` primary) and
   FB7 `zoneProcessesDiffer` (relative comparison), plus render/display and diagnostic text.
+- A strict **brand matrix data contract** (`validateBrandMatrixEntry` /
+  `validateBrandRuleMatrix` / `getBrandMatrixReadiness`) exists for future brand data,
+  but is **diagnostic-only**: brand matrix calculation stays disabled
+  (`hasBrandRuleMatrix = false`) and incomplete/unvalidated data fails closed.
 - `meta` is internal: it is never rendered to the UI and is never set from user input.
 - **Meta-presence invariant:** every production recipe object (`rootRec` / `lenRec`)
   built by `calculateProtocol()` carries trusted `recipe.meta` with

@@ -281,6 +281,24 @@ Readiness helpers (`isBrandRuleMatrixAvailable`, `validateBrandRuleMatrixShape`,
 - `G1-LEGACY-CONDITION-POROUS-SB-NO-POROSITY-FIELD-MANUAL`
 - `BRAND-HELPER-*` (8 helper scaffold tests)
 
+### Brand matrix DATA CONTRACT v1 (diagnostic-only)
+
+A strict, structured, PURE data contract for a future brand-line data set now exists:
+`validateBrandMatrixEntry(entry)`, `validateBrandRuleMatrix(matrix)`,
+`getBrandMatrixReadiness(matrix)`. Each entry requires all 18
+`REQUIRED_BRAND_MATRIX_FIELDS`, a known `processCategory`
+(`permanent`/`special_blond`/`powder`/`toning`), a present `sourceReference` and
+`lastReviewedAt`, and `validationStatus === 'validated'`. Null/empty/partial/
+pending/draft/unknown-category → **not ready** with a structured `{ready, reasons,
+missingFields, validationStatus, requiredFieldsCount, contractType }` result.
+
+- Brand matrix **calculation remains DISABLED** (`hasBrandRuleMatrix = false`);
+  these helpers are diagnostic-only and are NOT wired into `calculateProtocol`.
+- No fake/real brand formulas are added; incomplete/pending/unreviewed data fails
+  closed (not ready). Real brand formulas require validated source data ingested
+  later (admin import / data pipeline) — never hardcoded.
+- Locked by `test_www_brand_matrix_contract.js` (11 groups, artificial MOCK fixtures only).
+
 ---
 
 ## 11. Input model limitation
