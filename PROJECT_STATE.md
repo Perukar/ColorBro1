@@ -79,6 +79,7 @@ The safety foundation phase is **in progress**. All committed work is on `main`.
 17. Retire legacy text fallbacks FB1-FB5 — www/core.js: powder/SB/grey-.00(process+ox)/toning/high-ox runtime safety logic now reads recipe.meta ONLY (text/ox display fallbacks removed). Fail-closed meta guard handles missing/invalid meta. FB6 damage-lift markers + FB7 zoneProcessesDiffer intentionally retained; render/diagnostic text untouched. extractOxPercent now unused by safety path (kept as utility, removable later). Valid-recipe behavior unchanged (full matrix green). Structured-flags test extended to 35 groups (added 31-35; group 18 repurposed to assert FB6/FB7+guard retained). No formula/mass/timing/brand/3-zone/endsRec change.
 16. Fail-closed recipe meta guard — www/core.js: added isValidRecipeMeta() + a guard after recipe assembly that pushes a manualDecision (→ MANUAL_REQUIRED, no approved recipe, no exact grams, no meta leak) when any built rootRec/lenRec is missing/invalid meta. Proven: stripping meta (forgotten withMeta) — even with the process label renamed so text fallback can't help — fails CLOSED to MANUAL. Legacy text fallbacks retained as defense-in-depth, no longer required for missing-meta safety. Valid recipes unaffected (clean 7→7 still APPROVED). Structured-flags test extended to 30 groups (added 26-30). No formula/mass/timing/brand/3-zone/endsRec change.
 15. Recipe meta-presence invariant test — captures internal rootRec/lenRec via a VM wrap of buildWwwRenderState and asserts every calculateProtocol-built recipe carries valid, internally-consistent recipe.meta (safetyMarkersVersion=1, valid processCategory, boolean flags, null/finite oxidizerPercent) across permanent/SB/powder/toning/grey/high-ox/manual/blocked; user input cannot inject/override meta; meta never rendered. Test-only; no runtime change (no missing-meta bug found). Structured-flags test extended to 25 groups (added 21-25).
+20. Repo hygiene transient artifact contract — `.gitignore` expanded with explicit sections: OS/editor noise, logs/cache/temp, test/build artifacts, local secrets, and PERUKAR agent/git anomaly artifacts (`.tmp.driveupload/`, `index.lock.stale*`, `.lock.stale`, agent scratch dirs). Added `test_repo_hygiene_contract.js` (8 groups, 21 assertions): verifies all required ignore entries present, no tracked transient files, `.tmp.driveupload/` ignored not untracked, `www/core.js` unmodified, `git diff --check` passes. Docs synced (known-limitations §20, PROJECT_STATE.md §6 expanded). No runtime change; no product logic touched.
 
 ---
 
@@ -171,9 +172,24 @@ Run from Windows PowerShell (Chromium binary required). Not required before ever
 
 ---
 
-## 6. Known FUSE / git anomaly (sandbox)
+## 6. Known FUSE / git anomaly (sandbox) and repo hygiene policy
 
-`git add` from the Linux sandbox fails with `index.lock` error (FUSE phantom stale cache) even when Windows sees no lock. Staging and commits must be done from Windows PowerShell. `git status` and read-only git commands work from sandbox.
+**FUSE phantom lock:** `git add` from the Linux sandbox fails with `index.lock` error (FUSE phantom stale cache) even when Windows sees no lock. A 0-byte `.git/index.lock` may appear in the sandbox with no active git process. Staging and commits must be done from Windows PowerShell. `git status` and read-only git commands work from sandbox.
+
+**Resolution:** From Windows PowerShell, verify no git process is running, then delete `.git\index.lock` manually. Do not attempt removal from the sandbox.
+
+**Transient artifact policy:**
+- `.tmp.driveupload/` — Google Drive FUSE upload staging folder; not product state; ignored by `.gitignore`; must never be staged.
+- `index.lock.stale*`, `.lock.stale` — stale lock copies in worktree; ignored by `.gitignore`.
+- Agent scratch dirs (`.cline/`, `.cursor/`, `.roo/`, `.continue/`, `.aider*`, `.codex/`) — ignored by `.gitignore`; must never be staged.
+
+**Commit gate hygiene:**
+- Always use `git add -- exact/path/to/file` (never `git add .` or `git add -A`).
+- Verify with `git diff --cached --name-only` before every commit.
+- `git diff --check` must pass before committing.
+
+See `docs/known-limitations-contract.md` §20 for full hygiene contract.
+Locked by `test_repo_hygiene_contract.js` (8 groups, 21 assertions).
 
 ---
 

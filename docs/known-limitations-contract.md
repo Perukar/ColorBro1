@@ -762,3 +762,69 @@ localizing a recipe label (`process` / `dye` / `ox`) cannot silently disable a g
 ### Tests
 
 - `test_www_structured_safety_flags.js` (10 groups)
+
+---
+
+## 20. Repo hygiene contract
+
+**Date added:** 2026-06-11
+**HEAD at addition:** 3c70534
+
+### What this covers
+
+This section documents the transient artifact policy for the PERUKAR repo. These are
+infrastructure/documentation guards — not runtime safety constraints.
+
+### Transient artifacts: ignored, not product state
+
+The following artifact categories accumulate during development and cloud sync. They are
+explicitly ignored by `.gitignore` and must never be staged or committed:
+
+| Category | Examples | Rule |
+|---|---|---|
+| Cloud-sync staging | `.tmp.driveupload/` | Google Drive FUSE upload cache; not product state |
+| OS/editor noise | `.DS_Store`, `Thumbs.db`, `desktop.ini`, `*.swp`, `*.swo`, `*.bak` | Local OS artifacts |
+| Logs / cache / temp | `*.log`, `*.tmp`, `*.temp`, `*.cache`, `.tmp/`, `tmp/`, `temp/` | Build/runtime scratch |
+| Test/build output | `coverage/`, `test-results/`, `playwright-report/` | Generated; reproducible |
+| Secrets | `.env`, `.env.*`, `*.local` | Never commit credentials |
+| Agent scratch | `.cline/`, `.cursor/`, `.roo/`, `.continue/`, `.aider*`, `.codex/` | AI agent state dirs |
+| Stale lock artifacts | `index.lock.stale*`, `.lock.stale` | FUSE phantom lock copies in worktree |
+
+### `.tmp.driveupload/` policy
+
+- This directory is created by Google Drive FUSE during upload staging.
+- It is **not part of product state** and must never be committed.
+- It is listed in `.gitignore` and should appear only as `!!` (ignored) in `git status --ignored`, never as `??` (untracked).
+- Do not delete it manually — Drive manages its lifecycle.
+
+### Stale `index.lock` policy
+
+- `.git/index.lock` lives inside `.git/` and is never tracked by git.
+- In the Linux sandbox, a phantom 0-byte `index.lock` may appear (FUSE stale cache anomaly). This blocks `git add` / `git commit` from the sandbox.
+- **Resolution:** Check from Windows PowerShell that no git process is running, then delete `.git\index.lock` from Windows only.
+- Do not attempt removal from the sandbox — the sandbox cannot reliably delete FUSE-phantom locks.
+- Stale lock copies that appear in the worktree (outside `.git/`) are covered by `index.lock.stale*` and `.lock.stale` patterns in `.gitignore`.
+
+### Commit gate hygiene rules
+
+- Always use `git add -- exact/path/to/file` for each file individually.
+- **Never** use `git add .`, `git add -A`, or `git add --all`.
+- Verify staged files with `git diff --cached --name-only` before every commit.
+- Staged set must exactly equal the Approved commit file list — no more, no less.
+- `git diff --check` must pass (no trailing whitespace errors) before committing.
+
+### Repo hygiene test
+
+`test_repo_hygiene_contract.js` — 8 groups, 21+ assertions. Verifies:
+
+1. `.gitignore` exists.
+2. All required ignore entries are present.
+3. No tracked file matches forbidden transient patterns.
+4. `.tmp.driveupload/` (if present) is ignored, not untracked.
+5. `www/core.js` was not modified by hygiene work.
+6. `git diff --check` passes.
+7. No `.env` files are tracked.
+8. `node_modules/` is not tracked.
+
+**Classification:** Infrastructure/documentation guard — not a runtime safety test. Failure
+does not indicate a product logic error; it indicates a commit-hygiene violation.
