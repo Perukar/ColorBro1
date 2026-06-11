@@ -1,7 +1,7 @@
 # PROJECT_STATE — PERUKAR
 
-**Last updated:** 2026-06-09
-**Updated by:** RALFBOT — AUTONOMOUS_BOUNDED_TEST_COVERAGE (Input boundary fuzz v1)
+**Last updated:** 2026-06-11
+**Updated by:** RALFBOT — BOUNDED_PRODUCT_INFRA_WITH_TESTS (Brand matrix import provenance + sanity contract v1)
 
 ---
 
@@ -55,6 +55,7 @@ The safety foundation phase is **in progress**. All committed work is on `main`.
 | *(pending)* | Add brand matrix admin/import contract — parse/validate/getBrandMatrixImportReadiness (diagnostic-only); import-ready != activation; brand matrix stays disabled; test_www_brand_matrix_import_contract.js |
 | *(pending)* | Retire legacy text fallbacks FB1-FB5 (meta-only powder/SB/grey/toning/high-ox); guard handles missing meta; FB6/FB7 retained; tests 31-35 |
 | *(pending)* | Add brand matrix data contract — strict validateBrandMatrixEntry/validateBrandRuleMatrix/getBrandMatrixReadiness (diagnostic-only); matrix stays disabled; test_www_brand_matrix_contract.js |
+| *(pending)* | Add brand matrix import provenance sanity checks — validateBrandImportProvenance / validateBrandMatrixEntrySanity / validateBrandMatrixImportSanity merged into getBrandMatrixImportReadiness; provenance (allowed sourceType, non-placeholder sourceName/reviewedBy, parseable importedAt) + conservative coloristic sanity (levels 1-12, allowed oxidizer set, structured mixRatio <= 1:3, timing 1-90 min, structured policies, source-pointer sourceReference, parseable lastReviewedAt); diagnostic-only; import-ready != production-ready; hasBrandRuleMatrix stays false; calculateProtocol unchanged; no fake formulas; import test now 29 groups |
 
 ### Recently completed blocks
 

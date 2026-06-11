@@ -313,7 +313,8 @@ An import package requires top-level `contractType: 'brandMatrixImport'`,
 `entries` array; every entry must pass the canonical 18-field brand matrix contract
 (`validationStatus === 'validated'`, known `processCategory`, present `sourceReference`).
 Result is structured `{ ready, contractType, schemaVersion, entryCount, reasons,
-missingFields, invalidEntries, matrixReadiness, notForProductionActivation: true }`.
+missingFields, invalidEntries, matrixReadiness, provenanceReadiness,
+sanityReadiness, notForProductionActivation: true }`.
 
 - **IMPORT READY != PRODUCTION ACTIVATION.** Even a fully-valid package returns
   `notForProductionActivation: true`; `hasBrandRuleMatrix` stays `false`,
@@ -324,7 +325,54 @@ missingFields, invalidEntries, matrixReadiness, notForProductionActivation: true
 - No fake/real brand formulas are added; helpers are pure (do not mutate input);
   no network access and no persistence are used.
 - Current formula behavior is unchanged.
-- Locked by `test_www_brand_matrix_import_contract.js` (16 groups, artificial TEST_* fixtures only).
+- Locked by `test_www_brand_matrix_import_contract.js` (29 groups, artificial TEST_* fixtures only).
+
+### Brand matrix import PROVENANCE + SANITY contract v1 (diagnostic-only)
+
+The import contract now also includes **provenance validation** and conservative
+**coloristic sanity checks** (`validateBrandImportProvenance(payload)`,
+`validateBrandMatrixEntrySanity(entry)`, `validateBrandMatrixImportSanity(payload)`,
+merged into `getBrandMatrixImportReadiness(payload)`). Goal: a formally shape-valid
+but professionally unsafe / import-garbage package must NOT be marked import-ready.
+
+**Provenance (per package).** Real brand data requires a valid source, reviewer,
+review date, and source reference:
+
+- `sourceType` must be one of `manufacturer_pdf`, `official_education`,
+  `technologist_notes`, `salon_validated`, `internal_test_fixture`;
+- `sourceName` and `reviewedBy` must be present and non-placeholder
+  (placeholder markers rejected: empty, `todo`, `tbd`, `unknown`, `n/a`, `none`,
+  `test`, `placeholder`, `sample`, `xxx`, `-`, `???`);
+- `importedAt` must be an ISO-like, parseable date/time string.
+
+**Sanity (per entry, conservative, diagnostic-only).**
+
+- `supportedLevels`: non-empty array of finite numbers within 1–12;
+- `oxidizerCompatibility`: non-empty array drawn from {1.5, 1.9, 3, 4, 6, 9, 12};
+- `mixRatio`: structured object only (`{ dye|powder, oxidizer }`), no free-text
+  ratios, no zero/negative values, no extreme ratio above 1:3;
+- `timingRange`: `{ min, max, unit: 'minutes' }` with 1 ≤ min ≤ max ≤ 90;
+- policy fields (`greyCoveragePolicy`, `specialBlondPolicy`, `powderPolicy`,
+  `toningPolicy`): structured objects only; no formulas are read or derived from
+  policies;
+- `contraindications` / `manualReviewTriggers`: arrays of real, non-empty,
+  non-placeholder strings;
+- `sourceReference`: non-placeholder, ≥ 8 chars, must look like a source pointer
+  (contains `pdf`/`manual`/`education`/`technologist`/`source`/`internal`/
+  `fixture`/`doc`);
+- `lastReviewedAt`: ISO-like parseable date; `validationStatus` must still be
+  exactly `'validated'`.
+
+If provenance or sanity fails: `ready: false`, `reasons` explain why, and
+`invalidEntries` identify the entry index with reasons.
+
+- **Import-ready is still NOT production-ready.** Even a fully-valid package
+  returns `notForProductionActivation: true`; production activation remains
+  disabled (`hasBrandRuleMatrix = false`), `calculateProtocol` is unchanged, and
+  current formula behavior is unchanged.
+- Sanity checks are conservative and diagnostic-only; no fake formulas are
+  allowed anywhere (test fixtures use clearly-artificial TEST_* values only).
+- Future activation needs a separate guarded task and real validated data.
 
 ---
 

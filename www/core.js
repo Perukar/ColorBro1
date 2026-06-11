@@ -1722,7 +1722,231 @@ const pigmentMap = {
             return null;
         }
 
-        function buildBrandImportResult(ready, schemaVersion, entryCount, reasons, missingFields, invalidEntries, matrixReadiness) {
+
+        // ---------------------------------------------------------------------
+        // IMPORT PROVENANCE + SANITY CONTRACT v1 (additive, DIAGNOSTIC-ONLY).
+        // Goal: a formally shape-valid but professionally unsafe / import-garbage
+        // package must NOT be marked import-ready. These helpers are pure, never
+        // produce a formula, never activate the brand matrix, and are never
+        // called by calculateProtocol. Conservative ranges only — no brand data.
+        // ---------------------------------------------------------------------
+        const ALLOWED_BRAND_IMPORT_SOURCE_TYPES = [
+            'manufacturer_pdf', 'official_education', 'technologist_notes',
+            'salon_validated', 'internal_test_fixture'
+        ];
+        const BRAND_IMPORT_PLACEHOLDER_VALUES = [
+            '', 'todo', 'tbd', 'unknown', 'n/a', 'none', 'test',
+            'placeholder', 'sample', 'xxx', '-', '???'
+        ];
+        const ALLOWED_BRAND_OXIDIZER_VALUES = [1.5, 1.9, 3, 4, 6, 9, 12];
+        const BRAND_SOURCE_REFERENCE_KEYWORDS = [
+            'pdf', 'manual', 'education', 'technologist', 'source', 'internal', 'fixture', 'doc'
+        ];
+        const BRAND_SOURCE_REFERENCE_MIN_LENGTH = 8;
+        const BRAND_TIMING_MIN_MINUTES = 1;
+        const BRAND_TIMING_MAX_MINUTES = 90;
+        const BRAND_MIX_RATIO_MAX_OXIDIZER_PARTS = 3;
+
+        // True if value is a placeholder marker ('', 'todo', 'tbd', ...). Non-strings
+        // are treated as placeholders (a real provenance field must be a string). Pure.
+        // Exact-match (trimmed, lowercased): clearly-artificial fixture values like
+        // 'TEST_BRAND_ID' are NOT placeholders; the bare word 'test' IS.
+        function isBrandImportPlaceholderValue(value) {
+            if (typeof value !== 'string') return true;
+            return BRAND_IMPORT_PLACEHOLDER_VALUES.indexOf(value.trim().toLowerCase()) !== -1;
+        }
+
+        // True only for ISO-like (YYYY-MM-DD or YYYY-MM-DD[T ]...) parseable date strings. Pure.
+        function isIsoLikeDateString(value) {
+            if (typeof value !== 'string') return false;
+            if (!/^\d{4}-\d{2}-\d{2}([T ].+)?$/.test(value.trim())) return false;
+            return !isNaN(Date.parse(value));
+        }
+
+        /**
+         * Provenance validation of an import payload: WHERE the data came from,
+         * WHO reviewed it, WHEN it was imported. Pure; diagnostic-only; never
+         * activates anything. Accepts an object or a JSON string.
+         * @param {*} payload
+         * @returns {{contractType:string, ready:boolean, reasons:string[], allowedSourceTypes:string[]}}
+         */
+        function validateBrandImportProvenance(payload) {
+            var p = parseBrandMatrixImportPayload(payload);
+            var reasons = [];
+            if (p === null) {
+                reasons.push('payload is not an object');
+            } else {
+                if (typeof p.sourceType !== 'string' || ALLOWED_BRAND_IMPORT_SOURCE_TYPES.indexOf(p.sourceType) === -1) {
+                    reasons.push('sourceType must be one of [' + ALLOWED_BRAND_IMPORT_SOURCE_TYPES.join(', ') + ']: ' + String(p.sourceType));
+                }
+                if (isBrandImportPlaceholderValue(p.sourceName)) {
+                    reasons.push('sourceName is missing or a placeholder: ' + String(p.sourceName));
+                }
+                if (!isIsoLikeDateString(p.importedAt)) {
+                    reasons.push('importedAt must be an ISO-like parseable date/time string: ' + String(p.importedAt));
+                }
+                if (isBrandImportPlaceholderValue(p.reviewedBy)) {
+                    reasons.push('reviewedBy is missing or a placeholder: ' + String(p.reviewedBy));
+                }
+                if (!Array.isArray(p.entries) || p.entries.length === 0) {
+                    reasons.push('entries must be a non-empty array');
+                }
+            }
+            return {
+                contractType: 'brandImportProvenanceReadiness',
+                ready: reasons.length === 0,
+                reasons: reasons,
+                allowedSourceTypes: ALLOWED_BRAND_IMPORT_SOURCE_TYPES.slice()
+            };
+        }
+
+        /**
+         * Conservative coloristic sanity checks for ONE imported brand-line entry.
+         * Pure; diagnostic-only; produces NO formula and invents NO brand data.
+         * @param {*} entry
+         * @returns {{contractType:string, ready:boolean, reasons:string[]}}
+         */
+        function validateBrandMatrixEntrySanity(entry) {
+            var reasons = [];
+            if (entry === null || entry === undefined || typeof entry !== 'object' || Array.isArray(entry)) {
+                return { contractType: 'brandMatrixEntrySanityReadiness', ready: false, reasons: ['entry is not an object'] };
+            }
+            // Identity fields must be real, non-placeholder strings.
+            ['brandId', 'brandDisplayName', 'lineId', 'lineDisplayName'].forEach(function(f) {
+                if (isBrandImportPlaceholderValue(entry[f])) {
+                    reasons.push(f + ' is missing or a placeholder: ' + String(entry[f]));
+                }
+            });
+            // supportedLevels: non-empty array of finite numbers within 1..12.
+            if (!Array.isArray(entry.supportedLevels) || entry.supportedLevels.length === 0) {
+                reasons.push('supportedLevels must be a non-empty array of numbers');
+            } else {
+                entry.supportedLevels.forEach(function(v) {
+                    if (typeof v !== 'number' || !isFinite(v) || v < 1 || v > 12) {
+                        reasons.push('supportedLevels value out of range 1-12: ' + String(v));
+                    }
+                });
+            }
+            // oxidizerCompatibility: non-empty array of finite numbers from the allowed set.
+            if (!Array.isArray(entry.oxidizerCompatibility) || entry.oxidizerCompatibility.length === 0) {
+                reasons.push('oxidizerCompatibility must be a non-empty array of numbers');
+            } else {
+                entry.oxidizerCompatibility.forEach(function(v) {
+                    if (typeof v !== 'number' || !isFinite(v) || ALLOWED_BRAND_OXIDIZER_VALUES.indexOf(v) === -1) {
+                        reasons.push('oxidizerCompatibility value not in allowed set [' + ALLOWED_BRAND_OXIDIZER_VALUES.join(', ') + ']: ' + String(v));
+                    }
+                });
+            }
+            // mixRatio: structured object only (never free text), conservative bounds.
+            var mr = entry.mixRatio;
+            if (mr === null || mr === undefined || typeof mr !== 'object' || Array.isArray(mr)) {
+                reasons.push('mixRatio must be a structured object like { dye: 1, oxidizer: 1.5 }, not free text');
+            } else {
+                var hasDye = typeof mr.dye === 'number' && isFinite(mr.dye);
+                var hasPowder = typeof mr.powder === 'number' && isFinite(mr.powder);
+                var hasOx = typeof mr.oxidizer === 'number' && isFinite(mr.oxidizer);
+                if (!hasDye && !hasPowder) reasons.push('mixRatio must include a numeric dye or powder side');
+                if (hasDye && hasPowder) reasons.push('mixRatio must not include both dye and powder sides');
+                if (!hasOx) reasons.push('mixRatio must include a numeric oxidizer side');
+                var mixBase = (hasDye !== hasPowder) ? (hasDye ? mr.dye : mr.powder) : null;
+                if (mixBase !== null && mixBase <= 0) reasons.push('mixRatio base side must be positive: ' + String(mixBase));
+                if (hasOx && mr.oxidizer <= 0) reasons.push('mixRatio oxidizer side must be positive: ' + String(mr.oxidizer));
+                if (mixBase !== null && mixBase > 0 && hasOx && mr.oxidizer > 0 && (mr.oxidizer / mixBase) > BRAND_MIX_RATIO_MAX_OXIDIZER_PARTS) {
+                    reasons.push('mixRatio is extreme (above 1:' + BRAND_MIX_RATIO_MAX_OXIDIZER_PARTS + '): ' + String(mixBase) + ':' + String(mr.oxidizer));
+                }
+            }
+            // timingRange: { min, max, unit: 'minutes' }, 1 <= min <= max <= 90.
+            var tr = entry.timingRange;
+            if (tr === null || tr === undefined || typeof tr !== 'object' || Array.isArray(tr)) {
+                reasons.push('timingRange must be a structured object { min, max, unit: "minutes" }');
+            } else {
+                var minOk = typeof tr.min === 'number' && isFinite(tr.min);
+                var maxOk = typeof tr.max === 'number' && isFinite(tr.max);
+                if (!minOk || !maxOk) reasons.push('timingRange min/max must be finite numbers');
+                if (tr.unit !== 'minutes') reasons.push('timingRange unit must be "minutes": ' + String(tr.unit));
+                if (minOk && tr.min < BRAND_TIMING_MIN_MINUTES) reasons.push('timingRange min below ' + BRAND_TIMING_MIN_MINUTES + ': ' + String(tr.min));
+                if (maxOk && tr.max > BRAND_TIMING_MAX_MINUTES) reasons.push('timingRange max above ' + BRAND_TIMING_MAX_MINUTES + ' minutes: ' + String(tr.max));
+                if (minOk && maxOk && tr.min > tr.max) reasons.push('timingRange min > max: ' + String(tr.min) + ' > ' + String(tr.max));
+            }
+            // Policy fields: structured objects only. NO formula is read or derived
+            // from policies — only shape + non-placeholder status (when present).
+            ['greyCoveragePolicy', 'specialBlondPolicy', 'powderPolicy', 'toningPolicy'].forEach(function(f) {
+                var pol = entry[f];
+                if (pol === null || pol === undefined || typeof pol !== 'object' || Array.isArray(pol)) {
+                    reasons.push(f + ' must be a structured object, not free text');
+                } else if (pol.status !== undefined && isBrandImportPlaceholderValue(pol.status)) {
+                    reasons.push(f + '.status is a placeholder: ' + String(pol.status));
+                }
+            });
+            // contraindications / manualReviewTriggers: arrays of real, non-empty strings.
+            ['contraindications', 'manualReviewTriggers'].forEach(function(f) {
+                var arr = entry[f];
+                if (!Array.isArray(arr)) {
+                    reasons.push(f + ' must be an array');
+                } else {
+                    arr.forEach(function(item) {
+                        if (typeof item !== 'string' || item.trim().length === 0 || isBrandImportPlaceholderValue(item)) {
+                            reasons.push(f + ' item must be a non-empty, non-placeholder string: ' + String(item));
+                        }
+                    });
+                }
+            });
+            // sourceReference: must look like a real source pointer.
+            var sr = entry.sourceReference;
+            if (isBrandImportPlaceholderValue(sr)) {
+                reasons.push('sourceReference is missing or a placeholder: ' + String(sr));
+            } else if (sr.trim().length < BRAND_SOURCE_REFERENCE_MIN_LENGTH) {
+                reasons.push('sourceReference too short (< ' + BRAND_SOURCE_REFERENCE_MIN_LENGTH + ' chars): ' + String(sr));
+            } else {
+                var srLower = sr.toLowerCase();
+                var srHasKeyword = BRAND_SOURCE_REFERENCE_KEYWORDS.some(function(k) { return srLower.indexOf(k) !== -1; });
+                if (!srHasKeyword) {
+                    reasons.push('sourceReference does not look like a source pointer (expected one of: ' + BRAND_SOURCE_REFERENCE_KEYWORDS.join(', ') + '): ' + String(sr));
+                }
+            }
+            // lastReviewedAt: ISO-like parseable date.
+            if (!isIsoLikeDateString(entry.lastReviewedAt)) {
+                reasons.push('lastReviewedAt must be an ISO-like parseable date string: ' + String(entry.lastReviewedAt));
+            }
+            // validationStatus must be exactly 'validated' for readiness.
+            if (entry.validationStatus !== 'validated') {
+                reasons.push('validationStatus must be "validated": ' + String(entry.validationStatus));
+            }
+            return { contractType: 'brandMatrixEntrySanityReadiness', ready: reasons.length === 0, reasons: reasons };
+        }
+
+        /**
+         * Sanity validation across ALL entries of an import payload. Pure;
+         * diagnostic-only. Accepts an object or a JSON string.
+         * @param {*} payload
+         * @returns {{contractType:string, ready:boolean, reasons:string[], invalidEntries:Array<{index:number, reasons:string[]}>}}
+         */
+        function validateBrandMatrixImportSanity(payload) {
+            var p = parseBrandMatrixImportPayload(payload);
+            var reasons = [];
+            var invalidEntries = [];
+            if (p === null || !Array.isArray(p.entries) || p.entries.length === 0) {
+                reasons.push('entries must be a non-empty array');
+            } else {
+                for (var i = 0; i < p.entries.length; i++) {
+                    var r = validateBrandMatrixEntrySanity(p.entries[i]);
+                    if (!r.ready) {
+                        invalidEntries.push({ index: i, reasons: r.reasons });
+                        for (var j = 0; j < r.reasons.length; j++) {
+                            reasons.push('entry[' + i + ']: ' + r.reasons[j]);
+                        }
+                    }
+                }
+            }
+            return {
+                contractType: 'brandMatrixImportSanityReadiness',
+                ready: reasons.length === 0,
+                reasons: reasons,
+                invalidEntries: invalidEntries
+            };
+        }
+
+        function buildBrandImportResult(ready, schemaVersion, entryCount, reasons, missingFields, invalidEntries, matrixReadiness, provenanceReadiness, sanityReadiness) {
             return {
                 contractType: 'brandMatrixImportReadiness',
                 ready: ready === true,
@@ -1732,12 +1956,15 @@ const pigmentMap = {
                 missingFields: missingFields,
                 invalidEntries: invalidEntries,
                 matrixReadiness: matrixReadiness,
+                provenanceReadiness: provenanceReadiness || null,
+                sanityReadiness: sanityReadiness || null,
                 notForProductionActivation: true
             };
         }
 
         // Strictly validate an import payload. Pure; structured result. Does NOT mutate
-        // input and does NOT activate anything.
+        // input and does NOT activate anything. Combines shape validation (canonical
+        // 18-field matrix contract) with provenance + coloristic sanity checks.
         function validateBrandMatrixImportPayload(payload) {
             var reasons = [];
             var missingFields = [];
@@ -1748,7 +1975,8 @@ const pigmentMap = {
             var schemaVersion = isObj ? (payload.schemaVersion !== undefined ? payload.schemaVersion : null) : null;
             if (!isObj) {
                 reasons.push('payload is not an object');
-                return buildBrandImportResult(false, schemaVersion, 0, reasons, missingFields, invalidEntries, matrixReadiness);
+                return buildBrandImportResult(false, schemaVersion, 0, reasons, missingFields, invalidEntries, matrixReadiness,
+                    validateBrandImportProvenance(payload), validateBrandMatrixImportSanity(payload));
             }
             for (var i = 0; i < REQUIRED_BRAND_IMPORT_FIELDS.length; i++) {
                 var f = REQUIRED_BRAND_IMPORT_FIELDS[i];
@@ -1778,7 +2006,36 @@ const pigmentMap = {
                     }
                 }
             }
-            return buildBrandImportResult(reasons.length === 0, schemaVersion, entryCount, reasons, missingFields, invalidEntries, matrixReadiness);
+            // PROVENANCE: where the data came from, who reviewed it, when. Failure
+            // means not-ready even when the 18-field shape is formally valid.
+            var provenanceReadiness = validateBrandImportProvenance(payload);
+            if (!provenanceReadiness.ready) {
+                for (var pi = 0; pi < provenanceReadiness.reasons.length; pi++) {
+                    reasons.push('provenance: ' + provenanceReadiness.reasons[pi]);
+                }
+            }
+            // SANITY: conservative coloristic range checks per entry. Failure means
+            // not-ready; invalid entries are identified by index with reasons.
+            var sanityReadiness = validateBrandMatrixImportSanity(payload);
+            if (!sanityReadiness.ready) {
+                for (var si = 0; si < sanityReadiness.reasons.length; si++) {
+                    reasons.push('sanity: ' + sanityReadiness.reasons[si]);
+                }
+                for (var se = 0; se < sanityReadiness.invalidEntries.length; se++) {
+                    var sErr = sanityReadiness.invalidEntries[se];
+                    var merged = null;
+                    for (var me = 0; me < invalidEntries.length; me++) {
+                        if (invalidEntries[me].index === sErr.index) { merged = invalidEntries[me]; break; }
+                    }
+                    if (merged) {
+                        merged.reasons = merged.reasons.concat(sErr.reasons);
+                    } else {
+                        invalidEntries.push({ index: sErr.index, reasons: sErr.reasons.slice(), missingFields: [] });
+                    }
+                }
+            }
+            return buildBrandImportResult(reasons.length === 0, schemaVersion, entryCount, reasons, missingFields, invalidEntries, matrixReadiness,
+                provenanceReadiness, sanityReadiness);
         }
 
         // Top-level import readiness: parse then validate. DIAGNOSTIC ONLY.
