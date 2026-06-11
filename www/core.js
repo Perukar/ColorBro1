@@ -2093,7 +2093,7 @@ const pigmentMap = {
                     rootRec = withMeta('permanent', 6, {process: "Перманент", dye: `Барвник ${tDye}`, ox: "6%", mass: rMass, ratio: "1:1"});
                 }
 
-                if (rootRec && ((rootRec.meta && rootRec.meta.isPowder) || String(rootRec.process).includes("Порошок"))) {
+                if (rootRec && rootRec.meta && rootRec.meta.isPowder) {
                     rMass = Math.round(rMass * 1.6);
                     if (rMass < 40) rMass = 40;
                     rootRec.mass = rMass;
@@ -2108,8 +2108,8 @@ const pigmentMap = {
 
                 // ПАТЧ: Попередження для 30% сивини
                 if (grey >= 30 && grey < 50) {
-                    let isValidRootGrey = rootRec && ((rootRec.meta && rootRec.meta.processCategory === 'permanent') || String(rootRec.process).includes("Перманент")) && ((rootRec.meta && [6, 9, 12].indexOf(rootRec.meta.oxidizerPercent) !== -1) || ["6%", "9%", "12%"].includes(rootRec.ox));
-                    let isValidLenGrey = lenRec && ((lenRec.meta && lenRec.meta.processCategory === 'permanent') || String(lenRec.process).includes("Перманент")) && ((lenRec.meta && [6, 9, 12].indexOf(lenRec.meta.oxidizerPercent) !== -1) || ["6%", "9%", "12%"].includes(lenRec.ox));
+                    let isValidRootGrey = rootRec && rootRec.meta && rootRec.meta.processCategory === 'permanent' && [6, 9, 12].indexOf(rootRec.meta.oxidizerPercent) !== -1;
+                    let isValidLenGrey = lenRec && lenRec.meta && lenRec.meta.processCategory === 'permanent' && [6, 9, 12].indexOf(lenRec.meta.oxidizerPercent) !== -1;
 
                     if (isValidRootGrey || isValidLenGrey) {
                         warnings.push("⚠️ СИВИНА 30-49%: Система не додає базу .00 автоматично. Можлива прозорість або недостатнє покриття. За потреби, додайте базу самостійно (напр. 1/4 маси).");
@@ -2128,8 +2128,8 @@ const pigmentMap = {
 
                     // Перевіряємо, чи це справжній перманент здатний розпушити сивину (6%, 9% або 12%)
                     // Якщо це тонування на 1.9%, 3% або 4% — додавання бази .00 заборонено (сивина або знебарвлена, або не візьметься)
-                    let isValidRootGrey = rootRec && ((rootRec.meta && rootRec.meta.processCategory === 'permanent') || String(rootRec.process).includes("Перманент")) && ((rootRec.meta && [6, 9, 12].indexOf(rootRec.meta.oxidizerPercent) !== -1) || ["6%", "9%", "12%"].includes(rootRec.ox));
-                    let isValidLenGrey = lenRec && ((lenRec.meta && lenRec.meta.processCategory === 'permanent') || String(lenRec.process).includes("Перманент")) && ((lenRec.meta && [6, 9, 12].indexOf(lenRec.meta.oxidizerPercent) !== -1) || ["6%", "9%", "12%"].includes(lenRec.ox));
+                    let isValidRootGrey = rootRec && rootRec.meta && rootRec.meta.processCategory === 'permanent' && [6, 9, 12].indexOf(rootRec.meta.oxidizerPercent) !== -1;
+                    let isValidLenGrey = lenRec && lenRec.meta && lenRec.meta.processCategory === 'permanent' && [6, 9, 12].indexOf(lenRec.meta.oxidizerPercent) !== -1;
 
                     if (isValidRootGrey || isValidLenGrey) {
                         diagnostics.push(`Сивина >=50%. Впроваджено базу ${dLevel}.00 (Тільки для Перманенту >= 6%).`);
@@ -2149,8 +2149,8 @@ const pigmentMap = {
                     }
                 }
 
-                let isRPowder = rootRec && ((rootRec.meta && rootRec.meta.isPowder) || String(rootRec.process).includes("Порошок"));
-                let isLPowder = lenRec && ((lenRec.meta && lenRec.meta.isPowder) || String(lenRec.process).includes("Порошок"));
+                let isRPowder = rootRec && rootRec.meta && rootRec.meta.isPowder;
+                let isLPowder = lenRec && lenRec.meta && lenRec.meta.isPowder;
 
                 // FAIL-CLOSED RECIPE META GUARD — docs/input-safety-gates-contract.md
                 // Every built rootRec/lenRec MUST carry trusted recipe.meta. If a recipe
@@ -2232,8 +2232,8 @@ const pigmentMap = {
                     return Number.isFinite(parsed) ? parsed : null;
                 }
 
-                const rootOxPercent = (rootRec && rootRec.meta && typeof rootRec.meta.oxidizerPercent === 'number') ? rootRec.meta.oxidizerPercent : extractOxPercent(rootRec && rootRec.ox);
-                const lengthOxPercent = (lenRec && lenRec.meta && typeof lenRec.meta.oxidizerPercent === 'number') ? lenRec.meta.oxidizerPercent : extractOxPercent(lenRec && lenRec.ox);
+                const rootOxPercent = (rootRec && rootRec.meta && typeof rootRec.meta.oxidizerPercent === 'number') ? rootRec.meta.oxidizerPercent : null;
+                const lengthOxPercent = (lenRec && lenRec.meta && typeof lenRec.meta.oxidizerPercent === 'number') ? lenRec.meta.oxidizerPercent : null;
                 const rootHighOxidizer = rootOxPercent !== null && rootOxPercent >= 9;
                 const lengthHighOxidizer = lengthOxPercent !== null && lengthOxPercent >= 9;
 
@@ -2287,8 +2287,8 @@ const pigmentMap = {
                     && !isNeutralPorosity
                     && highPorosityMarkers.some(marker => porosityText.includes(marker));
                 const hasSpecialBlondProcess =
-                    (rootRec && ((rootRec.meta && rootRec.meta.isSpecialBlond) || String(rootRec.process).includes("Special Blond"))) ||
-                    (lenRec && ((lenRec.meta && lenRec.meta.isSpecialBlond) || String(lenRec.process).includes("Special Blond")));
+                    (rootRec && (rootRec.meta && rootRec.meta.isSpecialBlond)) ||
+                    (lenRec && (lenRec.meta && lenRec.meta.isSpecialBlond));
                 const specialBlondHighPorosityNeedsConfirmation = hasSpecialBlondProcess && hasHighPorositySignal;
 
                 const legacyConditionText = String(condition || '').toLowerCase();
@@ -2347,15 +2347,11 @@ const pigmentMap = {
                     collectBrandSensitiveRecipeText(lenRec)
                 ].join(' ').toLowerCase();
                 const brandSensitiveReasons = [];
-                const brandSensitiveSpecialBlond = Boolean(rootRec && rootRec.meta && rootRec.meta.isSpecialBlond) || Boolean(lenRec && lenRec.meta && lenRec.meta.isSpecialBlond) || ['special blond', 'special blonde', 'спецблонд', 'спец блонд']
-                    .some(marker => brandSensitiveRecipeText.includes(marker));
-                const brandSensitiveGreyBase = Boolean(rootRec && rootRec.meta && rootRec.meta.usesDoubleNaturalBase) || Boolean(lenRec && lenRec.meta && lenRec.meta.usesDoubleNaturalBase) || ['.00', '/00', 'double natural', 'intense natural']
-                    .some(marker => brandSensitiveRecipeText.includes(marker));
+                const brandSensitiveSpecialBlond = Boolean(rootRec && rootRec.meta && rootRec.meta.isSpecialBlond) || Boolean(lenRec && lenRec.meta && lenRec.meta.isSpecialBlond);
+                const brandSensitiveGreyBase = Boolean(rootRec && rootRec.meta && rootRec.meta.usesDoubleNaturalBase) || Boolean(lenRec && lenRec.meta && lenRec.meta.usesDoubleNaturalBase);
                 const brandSensitiveHighOxidizer = rootHighOxidizer || lengthHighOxidizer;
-                const brandSensitivePowder = Boolean(rootRec && rootRec.meta && rootRec.meta.isPowder) || Boolean(lenRec && lenRec.meta && lenRec.meta.isPowder) || ['powder', 'порошок', 'порош']
-                    .some(marker => brandSensitiveRecipeText.includes(marker));
-                const brandSensitiveToning = Boolean(rootRec && rootRec.meta && rootRec.meta.isToning) || Boolean(lenRec && lenRec.meta && lenRec.meta.isToning) || ['перманент / тонування', 'тонування', 'toning']
-                    .some(marker => brandSensitiveRecipeText.includes(marker));
+                const brandSensitivePowder = Boolean(rootRec && rootRec.meta && rootRec.meta.isPowder) || Boolean(lenRec && lenRec.meta && lenRec.meta.isPowder);
+                const brandSensitiveToning = Boolean(rootRec && rootRec.meta && rootRec.meta.isToning) || Boolean(lenRec && lenRec.meta && lenRec.meta.isToning);
 
                 if (brandSensitiveSpecialBlond) brandSensitiveReasons.push('Special Blond');
                 if (brandSensitiveGreyBase) brandSensitiveReasons.push('.00 / grey coverage');
@@ -2386,8 +2382,8 @@ const pigmentMap = {
                 }
 
                 let specialBlondBase6NeedsConfirmation =
-                    (rLevel === 6 && rootRec && ((rootRec.meta && rootRec.meta.isSpecialBlond) || String(rootRec.process).includes("Special Blond"))) ||
-                    (lLevel === 6 && lenRec && ((lenRec.meta && lenRec.meta.isSpecialBlond) || String(lenRec.process).includes("Special Blond")));
+                    (rLevel === 6 && rootRec && (rootRec.meta && rootRec.meta.isSpecialBlond)) ||
+                    (lLevel === 6 && lenRec && (lenRec.meta && lenRec.meta.isSpecialBlond));
 
                 if (specialBlondBase6NeedsConfirmation) {
                     warnings.push("⚠️ SPECIAL BLOND З БАЗИ 6: Потрібне підтвердження технології бренду або рішення майстра. Не вважати безумовно безпечним approved-рецептом.");

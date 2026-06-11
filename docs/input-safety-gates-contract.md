@@ -161,8 +161,12 @@ formula-assembly branch), not user-facing display strings:
   are fallback only.
 - Display labels (`recipe.process` / `recipe.dye` / `recipe.ox`) are **not**
   safety-critical inputs: renaming/localizing a label cannot silently disable a gate.
-- A legacy text-marker check remains only as a fallback when `meta` is absent;
-  the current builder always attaches `meta`.
+- Selected legacy display-text fallbacks (FB1-FB5: powder / Special Blond / grey-`.00`
+  process+ox / toning / high-oxidizer `extractOxPercent`) have been **retired** — the
+  runtime safety/advisory logic for these now reads `recipe.meta` ONLY. The fail-closed
+  meta guard (`isValidRecipeMeta`) is the protection against missing/invalid meta.
+  Retained on purpose: FB6 damage-lift markers (numeric `rStep/lStep>0` primary) and
+  FB7 `zoneProcessesDiffer` (relative comparison), plus render/display and diagnostic text.
 - `meta` is internal: it is never rendered to the UI and is never set from user input.
 - **Meta-presence invariant:** every production recipe object (`rootRec` / `lenRec`)
   built by `calculateProtocol()` carries trusted `recipe.meta` with

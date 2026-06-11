@@ -333,16 +333,13 @@ const GROUPS = [
         for (const f of META_FIELDS) assertNotIncludes(h, f, 'grey ox-decorated meta must not leak');
     }],
 
-    ['18. fallback remains compatible (legacy recipe without meta)', function () {
-        // A legacy-style permanent recipe lacking meta but with old text still classifies
-        // as grey-valid via the text fallback. Exercise getBaseProcessTiming + the grey
-        // validity path indirectly through the render layer on a hand-built state is not
-        // possible here; instead assert the source keeps an OR text fallback for both
-        // process and ox in the grey-validity expression.
-        assert.ok(/processCategory === 'permanent'\) \|\| String\(rootRec\.process\)\.includes\("Перманент"\)/.test(CORE),
-            'grey validity must keep permanent text fallback');
-        assert.ok(/indexOf\(rootRec\.meta\.oxidizerPercent\) !== -1\) \|\| \["6%", "9%", "12%"\]\.includes\(rootRec\.ox\)/.test(CORE),
-            'grey validity must keep ox text fallback');
+    ['18. retained fallbacks (FB6/FB7) + guard remain after FB1-FB5 retirement', function () {
+        // FB1-FB5 text fallbacks are retired (asserted absent in group 35). The
+        // intentionally-retained fallbacks and the fail-closed guard must remain.
+        assert.ok(/rootLiftProcessMarkers/.test(CORE) && /lengthLiftProcessMarkers/.test(CORE),
+            'FB6 damage-lift markers must be retained');
+        assert.ok(/zoneProcessesDiffer/.test(CORE), 'FB7 zoneProcessesDiffer must be retained');
+        assert.ok(/function isValidRecipeMeta/.test(CORE), 'fail-closed meta guard must remain');
     }],
 
     ['19. behavior regression control (grey)', function () {
@@ -488,6 +485,67 @@ const GROUPS = [
         const html = getOutputHtml(CORE, injected);
         assert.strictEqual(status(html).split(' ')[0], 'APPROVED', 'clean baseline still APPROVED via trusted meta (injection ignored)');
         for (const f of META_FIELDS) assertNotIncludes(html, f, 'injected meta must not leak');
+    }],
+
+    ['31. powder text fallback retired (meta-only drives gate; guard for missing meta)', function () {
+        const POWDER = makeFixture({ root_level: '5', length_level: '5', target_level: '9', target_direction: '1' });
+        // Rename powder display label; meta.isPowder still drives the gate (no text fallback now).
+        const renamed = getOutputHtml(mutate('process: "Порошок"', 'process: "Lightener"'), POWDER);
+        assertManualOrBlocked(renamed, 'powder renamed (meta-only)');
+        assertNoApproved(renamed, 'powder renamed'); assertNoExactGrams(renamed, 'powder renamed');
+        assertIncludes(renamed, 'Brand rule matrix', 'powder gate must fire from meta.isPowder');
+        // Strip meta -> fail-closed guard, regardless of label.
+        const noMeta = getOutputHtml(CORE.replace(/withMeta\('powder', [0-9.]+, (\{[^}]*\})\)/g, '$1'), POWDER);
+        assertManualOrBlocked(noMeta, 'powder meta-stripped'); assertNoExactGrams(noMeta, 'powder meta-stripped');
+    }],
+
+    ['32. Special Blond text fallback retired (meta-only)', function () {
+        const SBfx = makeFixture({ root_level: '6', length_level: '6', target_level: '10', target_direction: '1' });
+        const renamed = getOutputHtml(mutate('process: "Special Blond"', 'process: "Lift System"'), SBfx);
+        assertManualOrBlocked(renamed, 'SB renamed (meta-only)');
+        assertNoApproved(renamed, 'SB renamed'); assertNoExactGrams(renamed, 'SB renamed');
+        assertIncludes(renamed, 'Brand rule matrix', 'SB gate must fire from meta.isSpecialBlond');
+    }],
+
+    ['33. grey validity text/ox fallback retired (meta-only)', function () {
+        const GREYfx = makeFixture({ root_level: '6', length_level: '6', target_level: '7', target_direction: '1', grey_percent: '50' });
+        // Rename permanent label AND decorate ox; numeric meta still drives grey validity.
+        let MUT = mutate('process: "Перманент"', 'process: "Permanent"');
+        MUT = MUT.split('ox: oxChoice').join('ox: ("OX:" + oxChoice)');
+        const html = getOutputHtml(MUT, GREYfx);
+        assertManualOrBlocked(html, 'grey renamed (meta-only)');
+        assertNoApproved(html, 'grey renamed'); assertNoExactGrams(html, 'grey renamed');
+        assertIncludes(html, 'Brand rule matrix', 'grey .00 gate must fire from meta.usesDoubleNaturalBase');
+        assertIncludes(html, '.00', 'grey still injects .00 base via meta-driven validity');
+    }],
+
+    ['34. toning text fallback retired (meta-only)', function () {
+        const TONfx = makeFixture({ root_level: '8', length_level: '8', target_level: '6', target_direction: '1' });
+        const html = getOutputHtml(mutate('"Перманент / Тонування"', '"Refresh"'), TONfx);
+        assertManualOrBlocked(html, 'toning renamed (meta-only)');
+        assertNoApproved(html, 'toning renamed'); assertNoExactGrams(html, 'toning renamed');
+        assertIncludes(html, 'Brand rule matrix', 'toning gate must fire from meta.isToning');
+    }],
+
+    ['35. source inventory: FB1-FB5 runtime text fallbacks absent (FB6/FB7 kept)', function () {
+        // FB1 powder
+        assertNotIncludes(CORE, 'String(rootRec.process).includes("Порошок")', 'FB1 powder root fallback retired');
+        assertNotIncludes(CORE, 'String(lenRec.process).includes("Порошок")', 'FB1 powder length fallback retired');
+        // FB2 Special Blond
+        assertNotIncludes(CORE, 'String(rootRec.process).includes("Special Blond")', 'FB2 SB root fallback retired');
+        assertNotIncludes(CORE, 'String(lenRec.process).includes("Special Blond")', 'FB2 SB length fallback retired');
+        // FB3 grey process + ox display fallback
+        assertNotIncludes(CORE, 'String(rootRec.process).includes("Перманент")', 'FB3 grey process fallback retired');
+        assertNotIncludes(CORE, '["6%", "9%", "12%"].includes(rootRec.ox)', 'FB3 grey ox display fallback retired');
+        assertNotIncludes(CORE, '["6%", "9%", "12%"].includes(lenRec.ox)', 'FB3 grey ox display fallback retired (len)');
+        // FB4 toning text markers
+        assertNotIncludes(CORE, "['перманент / тонування', 'тонування', 'toning']", 'FB4 toning text markers retired');
+        // FB5 high-ox extractOxPercent fallback for built recipes
+        assertNotIncludes(CORE, 'extractOxPercent(rootRec', 'FB5 high-ox root fallback retired');
+        assertNotIncludes(CORE, 'extractOxPercent(lenRec', 'FB5 high-ox length fallback retired');
+        // FB6 / FB7 intentionally retained
+        assert.ok(/rootLiftProcessMarkers/.test(CORE), 'FB6 retained');
+        assert.ok(/zoneProcessesDiffer/.test(CORE), 'FB7 retained');
     }]
 ];
 

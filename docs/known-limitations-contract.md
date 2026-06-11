@@ -565,8 +565,13 @@ localizing a recipe label (`process` / `dye` / `ox`) cannot silently disable a g
   (text fallback retained). A process-label rename no longer changes corrector
   neutralisation or base timing for internally-built recipes.
 - **Fail-closed meta guard active:** `isValidRecipeMeta()` forces MANUAL_REQUIRED if any
-  built recipe lacks valid `recipe.meta`. Legacy text fallbacks remain as defense-in-depth
-  but are no longer the safety mechanism for the missing-meta case (groups 26-30).
+  built recipe lacks valid `recipe.meta` (groups 26-30).
+- **Legacy text fallbacks FB1-FB5 retired:** powder / Special Blond / grey-`.00` / toning /
+  high-oxidizer runtime safety logic now reads `recipe.meta` only; the guard handles
+  missing/invalid meta. FB6 (damage-lift, numeric-primary) and FB7 (`zoneProcessesDiffer`)
+  are intentionally retained. `extractOxPercent` remains defined but is now unused by the
+  safety path (candidate for later cleanup). Locked by `test_www_structured_safety_flags.js`
+  groups 31-35.
 - **Grey base-validity now meta-first:** the grey `>=50` base-`.00` validity check
   reads `meta.processCategory === 'permanent'` and numeric `meta.oxidizerPercent`
   (∈ {6,9,12}) first; the grey-perm recipe now carries a numeric `oxidizerPercent`
